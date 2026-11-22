@@ -21,10 +21,9 @@ Copy `apps/worker/.dev.vars.example` to `apps/worker/.dev.vars` before running t
 pnpm lint
 pnpm typecheck
 pnpm test
-cd apps/bridge && go test ./...
 ```
 
-Go code is formatted with `gofmt`. The CI workflow also runs `golangci-lint`.
+`pnpm test` runs the TypeScript tests and `go test ./...` in `apps/bridge`. Go code is formatted with `gofmt`. CI also runs `golangci-lint`.
 
 ## Commits
 
