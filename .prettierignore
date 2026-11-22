@@ -1,0 +1,7 @@
+node_modules
+dist
+coverage
+.wrangler
+pnpm-lock.yaml
+apps/bridge/vendor
+*.min.js

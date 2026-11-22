@@ -1,0 +1,15 @@
+node_modules
+dist
+coverage
+.turbo
+.wrangler
+.dev.vars
+*.log
+.DS_Store
+apps/bridge/mcp-bridge
+apps/bridge/mcp-bridge.exe
+apps/bridge/*.test
+.env
+.env.*
+!.env.example
+!.dev.vars.example
