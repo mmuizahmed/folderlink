@@ -1,0 +1,47 @@
+version: 2
+
+project_name: mcp-bridge
+
+builds:
+  - id: bridge
+    dir: apps/bridge
+    main: ./cmd/bridge
+    binary: mcp-bridge
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sig"
+    args:
+      - sign-blob
+      - --yes
+      - --output-signature
+      - "${signature}"
+      - "${artifact}"
+    if: '{{ isEnvSet "COSIGN_YES" }}'
+
+changelog:
+  disable: true

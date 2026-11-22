@@ -8,10 +8,14 @@
     "node": ">=22"
   },
   "scripts": {
-    "lint": "eslint . && prettier --check .",
+    "lint": "eslint . && prettier --check . && pnpm lint:go",
+    "lint:go": "test -z \"$(gofmt -l apps/bridge)\"",
     "format": "prettier --write .",
     "typecheck": "pnpm -r --if-present typecheck",
-    "test": "vitest run"
+    "test": "vitest run && pnpm test:go",
+    "test:go": "cd apps/bridge && go test ./...",
+    "dev:web": "pnpm --filter @mcp-bridge/web dev",
+    "dev:worker": "pnpm --filter @mcp-bridge/worker dev"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
