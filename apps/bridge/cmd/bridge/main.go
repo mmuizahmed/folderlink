@@ -34,18 +34,14 @@ func run(args []string) error {
 	webFlag := fs.String("web", "", "control panel URL")
 	homeFlag := fs.String("home", "", "config directory (default: MCP_BRIDGE_HOME or the user config dir)")
 	labelFlag := fs.String("label", "", "folder label")
-	if err := fs.Parse(args); err != nil {
+	cmd, rest := splitCommand(args)
+	if err := fs.Parse(orderFlagsFirst(rest)); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil
 		}
 		return err
 	}
-	cmd := "run"
-	rest := fs.Args()
-	if len(rest) > 0 {
-		cmd = rest[0]
-		rest = rest[1:]
-	}
+	rest = fs.Args()
 	if cmd == "version" || cmd == "--version" {
 		fmt.Println(version)
 		return nil
@@ -139,6 +135,63 @@ func runBridge(id *identity.Identity, store *config.Store, cfg config.File) erro
 		Store:    store,
 		Pair:     pair.Client{BaseURL: cfg.Server},
 	})
+}
+
+func splitCommand(args []string) (string, []string) {
+	known := map[string]bool{
+		"run": true, "allow": true, "unallow": true, "folders": true, "status": true, "version": true,
+	}
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg == "--" {
+			break
+		}
+		if strings.HasPrefix(arg, "-") {
+			if !strings.Contains(arg, "=") && flagTakesValue(arg) {
+				i++
+			}
+			continue
+		}
+		if known[arg] {
+			out := make([]string, 0, len(args)-1)
+			out = append(out, args[:i]...)
+			out = append(out, args[i+1:]...)
+			return arg, out
+		}
+	}
+	return "run", args
+}
+
+func orderFlagsFirst(args []string) []string {
+	var flags []string
+	var positional []string
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg == "--" {
+			positional = append(positional, args[i+1:]...)
+			break
+		}
+		if strings.HasPrefix(arg, "-") {
+			flags = append(flags, arg)
+			if !strings.Contains(arg, "=") && flagTakesValue(arg) && i+1 < len(args) {
+				i++
+				flags = append(flags, args[i])
+			}
+			continue
+		}
+		positional = append(positional, arg)
+	}
+	return append(flags, positional...)
+}
+
+func flagTakesValue(arg string) bool {
+	name := strings.TrimLeft(arg, "-")
+	switch name {
+	case "server", "web", "home", "label":
+		return true
+	default:
+		return false
+	}
 }
 
 func homeDir(flagValue string) (string, error) {
