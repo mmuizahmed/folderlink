@@ -31,6 +31,8 @@ var (
 	errUnpaired = errors.New("device is not paired")
 )
 
+const pickerOperationTimeout = 10 * time.Minute
+
 // Config controls one running bridge.
 type Config struct {
 	Server       string
@@ -421,7 +423,15 @@ func (s *session) handleRequest(ctx context.Context, cfg Config, msg protocol.Me
 				_ = s.write(ctx, failureMessage(msg.ID, "internal", "The request could not be completed."))
 			}
 		}()
-		opCtx, cancel := context.WithTimeout(ctx, cfg.OpTimeout)
+
+		var req struct {
+			Op string `json:"op"`
+		}
+		opTimeout := cfg.OpTimeout
+		if json.Unmarshal(msg.Payload, &req) == nil && req.Op == "pick_folder" {
+			opTimeout = pickerOperationTimeout
+		}
+		opCtx, cancel := context.WithTimeout(ctx, opTimeout)
 		defer cancel()
 		result := tools.Dispatch(opCtx, cfg.Store, msg.Payload)
 		raw, err := json.Marshal(result)
