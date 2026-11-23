@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { SiteFooter } from "../components/SiteFooter.tsx";
 import { Mark } from "../components/Icons.tsx";
 
 const RELEASES = "https://github.com/mmuizahmed/mcp-bridge/releases";
@@ -127,6 +128,7 @@ export function Landing() {
           </p>
         </div>
       </div>
+      <SiteFooter />
     </div>
   );
 }
