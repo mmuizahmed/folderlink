@@ -9,4 +9,4 @@ var ErrCanceled = errCanceled{}
 
 type errCanceled struct{}
 
-func (errCanceled) Error() string { return "folder selection was cancelled" }
+func (errCanceled) Error() string { return "folder selection was canceled" }

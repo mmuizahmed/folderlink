@@ -13,7 +13,7 @@ func openNative(ctx context.Context) (string, error) {
 	out, err := cmd.Output()
 	path := strings.TrimSpace(string(out))
 	if path == "" {
-		return "", ErrCancelled
+		return "", ErrCanceled
 	}
 	if err != nil && path == "" {
 		return "", err

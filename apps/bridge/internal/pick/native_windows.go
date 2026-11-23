@@ -19,14 +19,14 @@ Write-Output $dialog.SelectedPath
 	cmd := exec.CommandContext(ctx, "powershell", "-NoProfile", "-STA", "-Command", script)
 	out, err := cmd.Output()
 	if cmd.ProcessState != nil && cmd.ProcessState.ExitCode() == 2 {
-		return "", ErrCancelled
+		return "", ErrCanceled
 	}
 	path := strings.TrimSpace(string(out))
 	if path == "" {
 		if err != nil {
 			return "", err
 		}
-		return "", ErrCancelled
+		return "", ErrCanceled
 	}
 	return path, nil
 }
