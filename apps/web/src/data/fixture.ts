@@ -142,5 +142,6 @@ export function offlineDashboard(): DashboardData {
     device.online = false;
     device.status = "active";
   }
+  data.relay = "relay idle";
   return data;
 }

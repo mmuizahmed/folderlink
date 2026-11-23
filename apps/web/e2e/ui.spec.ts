@@ -19,6 +19,40 @@ async function noOverflow(page: Page) {
   expect(extra).toBeLessThanOrEqual(1);
 }
 
+function placed(box: { x: number; y: number; width: number; height: number } | null) {
+  if (!box) throw new Error("missing layout box");
+  return box;
+}
+
+async function dashboardFrame(page: Page, width: number) {
+  const header = page.locator("header.dash-top");
+  await expect(header).toBeVisible();
+  const headerBox = placed(await header.boundingBox());
+  expect(headerBox.y).toBeLessThanOrEqual(1);
+  expect(headerBox.height).toBeGreaterThanOrEqual(40);
+  expect(headerBox.height).toBeLessThanOrEqual(120);
+
+  const body = page.locator(".dash-body");
+  const bodyBox = placed(await body.boundingBox());
+  expect(bodyBox.y).toBeLessThanOrEqual(140);
+  expect(bodyBox.y).toBeGreaterThanOrEqual(headerBox.height - 1);
+
+  if (width > 800) {
+    const side = page.locator("aside.sidebar");
+    const sideBox = placed(await side.boundingBox());
+    expect(sideBox.x).toBeLessThanOrEqual(1);
+    expect(sideBox.y).toBeLessThanOrEqual(1);
+    expect(headerBox.x).toBeGreaterThanOrEqual(sideBox.x + sideBox.width - 2);
+    expect(bodyBox.x).toBeGreaterThanOrEqual(sideBox.x + sideBox.width - 2);
+    const card = page.locator(".stat-card").first();
+    if ((await card.count()) > 0) {
+      const cardBox = placed(await card.boundingBox());
+      expect(cardBox.y).toBeLessThan(400);
+      expect(cardBox.x).toBeGreaterThanOrEqual(sideBox.width - 2);
+    }
+  }
+}
+
 test.describe("visual and glitch checks", () => {
   for (const width of widths) {
     test(`landing ${width}`, async ({ page }) => {
@@ -51,6 +85,14 @@ test.describe("visual and glitch checks", () => {
       await page.evaluate(() => document.fonts.ready);
       await expect(page.getByRole("heading", { name: "Folders" })).toBeVisible();
       await expect(page.getByText("raffle/.env")).toBeVisible();
+      await dashboardFrame(page, width);
+      if (width > 800) {
+        await page.evaluate(() => window.scrollTo(0, 480));
+        const stuck = placed(await page.locator("aside.sidebar").boundingBox());
+        expect(stuck.y).toBeLessThanOrEqual(1);
+        expect(stuck.x).toBeLessThanOrEqual(1);
+        await page.evaluate(() => window.scrollTo(0, 0));
+      }
       await noOverflow(page);
       expect(errors).toEqual([]);
       await expect(page).toHaveScreenshot(`dashboard-${width}.png`, { fullPage: true });
@@ -59,22 +101,27 @@ test.describe("visual and glitch checks", () => {
 
   test("empty, error, offline, and long paths", async ({ page }) => {
     const errors = await quiet(page);
+    await page.setViewportSize({ width: 1440, height: 1100 });
     await page.goto("/dashboard?fixture=empty");
     await expect(page.getByText("No device yet")).toBeVisible();
     await expect(page.getByText("No folders")).toBeVisible();
     await expect(page.getByText("No connected apps")).toBeVisible();
     await expect(page.getByText("No activity yet")).toBeVisible();
+    await dashboardFrame(page, 1440);
     await noOverflow(page);
 
     await page.goto("/dashboard?fixture=error");
     await expect(page.getByRole("alert")).toContainText("not reachable");
+    await dashboardFrame(page, 1440);
 
     await page.goto("/dashboard?fixture=offline");
     await expect(page.getByText("offline")).toBeVisible();
+    await dashboardFrame(page, 1440);
 
     await page.setViewportSize({ width: 390, height: 800 });
     await page.goto("/dashboard?fixture=long");
     await page.evaluate(() => document.fonts.ready);
+    await dashboardFrame(page, 390);
     await noOverflow(page);
     const clipped = await page.locator(".path").evaluateAll((nodes) =>
       nodes.every((node) => node.scrollWidth <= node.clientWidth + 1 || getComputedStyle(node).textOverflow === "ellipsis"),

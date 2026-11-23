@@ -139,8 +139,7 @@ a {
   height: 56px;
 }
 .top-inner,
-.pair-top-inner,
-.dash-top {
+.pair-top-inner {
   max-width: 1080px;
   margin: 0 auto;
   height: 100%;
@@ -562,15 +561,21 @@ h1.display span {
 .shell {
   min-height: 100vh;
   display: flex;
+  align-items: flex-start;
 }
 .sidebar {
   width: 232px;
   flex: none;
+  align-self: flex-start;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: auto;
   background: var(--sidebar);
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
 }
 .side-brand {
   height: 56px;
@@ -670,10 +675,29 @@ h1.display span {
   min-width: 0;
 }
 .dash-top {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  height: 56px;
+  margin: 0;
   max-width: none;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--bg);
   border-bottom: 1px solid var(--line);
   color: var(--sub);
   font-size: 13px;
+}
+.dash-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: capitalize;
 }
 .dash-body {
   padding: 28px 32px 64px;
@@ -966,6 +990,8 @@ code.mono {
     inset: 0 auto 0 0;
     z-index: 20;
     width: min(280px, 86vw);
+    height: 100vh;
+    max-height: 100vh;
   }
   .menu {
     display: inline-flex;

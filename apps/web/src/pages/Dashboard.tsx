@@ -207,7 +207,7 @@ export function Dashboard() {
           <button type="button" className="btn quiet small menu" onClick={() => setMenu(true)}>
             Menu
           </button>
-          <div style={{ textTransform: "capitalize" }}>{section}</div>
+          <div className="dash-title">{NAV.find((item) => item.id === section)?.label}</div>
           <NavLink className="btn small" to={mode === "live" ? "/pair" : "/pair?fixture=1"}>
             + Pair device
           </NavLink>
