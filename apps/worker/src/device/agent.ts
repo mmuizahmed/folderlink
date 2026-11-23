@@ -5,7 +5,7 @@ import { setDeviceVersion, syncFolders, touchDevice, type DeviceRecord } from ".
 import type { Env } from "../env.ts";
 import type { InvokeRequest } from "./control.ts";
 
-const pickerOperationTimeout = inputOp(input: InvokeRequest): number => {
+const pickerOperationTimeout = (input: InvokeRequest): number => {
   // Folder selection is an interactive operation and may take much longer
   // than ordinary file reads.
   void input;
