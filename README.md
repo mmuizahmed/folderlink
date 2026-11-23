@@ -10,6 +10,7 @@
   <p>
     <a href="https://github.com/mmuizahmed/mcp-bridge/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/mmuizahmed/mcp-bridge/actions/workflows/ci.yml/badge.svg"></a>
     <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-22c55e"></a>
+    <a href="https://github.com/mmuizahmed/mcp-bridge/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/mmuizahmed/mcp-bridge?label=release"></a>
     <a href="https://go.dev/"><img alt="Go 1.22" src="https://img.shields.io/badge/go-1.22-00ADD8"></a>
   </p>
   <p>
@@ -58,7 +59,7 @@ Your laptop calls out. Nothing on it accepts incoming connections. The AI app ne
 
 ## Quick start
 
-Download the archive for your system from [GitHub Releases](https://github.com/mmuizahmed/mcp-bridge/releases). Each file is named `folderlink_<version>_<os>_<arch>`.
+Download the archive for your system from [GitHub Releases](https://github.com/mmuizahmed/mcp-bridge/releases). Each file is named `folderlink_<os>_<arch>`.
 
 ```bash
 # macOS Apple silicon
@@ -68,8 +69,11 @@ tar -xzf folderlink.tar.gz
 # macOS Intel
 curl -L -o folderlink.tar.gz https://github.com/mmuizahmed/mcp-bridge/releases/latest/download/folderlink_darwin_amd64.tar.gz
 
-# Linux
+# Linux x86_64
 curl -L -o folderlink.tar.gz https://github.com/mmuizahmed/mcp-bridge/releases/latest/download/folderlink_linux_amd64.tar.gz
+
+# Linux arm64
+curl -L -o folderlink.tar.gz https://github.com/mmuizahmed/mcp-bridge/releases/latest/download/folderlink_linux_arm64.tar.gz
 
 # Windows: download folderlink_windows_amd64.zip from the same page
 ```

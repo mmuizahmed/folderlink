@@ -32,16 +32,15 @@ checksum:
   name_template: checksums.txt
   algorithm: sha256
 
-signs:
-  - cmd: cosign
-    signature: "${artifact}.sig"
-    args:
-      - sign-blob
-      - --yes
-      - --output-signature
-      - "${signature}"
-      - "${artifact}"
-    if: '{{ isEnvSet "COSIGN_YES" }}'
+release:
+  # Beta tags must still be the latest release so /releases/latest/download works.
+  prerelease: false
+  draft: false
+  make_latest: true
+
+# Checksum signing is not configured. Cosign needs a key that this
+# repository does not have, and the free GoReleaser build cannot skip a
+# signs block with an if condition.
 
 changelog:
   disable: true
