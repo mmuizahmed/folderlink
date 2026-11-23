@@ -27,12 +27,28 @@ flowchart LR
 ```mermaid
 sequenceDiagram
   participant App as FolderLink
-  participant Web as Browser
+  participant Worker
+  participant Browser
+  App->>Worker: POST /api/pair/begin, signed by the device key
+  Worker-->>App: Code, valid for 10 minutes
+  App->>Browser: Open /pair?code=...
+  Browser->>Worker: Google session, then approve the code
+  App->>Worker: WebSocket hello, signed, with folder labels
+```
+
+```mermaid
+sequenceDiagram
   participant AI as ChatGPT or Claude
-  App->>Web: Open /pair?code=...
-  Web->>Web: Sign in and Allow
-  AI->>Web: OAuth consent
-  AI->>App: Read a file in an approved folder
+  participant Worker
+  participant Object as Durable Object
+  participant App as FolderLink
+  AI->>Worker: POST /mcp, Bearer access token
+  Worker->>Worker: Hash the token, load the user, choose their device
+  Worker->>Object: Tool call
+  Object->>App: request frame
+  App->>App: Match the folder id, resolve the path, refuse secrets
+  App-->>Object: response frame
+  Object-->>AI: MCP tool result
 ```
 
 ## Tool-call path

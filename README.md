@@ -34,8 +34,8 @@
 
 ## How it works
 
-1. Run FolderLink on your laptop and choose the folders it may read.
-2. Pair the laptop at [folderlink.muiz.pk/pair](https://folderlink.muiz.pk/pair) with the code it prints.
+1. Install FolderLink. Opening it connects this computer in your browser.
+2. Sign in with Google, allow the computer, and add a folder from the dashboard.
 3. Add the connector in ChatGPT or Claude. The address is `https://folderlink.muiz.pk/mcp`.
 
 ```mermaid
@@ -78,11 +78,23 @@ Archives are also on [GitHub Releases](https://github.com/mmuizahmed/mcp-bridge/
 sequenceDiagram
   participant App as FolderLink
   participant Site as folderlink.muiz.pk
+  participant You
+  App->>Site: Ask for a pairing code
+  App->>You: Open /pair?code=...
+  You->>Site: Sign in with Google and Allow
+  App->>Site: Stay connected
+```
+
+```mermaid
+sequenceDiagram
   participant AI as ChatGPT or Claude
-  App->>Site: Open /pair?code=...
-  Site->>Site: Google sign-in and Allow
-  AI->>Site: OAuth, read-only scope
-  AI->>App: Read a file you approved
+  participant Site as folderlink.muiz.pk
+  participant App as FolderLink
+  AI->>Site: Read a file, with an OAuth token
+  Site->>Site: The token names the account
+  Site->>App: Pass the read to that computer
+  App->>App: Allow the folder, refuse secrets
+  App-->>AI: File contents, or a refusal
 ```
 
 ## Security
