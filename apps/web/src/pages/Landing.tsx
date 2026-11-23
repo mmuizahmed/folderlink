@@ -6,6 +6,8 @@ import { downloadForThisComputer } from "../downloads.ts";
 import { usePageTitle, useSession } from "../session.ts";
 
 const RELEASES = "https://github.com/mmuizahmed/mcp-bridge/releases";
+const SOURCE = "https://github.com/mmuizahmed/mcp-bridge";
+const LATEST = "https://github.com/mmuizahmed/mcp-bridge/releases/latest/download";
 
 export function Landing() {
   const session = useSession();
@@ -41,18 +43,17 @@ export function Landing() {
         </div>
       </header>
       <div className="hero-inner">
-        <div className="pill">
-          <span className="dot" />
-          v0.1.0 · open source · MIT
-        </div>
+        <a className="pill" href={SOURCE}>
+          Open source
+        </a>
         <h1 className="display">
           Your folders.
           <br />
           <span>Your AI.</span>
         </h1>
         <p className="lede">
-          A 5 MB FolderLink bridge that lets ChatGPT and Claude read the project folders you choose
-          — read-only, logged, revocable in one click.
+          Let ChatGPT, Claude and other AI apps read the project folders you choose. No uploads, no
+          copy-paste. Read-only, logged, and revocable in one click.
         </p>
         <div className="cta">
           <a className="btn" href={download.href}>
@@ -77,17 +78,15 @@ export function Landing() {
             <span className="go">✓</span> Connected to folderlink.muiz.pk
             {"\n"}
             <span className="go">✓</span> Paired to muiz@example.com
-            {"\n\n"}
-            <span className="faint">14:32:07</span> read raffle/src/draw.ts
-            {"\n"}
-            <span className="faint">14:32:09</span> <span className="bad">deny</span> raffle/.env
           </pre>
         </div>
-        <img
-          className="product-shot"
-          src="/product.png"
-          alt="FolderLink dashboard showing a connected computer and the folders it may read"
-        />
+        <figure className="product-frame">
+          <img
+            className="product-shot"
+            src="/product.png"
+            alt="FolderLink dashboard showing a connected computer and the folders it may read"
+          />
+        </figure>
       </div>
       <div className="steps" id="how">
         <article>
@@ -160,8 +159,16 @@ export function Landing() {
           <pre>irm https://folderlink.muiz.pk/install.ps1 | iex</pre>
           <pre>curl -fsSL https://folderlink.muiz.pk/install.sh | sh</pre>
         </div>
+        <p className="platforms">
+          <a href={`${LATEST}/folderlink_windows_amd64.zip`}>Windows</a>
+          <a href={`${LATEST}/folderlink_darwin_arm64.tar.gz`}>Mac</a>
+          <a href={`${LATEST}/folderlink_linux_amd64.tar.gz`}>Linux</a>
+          <a href={RELEASES}>Other platforms</a>
+        </p>
         <p>
-          <Link to="/docs/getting-started">Getting started</Link>
+          <Link className="btn small" to="/docs/getting-started">
+            Getting started
+          </Link>
         </p>
       </section>
       <section className="band" id="faq">

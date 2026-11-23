@@ -17,8 +17,7 @@ export const fixturePreview: PairPreview = {
   folders: "none yet — you choose after pairing",
 };
 
-const longPath =
-  "~/projects/very-long-course-name/assignments/semester-three/data-structures-and-algorithms/project-final-submission/src";
+const longLabel = "very-long-course-name-assignments-semester-three-data-structures-and-algorithms";
 
 export function fixtureDashboard(longNames = false): DashboardData {
   return {
@@ -35,98 +34,45 @@ export function fixtureDashboard(longNames = false): DashboardData {
         arch: "amd64",
         fingerprint: "ed25519:9F3A…C21E",
         network: "39.45.x.x · Lahore, PK",
-        version: "v0.1.0",
-        lastSeenAt: new Date().toISOString(),
-        uptimeLabel: "2h 14m",
-        latencyLabel: "38 ms",
-        readsToday: 38,
-        blocked: 1,
+        version: "0.1.0",
+        lastSeenAt: "2026-11-23T02:40:00.000Z",
+        pairedAt: "2026-11-23T00:26:00.000Z",
       },
     ],
     folders: [
       {
         id: "f1",
-        label: "~/projects/raffle",
+        label: "raffle",
         approval: "approved",
         deviceName: "ThinkPad",
-        detail: "142 files · 3 blocked by rules",
+        detail: "read-only",
       },
       {
         id: "f2",
-        label: "~/uni/dsa-assignment-3",
+        label: "dsa-assignment-3",
         approval: "approved",
         deviceName: "ThinkPad",
-        detail: "27 files",
+        detail: "read-only",
       },
       {
         id: "f3",
-        label: longNames ? longPath : "~/projects/portfolio",
+        label: longNames ? longLabel : "portfolio",
         approval: "revoked",
         deviceName: "ThinkPad",
         detail: "paused · hidden from AI",
       },
     ],
     apps: [
-      { id: "gpt", name: "ChatGPT", mark: "GPT", tone: "gpt", detail: "oauth · last call 2m ago" },
+      { id: "gpt", name: "ChatGPT", mark: "GPT", tone: "gpt", detail: "Read-only" },
       {
         id: "claude",
         name: "Claude",
         mark: "C",
         tone: "claude",
-        detail: "oauth · last call yesterday",
+        detail: "Read-only",
       },
     ],
-    activity: [
-      {
-        id: "a1",
-        time: "14:32",
-        action: "read",
-        target: "raffle/src/draw.ts",
-        detail: "",
-        denied: false,
-      },
-      {
-        id: "a2",
-        time: "14:31",
-        action: "grep",
-        target: '"winner"',
-        detail: "6 hits",
-        denied: false,
-      },
-      {
-        id: "a3",
-        time: "14:31",
-        action: "deny",
-        target: "raffle/.env",
-        detail: "secret",
-        denied: true,
-      },
-      { id: "a4", time: "14:30", action: "ls", target: "raffle/src/", detail: "18", denied: false },
-      {
-        id: "a5",
-        time: "14:02",
-        action: "read",
-        target: "dsa-assignment-3/heap.cpp",
-        detail: "",
-        denied: false,
-      },
-      {
-        id: "a6",
-        time: "14:01",
-        action: "ls",
-        target: "dsa-assignment-3/",
-        detail: "27",
-        denied: false,
-      },
-      {
-        id: "a7",
-        time: "yday",
-        action: "read",
-        target: "raffle/README.md",
-        detail: "claude",
-        denied: false,
-      },
-    ],
+    activity: [],
   };
 }
 

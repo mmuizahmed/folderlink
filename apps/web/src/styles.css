@@ -237,10 +237,13 @@ h1.display span {
 }
 .lede {
   margin: 20px auto 0;
-  max-width: 540px;
+  max-width: 640px;
   color: var(--sub);
   font-size: 17px;
   line-height: 1.6;
+}
+a.pill {
+  text-decoration: none;
 }
 .cta {
   margin-top: 32px;
@@ -339,6 +342,10 @@ h1.display span {
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
     0 0 0 1px var(--line);
 }
+.band .steps {
+  width: 100%;
+  margin: 0;
+}
 .steps article {
   background: var(--bg);
   padding: 24px;
@@ -363,8 +370,9 @@ h1.display span {
 .audit {
   position: relative;
   max-width: 1080px;
+  width: calc(100% - 48px);
   margin: 0 auto;
-  padding: 56px 24px;
+  padding: 56px 0;
   display: grid;
   grid-template-columns: 1.2fr repeat(3, 1fr);
   gap: 32px;
@@ -380,20 +388,37 @@ h1.display span {
 }
 .band {
   max-width: 1080px;
+  width: calc(100% - 48px);
   margin: 0 auto;
-  padding: 24px 24px 8px;
+  padding: 24px 0 8px;
 }
 .band h2 {
   margin: 0 0 16px;
   font-size: 22px;
   letter-spacing: -0.03em;
 }
-.product-shot {
-  display: block;
-  width: min(920px, 100%);
+.product-frame {
   margin: 28px auto 0;
+  max-width: 960px;
   border: 1px solid var(--line);
   border-radius: 12px;
+  overflow: hidden;
+  background: #09090b;
+  line-height: 0;
+}
+.product-shot {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.platforms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 16px 0;
+}
+.platforms a {
+  color: var(--sub);
 }
 .install-lines {
   display: grid;
@@ -1029,6 +1054,22 @@ h1.display span {
 .stats .value.bad {
   color: var(--bad);
 }
+.facts {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 8px 16px;
+  margin: 0;
+  padding: 16px 20px 18px;
+  border-top: 1px solid var(--line);
+}
+.facts dt {
+  color: var(--faint);
+  font-size: 12px;
+}
+.facts dd {
+  margin: 0;
+  font-size: 13px;
+}
 
 .section-head {
   display: flex;
@@ -1312,7 +1353,9 @@ code.mono {
   .audit {
     grid-template-columns: 1fr;
   }
-  .steps {
+  .steps,
+  .band,
+  .audit {
     width: calc(100% - 32px);
   }
   .sidebar {

@@ -28,9 +28,11 @@ export interface Device {
   name: string;
   status: string;
   lastSeenAt: string | null;
+  pairedAt: string | null;
   online: boolean;
   os: string;
   arch: string;
+  version: string;
   fingerprint: string;
   network: string;
 }

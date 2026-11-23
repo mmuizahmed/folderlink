@@ -16,10 +16,7 @@ export interface DeviceView {
   network: string;
   version: string;
   lastSeenAt: string | null;
-  uptimeLabel: string;
-  latencyLabel: string;
-  readsToday: number | null;
-  blocked: number | null;
+  pairedAt: string | null;
 }
 
 export interface FolderView {

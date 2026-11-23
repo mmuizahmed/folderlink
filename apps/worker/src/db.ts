@@ -27,6 +27,7 @@ export interface DeviceRecord {
   arch: string;
   client_ip: string;
   client_region: string;
+  client_version: string;
 }
 
 export function nowIso(): string {
@@ -354,6 +355,13 @@ export async function setDeviceStatus(
   await db
     .prepare("UPDATE devices SET status = ?, updated_at = ? WHERE id = ?")
     .bind(status, ts, id)
+    .run();
+}
+
+export async function setDeviceVersion(db: D1Database, id: string, version: string): Promise<void> {
+  await db
+    .prepare(`UPDATE devices SET client_version = ? WHERE id = ?`)
+    .bind(version.slice(0, 32), id)
     .run();
 }
 

@@ -212,7 +212,7 @@ function readAuthorize(url: URL, origin: string): AuthorizeQuery | Response {
 export async function authorizeGet(
   request: Request,
   store: OAuthStore,
-  user: { id: string } | null,
+  user: { id: string; email?: string; name?: string; avatarUrl?: string } | null,
   origin: string,
 ): Promise<Response> {
   const url = new URL(request.url);
@@ -228,13 +228,22 @@ export async function authorizeGet(
     const next = `${url.pathname}${url.search}`;
     return Response.redirect(`${origin}/api/auth/google?next=${encodeURIComponent(next)}`, 302);
   }
-  return new Response(consentPage(client.name, query), {
-    status: 200,
-    headers: {
-      "content-type": "text/html; charset=utf-8",
-      "cache-control": "no-store",
+  const next = `${url.pathname}${url.search}`;
+  return new Response(
+    consentPage(client.name, query, {
+      email: user.email ?? "",
+      name: user.name ?? "",
+      avatarUrl: user.avatarUrl ?? "",
+      switchHref: `${origin}/api/auth/google?next=${encodeURIComponent(next)}`,
+    }),
+    {
+      status: 200,
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+      },
     },
-  });
+  );
 }
 
 export async function authorizePost(
@@ -451,7 +460,11 @@ export function mcpAuthenticateHeader(origin: string): string {
   return `Bearer realm="folderlink", resource_metadata="${metadata}"`;
 }
 
-function consentPage(name: string, query: AuthorizeQuery): string {
+function consentPage(
+  name: string,
+  query: AuthorizeQuery,
+  account: { email: string; name: string; avatarUrl: string; switchHref: string },
+): string {
   const fields: Array<[string, string]> = [
     ["client_id", query.clientId],
     ["redirect_uri", query.redirectUri],
@@ -468,6 +481,11 @@ function consentPage(name: string, query: AuthorizeQuery): string {
         `<input type="hidden" name="${escapeHtml(key)}" value="${escapeHtml(value)}">`,
     )
     .join("");
+  const domain = redirectHost(query.redirectUri);
+  const who = escapeHtml(account.email || account.name || "your account");
+  const avatar = account.avatarUrl
+    ? `<img class="avatar" alt="" src="${escapeHtml(account.avatarUrl)}">`
+    : `<span class="avatar">${escapeHtml(initials(account.name, account.email))}</span>`;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -475,11 +493,18 @@ function consentPage(name: string, query: AuthorizeQuery): string {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Allow ${escapeHtml(name)} · FolderLink</title>
   <style>
-    body { margin: 0; background: #09090b; color: #ededef; font: 15px/1.5 Inter, ui-sans-serif, system-ui, sans-serif; }
-    main { max-width: 440px; margin: 12vh auto; padding: 32px 24px; }
+    body { margin: 0; min-height: 100vh; background: #09090b; color: #ededef; font: 15px/1.5 Inter, ui-sans-serif, system-ui, sans-serif; }
+    header { height: 56px; display: flex; align-items: center; padding: 0 24px; border-bottom: 1px solid #232327; }
+    .brand { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; font-weight: 600; }
+    main { min-height: calc(100vh - 57px); display: grid; place-items: center; padding: 32px 16px; }
+    .panel { width: min(440px, 100%); border: 1px solid #232327; border-radius: 16px; background: #111113; padding: 24px; }
+    .who { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .avatar { width: 36px; height: 36px; border-radius: 50%; background: #17171a; display: grid; place-items: center; font-size: 12px; object-fit: cover; }
+    .who p { margin: 0; color: #8d8d96; font-size: 12px; }
+    .who a { margin-left: auto; color: #9a9aa3; font-size: 13px; }
     h1 { font-size: 28px; letter-spacing: -0.03em; margin: 0 0 8px; }
     p { color: #9a9aa3; }
-    .card { border: 1px solid #232327; border-radius: 12px; padding: 16px; margin: 24px 0; }
+    .scope { border: 1px solid #232327; border-radius: 12px; padding: 16px; margin: 20px 0; }
     strong { color: #ededef; }
     .row { display: flex; gap: 12px; }
     button { height: 40px; border-radius: 6px; border: 0; padding: 0 16px; font: inherit; cursor: pointer; }
@@ -488,24 +513,57 @@ function consentPage(name: string, query: AuthorizeQuery): string {
   </style>
 </head>
 <body>
+  <header>
+    <a class="brand" href="/">
+      <svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true"><path fill="#F2F4F7" d="M6 2h32a5 5 0 0 1 5 5v3a5 5 0 0 1-5 5H16v11h8a4 4 0 0 1 4 4v8a8 8 0 0 1-8 8H6a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4z"/><path fill="#22C55E" d="M36 22h18a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H26a4 4 0 0 1-4-4l10-24a5 5 0 0 1 4-5z"/></svg>
+      FolderLink
+    </a>
+  </header>
   <main>
-    <h1>Allow ${escapeHtml(name)}</h1>
-    <p>${escapeHtml(name)} wants read-only access to the folders you approve in FolderLink.</p>
-    <div class="card">
-      <div>Scope</div>
-      <strong>Read folders you approve</strong>
-      <p>It cannot change files, and it cannot see folders you have not turned on.</p>
-    </div>
-    <form method="post" action="/oauth/authorize">
-      ${hidden}
-      <div class="row">
-        <button class="deny" name="decision" value="deny" type="submit">Deny</button>
-        <button class="allow" name="decision" value="allow" type="submit">Allow</button>
+    <section class="panel">
+      <div class="who">
+        ${avatar}
+        <div>
+          <p>Signed in as</p>
+          <strong>${who}</strong>
+        </div>
+        <a href="${escapeHtml(account.switchHref)}">Not you?</a>
       </div>
-    </form>
+      <h1>Allow ${escapeHtml(name)}</h1>
+      <p>${escapeHtml(name)} at ${escapeHtml(domain)} wants read-only access to the folders you approve.</p>
+      <div class="scope">
+        <div>Scope</div>
+        <strong>Read folders you approve</strong>
+        <p>It cannot change files, and it cannot see folders you have not turned on.</p>
+      </div>
+      <form method="post" action="/oauth/authorize">
+        ${hidden}
+        <div class="row">
+          <button class="deny" name="decision" value="deny" type="submit">Deny</button>
+          <button class="allow" name="decision" value="allow" type="submit">Allow</button>
+        </div>
+      </form>
+    </section>
   </main>
 </body>
 </html>`;
+}
+
+function redirectHost(uri: string): string {
+  try {
+    return new URL(uri).host;
+  } catch {
+    return uri;
+  }
+}
+
+function initials(name: string, email: string): string {
+  const source = name.trim() || email.trim() || "?";
+  const parts = source.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase();
+  }
+  return source.slice(0, 2).toUpperCase();
 }
 
 function escapeHtml(value: string): string {

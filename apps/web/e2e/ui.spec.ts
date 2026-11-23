@@ -88,7 +88,7 @@ test.describe("visual and glitch checks", () => {
       await page.goto("/dashboard?fixture=1");
       await page.evaluate(() => document.fonts.ready);
       await expect(page.getByRole("heading", { name: "Folders" })).toBeVisible();
-      await expect(page.getByText("raffle/.env")).toBeVisible();
+      await expect(page.getByText("FolderLink does not store what an app reads.")).toBeVisible();
       await dashboardFrame(page, width);
       if (width > 800) {
         await page.evaluate(() => window.scrollTo(0, 480));
@@ -110,7 +110,7 @@ test.describe("visual and glitch checks", () => {
     await expect(page.getByText("No device yet")).toBeVisible();
     await expect(page.getByText("No folders")).toBeVisible();
     await expect(page.getByText("No connected apps")).toBeVisible();
-    await expect(page.getByText("FolderLink does not keep a read log yet.")).toBeVisible();
+    await expect(page.getByText("FolderLink does not store what an app reads.")).toBeVisible();
     await dashboardFrame(page, 1440);
     await noOverflow(page);
 
