@@ -175,6 +175,29 @@ test.describe("visual and glitch checks", () => {
     });
   }
 
+  for (const width of [1440, 390] as const) {
+    test(`docs ${width}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      const errors = await quiet(page);
+      await page.goto("/docs/getting-started");
+      await expect(page.getByRole("heading", { name: "Getting started" })).toBeVisible();
+      await expect(page.getByText(/install.ps1/)).toBeVisible();
+      await noOverflow(page);
+      expect(errors).toEqual([]);
+      await expect(page).toHaveScreenshot(`docs-${width}.png`, { fullPage: true });
+    });
+
+    test(`not found ${width}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      const errors = await quiet(page);
+      await page.goto("/missing");
+      await expect(page.getByRole("heading", { name: "That page is not here" })).toBeVisible();
+      await noOverflow(page);
+      expect(errors).toEqual([]);
+      await expect(page).toHaveScreenshot(`not-found-${width}.png`, { fullPage: true });
+    });
+  }
+
   test("footer links are on the main screens", async ({ page }) => {
     const errors = await quiet(page);
     for (const path of ["/", "/privacy"]) {

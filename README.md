@@ -56,35 +56,34 @@ Your laptop calls out. Nothing on it accepts incoming connections. The AI app ne
 | ----------------------------------- | -------------------------------------- |
 | ![Landing](docs/images/landing.png) | ![Pair a device](docs/images/pair.png) |
 
-## Quick start
+## Install
 
-Download the archive for your system from [GitHub Releases](https://github.com/mmuizahmed/mcp-bridge/releases). Each file is named `folderlink_<os>_<arch>`.
+Windows:
 
-```bash
-# macOS Apple silicon
-curl -L -o folderlink.tar.gz https://github.com/mmuizahmed/mcp-bridge/releases/latest/download/folderlink_darwin_arm64.tar.gz
-tar -xzf folderlink.tar.gz
-
-# macOS Intel
-curl -L -o folderlink.tar.gz https://github.com/mmuizahmed/mcp-bridge/releases/latest/download/folderlink_darwin_amd64.tar.gz
-
-# Linux x86_64
-curl -L -o folderlink.tar.gz https://github.com/mmuizahmed/mcp-bridge/releases/latest/download/folderlink_linux_amd64.tar.gz
-
-# Linux arm64
-curl -L -o folderlink.tar.gz https://github.com/mmuizahmed/mcp-bridge/releases/latest/download/folderlink_linux_arm64.tar.gz
-
-# Windows: download folderlink_windows_amd64.zip from the same page
+```powershell
+irm https://folderlink.muiz.pk/install.ps1 | iex
 ```
 
-Then:
+macOS and Linux:
 
 ```bash
-folderlink allow ~/projects/my-app --label my-app
-folderlink
+curl -fsSL https://folderlink.muiz.pk/install.sh | sh
 ```
 
-Open [folderlink.muiz.pk/pair](https://folderlink.muiz.pk/pair), enter the code, and turn the folder on. In ChatGPT or Claude, add a connector at `https://folderlink.muiz.pk/mcp`.
+The installer checks `checksums.txt`, puts FolderLink in your user directory, and opens the browser to connect this computer. Add a folder from the dashboard. In ChatGPT or Claude, add `https://folderlink.muiz.pk/mcp`.
+
+Archives are also on [GitHub Releases](https://github.com/mmuizahmed/mcp-bridge/releases).
+
+```mermaid
+sequenceDiagram
+  participant App as FolderLink
+  participant Site as folderlink.muiz.pk
+  participant AI as ChatGPT or Claude
+  App->>Site: Open /pair?code=...
+  Site->>Site: Google sign-in and Allow
+  AI->>Site: OAuth, read-only scope
+  AI->>App: Read a file you approved
+```
 
 ## Security
 
@@ -92,13 +91,13 @@ Open [folderlink.muiz.pk/pair](https://folderlink.muiz.pk/pair), enter the code,
 - The folder list is enforced on your laptop. The server cannot add a path.
 - `.env`, keys, and certificates are refused by default.
 - The laptop holds an Ed25519 device key. The server checks it on every connection.
-- Access tokens are short-lived. You can revoke a device from the website.
+- AI apps sign in with OAuth. You can disconnect an app or a computer from the website.
 
 Report a vulnerability through [SECURITY.md](SECURITY.md). The longer threat model is [docs/SECURITY-MODEL.md](docs/SECURITY-MODEL.md).
 
 ## Self-hosting
 
-FolderLink runs on a free Cloudflare account: one Worker, one database, and the website as static files. The steps are in [docs/SELF-HOSTING.md](docs/SELF-HOSTING.md). Point your laptop at your own server with `folderlink --server https://your-host`.
+FolderLink runs on a free Cloudflare account: one Worker, one database, and the website as static files. `pnpm setup` prints the commands. The notes are in [docs/SELF-HOSTING.md](docs/SELF-HOSTING.md).
 
 ## Development
 

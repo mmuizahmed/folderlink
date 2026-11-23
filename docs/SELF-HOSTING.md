@@ -29,6 +29,8 @@ For Google sign-in, set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The redir
 
 The production Worker serves `apps/web/dist` with Workers Static Assets. A path with no file falls back to the single-page app. The worker runs first on every request: API, MCP, device, and health routes stay in the worker, and other paths are read from the asset binding. A request whose host is `mcp.muiz.pk` is a 301 to the same path and query on `https://folderlink.muiz.pk`. The panel calls `/api` on the same origin, and the Worker allows that origin along with `WEB_ORIGIN`.
 
+`pnpm setup` prints the same commands. `pnpm setup --apply` runs them in this terminal.
+
 Build the site, apply the remote migrations, then deploy:
 
 ```bash

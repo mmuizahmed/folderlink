@@ -10,9 +10,30 @@ FolderLink has three deployable parts and one shared protocol package.
 
 **Device Durable Object.** One SQLite-backed object per device. The object's name is the device id. It accepts the bridge's WebSocket with the Hibernation API, checks the hello signature, and holds the socket while the isolate is evicted. Tool calls are RPC methods on that object: it writes a request frame and waits for the matching response.
 
-**Control panel (`apps/web`).** A Vite + React shell. Landing, pairing, and a dashboard for devices, folder approval, and a one-time agent token. It does not display filesystem paths because the API never returns them.
+**Control panel (`apps/web`).** A Vite + React shell. Landing, pairing, docs, and a dashboard for devices and folder approval. It does not display filesystem paths because the API never returns them. AI apps sign in with OAuth and never receive a token to copy.
 
 **Shared package (`packages/shared`).** Canonical JSON, message parsers, and pairing-code rules. The Go module mirrors the canonical form and is checked against the same test vectors.
+
+```mermaid
+flowchart LR
+  laptop[FolderLink on the laptop]
+  worker[Worker and Durable Object]
+  app[ChatGPT or Claude]
+  laptop -->|outbound WebSocket| worker
+  app -->|MCP over HTTPS| worker
+  worker -->|read request| laptop
+```
+
+```mermaid
+sequenceDiagram
+  participant App as FolderLink
+  participant Web as Browser
+  participant AI as ChatGPT or Claude
+  App->>Web: Open /pair?code=...
+  Web->>Web: Sign in and Allow
+  AI->>Web: OAuth consent
+  AI->>App: Read a file in an approved folder
+```
 
 ## Tool-call path
 

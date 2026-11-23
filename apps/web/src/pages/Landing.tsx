@@ -101,13 +101,13 @@ export function Landing() {
       <div className="steps" id="how">
         <article>
           <div className="kicker">01 run</div>
-          <h3>Run one file</h3>
-          <p>No installer. It runs as your user and prints a pairing code.</p>
+          <h3>Open FolderLink</h3>
+          <p>One command installs it. Opening it connects this computer in your browser.</p>
         </article>
         <article>
           <div className="kicker">02 pair</div>
-          <h3>Pair and choose folders</h3>
-          <p>Sign in with Google, enter the code, switch folders on or off.</p>
+          <h3>Approve and add a folder</h3>
+          <p>Sign in with Google, allow this computer, then pick a project from the dashboard.</p>
         </article>
         <article>
           <div className="kicker">03 connect</div>
@@ -137,6 +137,56 @@ export function Landing() {
           </p>
         </div>
       </div>
+      <section className="band" id="apps">
+        <h2>Works with the apps you already use</h2>
+        <div className="steps">
+          <article>
+            <div className="kicker">ChatGPT</div>
+            <h3>Custom connector</h3>
+            <p>Add https://folderlink.muiz.pk/mcp and allow read-only access.</p>
+          </article>
+          <article>
+            <div className="kicker">Claude</div>
+            <h3>Custom connector</h3>
+            <p>The same address. Claude asks you before the first read.</p>
+          </article>
+          <article>
+            <div className="kicker">Others</div>
+            <h3>Any MCP client</h3>
+            <p>Clients that speak MCP OAuth can connect. The scope is read-only.</p>
+          </article>
+        </div>
+      </section>
+      <section className="band" id="download">
+        <h2>Download</h2>
+        <p className="sub">The installer checks checksums.txt, then opens FolderLink.</p>
+        <div className="install-lines">
+          <pre>irm https://folderlink.muiz.pk/install.ps1 | iex</pre>
+          <pre>curl -fsSL https://folderlink.muiz.pk/install.sh | sh</pre>
+        </div>
+        <p>
+          <Link to="/docs/getting-started">Getting started</Link>
+        </p>
+      </section>
+      <section className="band" id="faq">
+        <h2>Questions</h2>
+        <div className="faq">
+          <article>
+            <h3>Does a file get uploaded ahead of time?</h3>
+            <p>No. A file leaves the laptop only when an app asks for it, and it is not stored.</p>
+          </article>
+          <article>
+            <h3>Can it change my files?</h3>
+            <p>
+              No. This version only reads, and it refuses secrets such as .env and private keys.
+            </p>
+          </article>
+          <article>
+            <h3>What do I install?</h3>
+            <p>One program for Windows, macOS, or Linux. It does not need administrator rights.</p>
+          </article>
+        </div>
+      </section>
       <SiteFooter />
     </div>
   );

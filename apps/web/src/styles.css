@@ -378,6 +378,68 @@ h1.display span {
 .audit .kicker {
   color: var(--faint);
 }
+.band {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 24px 24px 8px;
+}
+.band h2 {
+  margin: 0 0 16px;
+  font-size: 22px;
+  letter-spacing: -0.03em;
+}
+.install-lines {
+  display: grid;
+  gap: 8px;
+}
+.install-lines pre,
+.faq p,
+.docs-article p {
+  color: var(--sub);
+}
+.install-lines pre {
+  margin: 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: var(--panel);
+  font-family: var(--mono);
+  font-size: 13px;
+}
+.faq {
+  display: grid;
+  gap: 16px;
+}
+.faq h3,
+.docs-article h1 {
+  margin: 0;
+}
+.docs-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 24px;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+.docs-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.docs-nav a[aria-current="page"] {
+  color: var(--fg);
+}
+.docs-article {
+  padding: 0;
+  margin: 0;
+}
+@media (max-width: 800px) {
+  .docs-layout {
+    grid-template-columns: 1fr;
+    padding: 24px 16px;
+  }
+}
 
 .site-footer {
   display: flex;
