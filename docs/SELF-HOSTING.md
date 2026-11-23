@@ -10,9 +10,9 @@ The top of the file is for `wrangler dev`. `WEB_ORIGIN` is the Vite app on `http
 
 `[env.production]` is what `wrangler deploy --env production` ships. For this product it sets:
 
-- `WEB_ORIGIN` and `PUBLIC_BASE_URL` to `https://mcp.muiz.pk`
+- `WEB_ORIGIN` and `PUBLIC_BASE_URL` to `https://folderlink.muiz.pk`
 - `workers_dev = false`
-- a custom domain route for `mcp.muiz.pk`
+- custom domains for `folderlink.muiz.pk` and `mcp.muiz.pk`
 - D1 binding `DB`, database name `folderlink`, database id `b7fd5f9d-7bf6-456b-a37f-125c18b5deb9`
 
 A self-hosted copy creates its own database and pastes the printed id into `[[env.production.d1_databases]]`:
@@ -27,7 +27,7 @@ For Google sign-in, set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The redir
 
 ## Website and API on one host
 
-The production Worker serves `apps/web/dist` with Workers Static Assets. A path with no file falls back to the single-page app. `/api/*`, `/mcp`, `/device/*`, and `/health` run the Worker first. The panel calls `/api` on the same origin, and the Worker allows that origin along with `WEB_ORIGIN`.
+The production Worker serves `apps/web/dist` with Workers Static Assets. A path with no file falls back to the single-page app. The worker runs first on every request: API, MCP, device, and health routes stay in the worker, and other paths are read from the asset binding. A request whose host is `mcp.muiz.pk` is a 301 to the same path and query on `https://folderlink.muiz.pk`. The panel calls `/api` on the same origin, and the Worker allows that origin along with `WEB_ORIGIN`.
 
 Build the site, apply the remote migrations, then deploy:
 

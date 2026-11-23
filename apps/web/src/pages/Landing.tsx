@@ -69,9 +69,10 @@ export function Landing() {
             <span className="faint">ed25519 · 9F3A…C21E</span>
             {"\n"}
             <span className="go">✓</span> connected{"             "}
-            <span className="faint">mcp.muiz.pk · 38 ms</span>
+            <span className="faint">folderlink.muiz.pk · 38 ms</span>
             {"\n\n"}
-            {"  "}Pair this laptop at <span className="linkish">mcp.muiz.pk/pair</span> with code
+            {"  "}Pair this laptop at <span className="linkish">folderlink.muiz.pk/pair</span> with
+            code
             {"  "}
             <span className="code-pill">K7QM-2XPA</span>
             {"\n\n"}
@@ -104,7 +105,7 @@ export function Landing() {
           <div className="kicker">03 connect</div>
           <h3>Add to ChatGPT or Claude</h3>
           <p>
-            Point the connector at <span className="fg mono">mcp.muiz.pk/mcp</span>. Done.
+            Point the connector at <span className="fg mono">folderlink.muiz.pk/mcp</span>. Done.
           </p>
         </article>
       </div>

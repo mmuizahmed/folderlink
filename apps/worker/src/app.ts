@@ -41,6 +41,7 @@ import {
   json,
   localDevEnabled,
   readCookie,
+  redirectLegacyHost,
   sessionCookie,
 } from "./http.ts";
 import { handleMcpMessage } from "./mcp/jsonrpc.ts";
@@ -55,6 +56,10 @@ type AuthOk = {
 type AuthNo = { ok: false; response: Response };
 
 export async function handleRequest(request: Request, env: Env): Promise<Response> {
+  const redirected = redirectLegacyHost(request);
+  if (redirected) {
+    return redirected;
+  }
   if (request.method === "OPTIONS") {
     return applyCors(request, new Response(null, { status: 204 }), env);
   }
@@ -143,7 +148,20 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
   if (url.pathname === "/api/tokens" && request.method === "POST") {
     return createToken(request, env);
   }
+  if (env.ASSETS && !workerRoute(url.pathname)) {
+    return env.ASSETS.fetch(request);
+  }
   return error(404, "not_found", "Not found.");
+}
+
+function workerRoute(pathname: string): boolean {
+  return (
+    pathname === "/health" ||
+    pathname === "/mcp" ||
+    pathname.startsWith("/mcp/") ||
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/device/")
+  );
 }
 
 async function mcp(request: Request, env: Env): Promise<Response> {

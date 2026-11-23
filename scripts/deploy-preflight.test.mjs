@@ -8,14 +8,14 @@ const PRODUCTION_ID = "b7fd5f9d-7bf6-456b-a37f-125c18b5deb9";
 describe("production deploy preflight", () => {
   it("accepts the committed production host, database, and asset config", () => {
     expect(current).toContain(`database_id = "${PRODUCTION_ID}"`);
-    expect(current).toContain('WEB_ORIGIN = "https://mcp.muiz.pk"');
-    expect(current).toContain('PUBLIC_BASE_URL = "https://mcp.muiz.pk"');
+    expect(current).toContain('WEB_ORIGIN = "https://folderlink.muiz.pk"');
+    expect(current).toContain('PUBLIC_BASE_URL = "https://folderlink.muiz.pk"');
+    expect(current).toContain('pattern = "folderlink.muiz.pk"');
     expect(current).toContain('pattern = "mcp.muiz.pk"');
     expect(current).toContain("workers_dev = false");
+    expect(current).toContain("run_worker_first = true");
     expect(current).toContain('directory = "../web/dist"');
     expect(current).toContain('not_found_handling = "single-page-application"');
-    expect(current).toContain('"/api/*"');
-    expect(current).toContain('"/mcp"');
     expect(productionProblems(current)).toEqual([]);
   });
 
@@ -26,7 +26,7 @@ describe("production deploy preflight", () => {
 
   it("rejects localhost origins and DEV_AUTH in production", () => {
     const toml = current.replace(
-      'WEB_ORIGIN = "https://mcp.muiz.pk"\nPUBLIC_BASE_URL = "https://mcp.muiz.pk"',
+      'WEB_ORIGIN = "https://folderlink.muiz.pk"\nPUBLIC_BASE_URL = "https://folderlink.muiz.pk"',
       'WEB_ORIGIN = "http://localhost:5173"\nPUBLIC_BASE_URL = "http://127.0.0.1:8787"\nDEV_AUTH = "true"',
     );
     const problems = productionProblems(toml).join("\n");

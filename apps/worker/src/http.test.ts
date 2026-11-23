@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyCors, localDevEnabled } from "./http.ts";
+import { applyCors, localDevEnabled, redirectLegacyHost } from "./http.ts";
 import type { Env } from "./env.ts";
 
 function request(url: string, host: string): Request {
@@ -14,7 +14,10 @@ describe("localDevEnabled", () => {
       localDevEnabled(request("http://127.0.0.1:8787/api/dev/session", "127.0.0.1:8787"), env),
     ).toBe(true);
     expect(
-      localDevEnabled(request("https://mcp.muiz.pk/api/dev/session", "mcp.muiz.pk"), env),
+      localDevEnabled(
+        request("https://folderlink.muiz.pk/api/dev/session", "folderlink.muiz.pk"),
+        env,
+      ),
     ).toBe(false);
     expect(
       localDevEnabled(request("http://127.0.0.1:8787/api/dev/session", "127.0.0.1:8787"), {
@@ -24,15 +27,40 @@ describe("localDevEnabled", () => {
   });
 });
 
+describe("redirectLegacyHost", () => {
+  it("sends the old host to the same path and query", () => {
+    const response = redirectLegacyHost(new Request("https://mcp.muiz.pk/pair?code=K7QM-2XPA"));
+    expect(response?.status).toBe(301);
+    expect(response?.headers.get("location")).toBe(
+      "https://folderlink.muiz.pk/pair?code=K7QM-2XPA",
+    );
+  });
+
+  it("keeps a tricky path on the new host", () => {
+    const response = redirectLegacyHost(new Request("https://MCP.MUIZ.PK//evil.example/a?x=1"));
+    expect(response?.headers.get("location")).toBe(
+      "https://folderlink.muiz.pk//evil.example/a?x=1",
+    );
+    const location = response?.headers.get("location") ?? "";
+    expect(new URL(location).hostname).toBe("folderlink.muiz.pk");
+  });
+
+  it("leaves the current host alone", () => {
+    expect(redirectLegacyHost(new Request("https://folderlink.muiz.pk/api/health"))).toBeNull();
+  });
+});
+
 describe("applyCors", () => {
   it("allows the configured site and a same-origin call", () => {
-    const env = { WEB_ORIGIN: "https://mcp.muiz.pk" } as Env;
+    const env = { WEB_ORIGIN: "https://folderlink.muiz.pk" } as Env;
     const site = applyCors(
-      new Request("https://mcp.muiz.pk/api/me", { headers: { origin: "https://mcp.muiz.pk" } }),
+      new Request("https://folderlink.muiz.pk/api/me", {
+        headers: { origin: "https://folderlink.muiz.pk" },
+      }),
       new Response("ok"),
       env,
     );
-    expect(site.headers.get("access-control-allow-origin")).toBe("https://mcp.muiz.pk");
+    expect(site.headers.get("access-control-allow-origin")).toBe("https://folderlink.muiz.pk");
     expect(site.headers.get("access-control-allow-credentials")).toBe("true");
 
     const preview = applyCors(
@@ -47,9 +75,11 @@ describe("applyCors", () => {
 
   it("does not allow a different site", () => {
     const response = applyCors(
-      new Request("https://mcp.muiz.pk/api/me", { headers: { origin: "https://evil.example" } }),
+      new Request("https://folderlink.muiz.pk/api/me", {
+        headers: { origin: "https://evil.example" },
+      }),
       new Response("ok"),
-      { WEB_ORIGIN: "https://mcp.muiz.pk" } as Env,
+      { WEB_ORIGIN: "https://folderlink.muiz.pk" } as Env,
     );
     expect(response.headers.get("access-control-allow-origin")).toBeNull();
   });
