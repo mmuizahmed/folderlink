@@ -1,7 +1,13 @@
 import type { ToolResult } from "@mcp-bridge/shared";
 
 export interface InvokeRequest {
-  op: "list_files" | "read_file" | "pick_folder" | "rename_folder" | "remove_folder" | "rename_device";
+  op:
+    | "list_files"
+    | "read_file"
+    | "pick_folder"
+    | "rename_folder"
+    | "remove_folder"
+    | "rename_device";
   folderId?: string;
   path?: string;
   label?: string;

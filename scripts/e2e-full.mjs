@@ -402,10 +402,10 @@ async function main() {
   );
   const alpha = startBridge(alphaHome);
   const beta = startBridge(betaHome);
-  await waitFor(() => /Pairing code:/.test(alpha.text()), "alpha code");
-  await waitFor(() => /Pairing code:/.test(beta.text()), "beta code");
-  const alphaCode = alpha.text().match(/Pairing code: (\S+)/)[1];
-  const betaCode = beta.text().match(/Pairing code: (\S+)/)[1];
+  await waitFor(() => /pair\?code=/.test(alpha.text()), "alpha code");
+  await waitFor(() => /pair\?code=/.test(beta.text()), "beta code");
+  const alphaCode = decodeURIComponent(alpha.text().match(/pair\?code=([^\s]+)/)[1]);
+  const betaCode = decodeURIComponent(beta.text().match(/pair\?code=([^\s]+)/)[1]);
   const userA = await session("a@localhost");
   const userB = await session("b@localhost");
   const pairedA = await complete(userA.token, alphaCode);
