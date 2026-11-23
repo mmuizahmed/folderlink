@@ -5,8 +5,7 @@
     <img alt="FolderLink" src="docs/brand/logo-lockup.svg" height="64">
   </picture>
   <p><strong>Your folders. Your AI.</strong></p>
-  <p>Let ChatGPT, Claude and other AI apps read the project folders you choose, straight from your laptop. Read-only, logged, and revocable in one click.</p>
-  <p><a href="https://mcp.muiz.pk"><strong>mcp.muiz.pk</strong></a></p>
+  <p>Let ChatGPT, Claude and other AI apps read the project folders you choose, right from their website. No uploads, no copy-paste. Read-only, logged, and revocable in one click.</p>
   <p>
     <a href="https://github.com/mmuizahmed/mcp-bridge/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/mmuizahmed/mcp-bridge/actions/workflows/ci.yml/badge.svg"></a>
     <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-22c55e"></a>
