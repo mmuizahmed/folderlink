@@ -1,0 +1,46 @@
+version: 2
+
+project_name: folderlink
+
+builds:
+  - id: bridge
+    dir: apps/bridge
+    main: ./cmd/bridge
+    binary: folderlink
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+release:
+  # Beta tags must still be the latest release so /releases/latest/download works.
+  prerelease: false
+  draft: false
+  make_latest: true
+
+# Checksum signing is not configured. Cosign needs a key that this
+# repository does not have, and the free GoReleaser build cannot skip a
+# signs block with an if condition.
+
+changelog:
+  disable: true

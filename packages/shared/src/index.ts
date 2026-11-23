@@ -1,0 +1,37 @@
+export {
+  PROTOCOL_VERSION,
+  SUPPORTED_MCP_PROTOCOL_VERSIONS,
+  MESSAGE_TYPES,
+  type MessageType,
+  type FolderClaim,
+  type HelloPayload,
+  type PairBeginPayload,
+  type PairStatusPayload,
+  type HelloAckPayload,
+  type ErrorBody,
+  type ListFilesParams,
+  type ReadFileParams,
+  type ToolParams,
+  type FileEntry,
+  type ListFilesResult,
+  type ReadFileResult,
+  type ToolSuccess,
+  type ToolFailure,
+  type ToolResult,
+  type Envelope,
+  isRecord,
+  isUuid,
+  isFolderLabel,
+  parseHelloPayload,
+  parsePairBeginPayload,
+  parsePairStatusPayload,
+  parseEnvelope,
+} from "./protocol.ts";
+
+export { canonicalJSON } from "./canonical.ts";
+export {
+  PAIRING_ALPHABET,
+  PAIRING_CODE_LENGTH,
+  normalizePairingCode,
+  formatPairingCode,
+} from "./pairing.ts";

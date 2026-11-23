@@ -1,0 +1,32 @@
+[
+  {
+    "name": "sorted keys",
+    "value": { "b": 1, "a": "x" },
+    "canonical": "{\"a\":\"x\",\"b\":1}"
+  },
+  {
+    "name": "nested",
+    "value": { "z": { "b": true, "a": null }, "a": [1, 2] },
+    "canonical": "{\"a\":[1,2],\"z\":{\"a\":null,\"b\":true}}"
+  },
+  {
+    "name": "escapes",
+    "value": { "s": "a\"b\\c" },
+    "canonical": "{\"s\":\"a\\\"b\\\\c\"}"
+  },
+  {
+    "name": "ampersand and slash stay literal",
+    "value": { "s": "a&b/c" },
+    "canonical": "{\"s\":\"a&b/c\"}"
+  },
+  {
+    "name": "unicode is not escaped",
+    "value": { "s": "é" },
+    "canonical": "{\"s\":\"é\"}"
+  },
+  {
+    "name": "empty containers",
+    "value": { "a": [], "b": {} },
+    "canonical": "{\"a\":[],\"b\":{}}"
+  }
+]

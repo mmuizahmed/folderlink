@@ -1,0 +1,57 @@
+name = "folderlink"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+# Local `wrangler dev` uses the top of this file.
+# Production is `wrangler deploy --env production`.
+
+[vars]
+WEB_ORIGIN = "http://localhost:5173"
+PUBLIC_BASE_URL = "http://127.0.0.1:8787"
+TOKEN_TTL_SECONDS = "2700"
+
+[[durable_objects.bindings]]
+name = "DEVICE"
+class_name = "DeviceAgent"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["DeviceAgent"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "folderlink"
+# Local only. `wrangler dev` does not read [env.production].
+database_id = "00000000-0000-0000-0000-000000000001"
+migrations_dir = "migrations"
+
+[env.production]
+name = "folderlink"
+workers_dev = false
+routes = [{ pattern = "mcp.muiz.pk", custom_domain = true }]
+
+[env.production.vars]
+WEB_ORIGIN = "https://mcp.muiz.pk"
+PUBLIC_BASE_URL = "https://mcp.muiz.pk"
+TOKEN_TTL_SECONDS = "2700"
+
+[env.production.assets]
+directory = "../web/dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*", "/mcp", "/mcp/*", "/device/*", "/health"]
+
+[[env.production.durable_objects.bindings]]
+name = "DEVICE"
+class_name = "DeviceAgent"
+
+[[env.production.migrations]]
+tag = "v1"
+new_sqlite_classes = ["DeviceAgent"]
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "folderlink"
+database_id = "b7fd5f9d-7bf6-456b-a37f-125c18b5deb9"
+migrations_dir = "migrations"

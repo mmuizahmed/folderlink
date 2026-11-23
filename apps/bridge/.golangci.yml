@@ -1,0 +1,26 @@
+run:
+  timeout: 5m
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gosec
+    - misspell
+
+issues:
+  exclude-rules:
+    # The guard package opens paths the user explicitly allowlisted.
+    # Containment is checked before and after the open.
+    - path: internal/guard/
+      linters:
+        - gosec
+      text: "G304|G703"
+
+linters-settings:
+  misspell:
+    locale: US
