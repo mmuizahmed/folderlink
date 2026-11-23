@@ -1,29 +1,47 @@
 # Self-hosting FolderLink
 
-FolderLink fits a free Cloudflare account: one Worker, SQLite Durable Objects, and one D1 database. The website is static files on any host.
+FolderLink fits a free Cloudflare account: one Worker, SQLite Durable Objects, and one D1 database. That Worker also serves the website.
 
-## Worker
+## Production config
 
-1. Create a D1 database named `folderlink` and put its id in `apps/worker/wrangler.toml`.
-2. Set `WEB_ORIGIN` to the website origin and `PUBLIC_BASE_URL` to the Worker origin.
-3. Leave `DEV_AUTH` unset. That switch is only for localhost.
-4. For Google sign-in, set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The redirect URI is `{PUBLIC_BASE_URL}/api/auth/google/callback`.
-5. Apply the migrations and deploy:
+`apps/worker/wrangler.toml` has two configs.
+
+The top of the file is for `wrangler dev`. `WEB_ORIGIN` is the Vite app on `http://localhost:5173`, and `database_id` is a local placeholder.
+
+`[env.production]` is what `wrangler deploy --env production` ships. For this product it sets:
+
+- `WEB_ORIGIN` and `PUBLIC_BASE_URL` to `https://mcp.muiz.pk`
+- `workers_dev = false`
+- a custom domain route for `mcp.muiz.pk`
+- D1 binding `DB`, database name `folderlink`, database id `b7fd5f9d-7bf6-456b-a37f-125c18b5deb9`
+
+A self-hosted copy creates its own database and pastes the printed id into `[[env.production.d1_databases]]`:
 
 ```bash
-pnpm --filter @mcp-bridge/worker exec wrangler d1 migrations apply folderlink --remote
-pnpm --filter @mcp-bridge/worker exec wrangler deploy
+pnpm --filter @mcp-bridge/worker exec wrangler d1 create folderlink
 ```
 
-The same deploy is the manual workflow in `.github/workflows/deploy.yml`.
+Leave `DEV_AUTH` unset. That switch is only for localhost. `node scripts/deploy-preflight.mjs` rejects a production config that still has the placeholder database id `00000000-0000-0000-0000-000000000001`, a `WEB_ORIGIN` or `PUBLIC_BASE_URL` on localhost or `127.0.0.1`, or `DEV_AUTH`.
 
-## Website
+For Google sign-in, set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The redirect URI is `{PUBLIC_BASE_URL}/api/auth/google/callback`.
+
+## Website and API on one host
+
+The production Worker serves `apps/web/dist` with Workers Static Assets. A path with no file falls back to the single-page app. `/api/*`, `/mcp`, `/device/*`, and `/health` run the Worker first. The panel calls `/api` on the same origin, and the Worker allows that origin along with `WEB_ORIGIN`.
+
+Build the site, apply the remote migrations, then deploy:
 
 ```bash
 pnpm --filter @mcp-bridge/web build
+pnpm --filter @mcp-bridge/worker exec wrangler d1 migrations apply folderlink --env production --remote
+pnpm --filter @mcp-bridge/worker exec wrangler deploy --env production
 ```
 
-Host `apps/web/dist` on a static host whose origin matches `WEB_ORIGIN`. The Worker does not serve the website.
+## Manual deploy
+
+`.github/workflows/deploy.yml` starts only from `workflow_dispatch`. The job runs in the `production` environment, with a 15 minute limit, and only when the ref is `refs/heads/main` in `mmuizahmed/mcp-bridge`. Deploys share the `deploy-production` concurrency group, and a deploy that is already running is left to finish. Add a required reviewer on the `production` environment before the first run.
+
+The job checks the Wrangler config, builds the website, runs `wrangler whoami` and `wrangler d1 list`, applies migrations, then deploys. Put `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` on the `production` environment.
 
 ## Laptop
 

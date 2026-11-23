@@ -10,7 +10,7 @@ The audience is about 10–15 students. A paid always-on VM is the wrong default
 
 ## Decision
 
-One Worker, one SQLite-backed Durable Object per device using the WebSocket Hibernation API, and D1 for users, devices, sessions, and tokens. Workers KV is not used for tokens: the free plan allows 1,000 KV writes per day. Static hosting for the panel can be Pages or any static host; phase 1 builds a Vite app and does not bundle it into the Worker.
+One Worker, one SQLite-backed Durable Object per device using the WebSocket Hibernation API, and D1 for users, devices, sessions, and tokens. Workers KV is not used for tokens: the free plan allows 1,000 KV writes per day. The production Worker serves the Vite build from `apps/web/dist` on the same host as the API.
 
 ## Consequences
 
