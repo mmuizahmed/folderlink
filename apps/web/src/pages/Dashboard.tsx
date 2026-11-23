@@ -13,7 +13,7 @@ import {
   Mark,
 } from "../components/Icons.tsx";
 import { initials, screenMode } from "../data/mode.ts";
-import type { ActivityView, AppView, DashboardData, FolderView, ViewState } from "../data/types.ts";
+import type { AppView, DashboardData, FolderView, ViewState } from "../data/types.ts";
 
 type Section = "overview" | "devices" | "folders" | "apps" | "activity" | "settings";
 
@@ -364,7 +364,7 @@ export function Dashboard() {
             />
           ) : null}
           {ready && section === "apps" ? <AppList apps={ready.apps} onRevoke={revokeApp} /> : null}
-          {ready && section === "activity" ? <ActivityList rows={ready.activity} /> : null}
+          {ready && section === "activity" ? <ActivityList /> : null}
           {ready && section === "settings" ? (
             <section>
               <h2>Settings</h2>
@@ -433,7 +433,7 @@ function Overview({
           />
           <AppList apps={data.apps} onRevoke={onRevoke} />
         </div>
-        <ActivityList rows={data.activity} live={Boolean(device?.online)} />
+        <ActivityList />
       </div>
     </>
   );
@@ -548,8 +548,8 @@ function DeviceCard({
             </span>
           </div>
           <div className="device-sub path">
-            {device.os || "unknown"} · {device.arch || "unknown"} · folderlink {device.version} ·{" "}
-            {device.fingerprint}
+            {device.os || "unknown"} · {device.arch || "unknown"}
+            {device.version ? ` · FolderLink ${device.version}` : ""}
           </div>
         </div>
         <div className="stat-actions">
@@ -574,30 +574,27 @@ function DeviceCard({
           </button>
         </div>
       </div>
-      <div className="stats">
-        <Stat label="uptime" value={device.uptimeLabel} />
-        <Stat label="latency" value={device.latencyLabel} />
-        <Stat
-          label="reads today"
-          value={device.readsToday === null ? "—" : String(device.readsToday)}
-        />
-        <Stat
-          label="blocked"
-          value={device.blocked === null ? "—" : String(device.blocked)}
-          bad={Boolean(device.blocked)}
-        />
-      </div>
+      <dl className="facts">
+        <dt>Last seen</dt>
+        <dd>{device.online ? "Online now" : when(device.lastSeenAt)}</dd>
+        <dt>Connected since</dt>
+        <dd>{when(device.pairedAt)}</dd>
+      </dl>
     </section>
   );
 }
 
-function Stat({ label, value, bad }: { label: string; value: string; bad?: boolean }) {
-  return (
-    <div>
-      <div className="label">{label}</div>
-      <div className={bad ? "value bad" : "value"}>{value}</div>
-    </div>
-  );
+function when(value: string | null): string {
+  if (!value) return "Not yet";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not yet";
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+  });
 }
 
 function DeviceList({
@@ -753,31 +750,17 @@ function AppList({ apps, onRevoke }: { apps: AppView[]; onRevoke: (id: string) =
   );
 }
 
-function ActivityList({ rows, live = false }: { rows: ActivityView[]; live?: boolean }) {
+function ActivityList() {
   return (
     <section>
       <div className="section-head">
         <h2>Activity</h2>
-        {live ? (
-          <span className="live">
-            <span className="dot" />
-            live
-          </span>
-        ) : null}
       </div>
       <div className="list edge">
-        {rows.length === 0 ? (
-          <Empty title="No activity yet" body="FolderLink does not keep a read log yet." />
-        ) : null}
-        {rows.map((row) => (
-          <div className={row.denied ? "log-row deny" : "log-row"} key={row.id}>
-            <span className="faint">{row.time}</span>
-            <span className={row.denied ? "bad" : undefined}>{row.action}</span>
-            <span title={row.target}>
-              {row.target} {row.detail ? <span className="faint">{row.detail}</span> : null}
-            </span>
-          </div>
-        ))}
+        <Empty
+          title="No read log"
+          body="FolderLink does not store what an app reads. A refusal happens on your computer, and the file stays there."
+        />
       </div>
     </section>
   );
@@ -802,12 +785,9 @@ function toDevice(device: Device): DashboardData["devices"][number] {
     arch: device.arch,
     fingerprint: device.fingerprint,
     network: device.network,
-    version: "v0.1.0",
+    version: device.version,
     lastSeenAt: device.lastSeenAt,
-    uptimeLabel: "—",
-    latencyLabel: "—",
-    readsToday: null,
-    blocked: null,
+    pairedAt: device.pairedAt,
   };
 }
 

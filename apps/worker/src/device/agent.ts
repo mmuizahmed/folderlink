@@ -1,7 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { parseEnvelope, parseHelloPayload, type ToolResult } from "@mcp-bridge/shared";
 import { freshTimestamp, verifySignature } from "../crypto.ts";
-import { syncFolders, touchDevice, type DeviceRecord } from "../db.ts";
+import { setDeviceVersion, syncFolders, touchDevice, type DeviceRecord } from "../db.ts";
 import type { Env } from "../env.ts";
 import type { InvokeRequest } from "./control.ts";
 
@@ -190,6 +190,9 @@ export class DeviceAgent extends DurableObject<Env> {
     }
     const next: Attachment = { deviceId: device.id, authenticated: true, userId: device.user_id };
     ws.serializeAttachment(next);
+    if (hello.version) {
+      await setDeviceVersion(this.env.DB, device.id, hello.version);
+    }
     await this.touch(device.id);
     ws.send(
       JSON.stringify({

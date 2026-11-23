@@ -90,12 +90,15 @@ describe("MCP OAuth", () => {
     const page = await authorizeGet(
       new Request(`https://folderlink.muiz.pk/oauth/authorize?${query}`),
       store,
-      { id: "user-1" },
+      { id: "user-1", email: "muiz@example.com", name: "Muiz Ahmed" },
       origin,
     );
     expect(page.status).toBe(200);
     const html = await page.text();
     expect(html).toContain("Allow ChatGPT");
+    expect(html).toContain("chatgpt.com");
+    expect(html).toContain("muiz@example.com");
+    expect(html).toContain("Not you?");
     expect(html).toContain("Read folders you approve");
     const denied = await authorizePost(
       new Request("https://folderlink.muiz.pk/oauth/authorize", {

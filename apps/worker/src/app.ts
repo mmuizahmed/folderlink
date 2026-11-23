@@ -565,9 +565,11 @@ async function devices(request: Request, env: Env): Promise<Response> {
       name: device.name,
       status: device.status,
       lastSeenAt: device.last_seen_at,
+      pairedAt: device.paired_at,
       online: device.last_seen_at ? Date.parse(device.last_seen_at) > cutoff : false,
       os: device.os ?? "",
       arch: device.arch ?? "",
+      version: device.client_version ?? "",
       fingerprint: fingerprint(device.public_key),
       network: networkLabel(device.client_ip ?? "", device.client_region ?? ""),
     })),
@@ -752,7 +754,7 @@ async function removeFolderRow(request: Request, env: Env, folderId: string): Pr
 async function sessionUser(
   request: Request,
   env: Env,
-): Promise<{ id: string; email: string; name: string } | null> {
+): Promise<{ id: string; email: string; name: string; avatarUrl?: string } | null> {
   const auth = await authenticate(request, env, "either");
   if (!auth.ok || auth.via !== "session") {
     return null;
