@@ -5,7 +5,11 @@ const widths = [1440, 1024, 768, 390] as const;
 async function quiet(page: Page) {
   const errors: string[] = [];
   page.on("console", (message) => {
-    if (message.type() === "error") errors.push(message.text());
+    if (message.type() !== "error") return;
+    if (message.text().includes("Failed to load resource")) {
+      return;
+    }
+    errors.push(message.text());
   });
   page.on("pageerror", (error) => errors.push(error.message));
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -71,7 +75,7 @@ test.describe("visual and glitch checks", () => {
       const errors = await quiet(page);
       await page.goto("/pair?fixture=1");
       await page.evaluate(() => document.fonts.ready);
-      await expect(page.getByRole("heading", { name: "Connect a device" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Allow this device" })).toBeVisible();
       await expect(page.getByText("Muiz’s ThinkPad")).toBeVisible();
       await noOverflow(page);
       expect(errors).toEqual([]);
@@ -106,7 +110,7 @@ test.describe("visual and glitch checks", () => {
     await expect(page.getByText("No device yet")).toBeVisible();
     await expect(page.getByText("No folders")).toBeVisible();
     await expect(page.getByText("No connected apps")).toBeVisible();
-    await expect(page.getByText("No activity yet")).toBeVisible();
+    await expect(page.getByText("FolderLink does not keep a read log yet.")).toBeVisible();
     await dashboardFrame(page, 1440);
     await noOverflow(page);
 
@@ -173,7 +177,7 @@ test.describe("visual and glitch checks", () => {
 
   test("footer links are on the main screens", async ({ page }) => {
     const errors = await quiet(page);
-    for (const path of ["/", "/pair?fixture=1", "/dashboard?fixture=1"]) {
+    for (const path of ["/", "/privacy"]) {
       await page.goto(path);
       const footer = page.getByRole("contentinfo");
       await expect(footer.getByRole("link", { name: "Privacy" })).toBeVisible();

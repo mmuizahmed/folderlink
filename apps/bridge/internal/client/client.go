@@ -18,6 +18,7 @@ import (
 
 	"github.com/coder/websocket"
 
+	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/browser"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/config"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/identity"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/pair"
@@ -182,8 +183,15 @@ func ensurePaired(ctx context.Context, cfg Config) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(cfg.Stdout, "Pairing code: %s\n", begun.Code)
-		fmt.Fprintf(cfg.Stdout, "Open %s/connect and enter the code.\n", strings.TrimRight(cfg.Web, "/"))
+		link, linkErr := browser.PairPage(cfg.Web, begun.Code)
+		if linkErr != nil {
+			fmt.Fprintf(cfg.Stdout, "Pairing code: %s\n", begun.Code)
+		} else {
+			fmt.Fprintf(cfg.Stdout, "Opening %s to connect this computer.\n", link)
+			if err := browser.Open(link); err != nil {
+				fmt.Fprintln(cfg.Stdout, "If the browser did not open, paste that address yourself.")
+			}
+		}
 		active, err := waitActive(ctx, cfg, begun.ExpiresAt.Add(-5*time.Second))
 		if err != nil {
 			return err

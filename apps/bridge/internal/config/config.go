@@ -150,6 +150,74 @@ func (s *Store) Allow(path, label string) (Folder, error) {
 	return folder, nil
 }
 
+// Rename changes the label of a folder. The path stays on this computer.
+func (s *Store) Rename(id, label string) error {
+	if !labelPattern.MatchString(label) {
+		return fmt.Errorf("label must be 1-41 letters, numbers, dots, underscores, or hyphens")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	cfg, err := s.load()
+	if err != nil {
+		return err
+	}
+	found := false
+	for i := range cfg.Folders {
+		if cfg.Folders[i].ID == id {
+			cfg.Folders[i].Label = label
+			found = true
+			continue
+		}
+		if strings.EqualFold(cfg.Folders[i].Label, label) {
+			return fmt.Errorf("a folder named %s is already allowed", label)
+		}
+	}
+	if !found {
+		return fmt.Errorf("that folder is not on this computer")
+	}
+	return s.save(cfg)
+}
+
+// Remove deletes a folder by id.
+func (s *Store) Remove(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	cfg, err := s.load()
+	if err != nil {
+		return err
+	}
+	next := cfg.Folders[:0]
+	found := false
+	for _, folder := range cfg.Folders {
+		if folder.ID == id {
+			found = true
+			continue
+		}
+		next = append(next, folder)
+	}
+	if !found {
+		return fmt.Errorf("that folder is not on this computer")
+	}
+	cfg.Folders = next
+	return s.save(cfg)
+}
+
+// SetName stores the name shown for this computer.
+func (s *Store) SetName(name string) error {
+	name = strings.TrimSpace(name)
+	if name == "" || len(name) > 60 {
+		return fmt.Errorf("name must be 1 to 60 characters")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	cfg, err := s.load()
+	if err != nil {
+		return err
+	}
+	cfg.Name = name
+	return s.save(cfg)
+}
+
 // Unallow removes a folder by label.
 func (s *Store) Unallow(label string) error {
 	s.mu.Lock()

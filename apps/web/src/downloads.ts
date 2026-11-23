@@ -1,0 +1,21 @@
+const RELEASE = "https://github.com/mmuizahmed/mcp-bridge/releases/latest/download";
+
+export function downloadForThisComputer(): { label: string; href: string } {
+  const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
+  const platform = typeof navigator === "undefined" ? "" : navigator.platform;
+  if (/Mac|iPhone|iPad/.test(platform) || /Mac OS/.test(ua)) {
+    const appleSilicon = /arm|aarch64/i.test(ua);
+    return {
+      label: appleSilicon ? "Download for Mac (Apple silicon)" : "Download for Mac",
+      href: `${RELEASE}/folderlink_darwin_${appleSilicon ? "arm64" : "amd64"}.tar.gz`,
+    };
+  }
+  if (/Win/.test(platform) || /Windows/.test(ua)) {
+    return { label: "Download for Windows", href: `${RELEASE}/folderlink_windows_amd64.zip` };
+  }
+  const arm = /aarch64|arm64/i.test(ua);
+  return {
+    label: arm ? "Download for Linux (arm64)" : "Download for Linux",
+    href: `${RELEASE}/folderlink_linux_${arm ? "arm64" : "amd64"}.tar.gz`,
+  };
+}

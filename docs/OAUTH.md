@@ -1,8 +1,6 @@
 # MCP OAuth 2.1
 
-Phase 1 authenticates agents with an opaque bearer token minted from the panel (`POST /api/tokens`). The token is stored as SHA-256 in `access_tokens` and expires in 45 minutes. That is enough for a local client and for MCP Inspector.
-
-The intended production flow is OAuth 2.1 for MCP. The HTTP surface is not mounted. The storage behavior we will not want to redesign later is already in the worker.
+ChatGPT and Claude sign in with OAuth 2.1. Access tokens stay opaque, hashed at rest, and last 45 minutes. The panel does not mint them. A migration clears tokens that were created before this flow.
 
 ## Endpoints to add
 
@@ -31,6 +29,6 @@ Refresh tokens rotate on every use. `rotateRefreshToken` in `apps/worker/src/aut
 
 Authorization codes, once they exist, should be single use, bound to the client, the redirect URI, and the user, and should expire in a few minutes. They are not in the schema yet because the routes that would write them do not exist.
 
-## What is deliberately absent
+## What is mounted
 
-The worker does not advertise OAuth metadata while the endpoints 404. Clients that only have a bearer token, which is the phase 1 contract, should not be sent into a flow that cannot finish.
+`GET /mcp` without a bearer token answers 401 and points `WWW-Authenticate` at the protected-resource metadata. Registration is public clients only. The consent screen reuses the Google panel session. Grants show on the dashboard as AI apps and can be revoked.

@@ -15,12 +15,16 @@ import (
 
 	"github.com/coder/websocket"
 
+	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/browser"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/config"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/identity"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/protocol"
 )
 
 func TestRunAnswersReadAndRejectsEscape(t *testing.T) {
+	browserOpen := browser.Open
+	browser.Open = func(string) error { return nil }
+	t.Cleanup(func() { browser.Open = browserOpen })
 	home := t.TempDir()
 	project := t.TempDir()
 	if err := os.WriteFile(project+"/hello.txt", []byte("hello from the bridge"), 0o600); err != nil {

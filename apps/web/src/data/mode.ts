@@ -1,4 +1,14 @@
-export type ScreenMode = "live" | "fixture" | "empty" | "error" | "loading" | "offline" | "long";
+export type ScreenMode =
+  | "live"
+  | "fixture"
+  | "empty"
+  | "error"
+  | "loading"
+  | "offline"
+  | "long"
+  | "signed-out"
+  | "code"
+  | "signed-in";
 
 export function screenMode(
   search = typeof location === "undefined" ? "" : location.search,
@@ -12,6 +22,15 @@ export function screenMode(
     value === "long"
   ) {
     return value;
+  }
+  if (value === "out") {
+    return "signed-out";
+  }
+  if (value === "code") {
+    return "code";
+  }
+  if (value === "in") {
+    return "signed-in";
   }
   if (value === "1") {
     return "fixture";
