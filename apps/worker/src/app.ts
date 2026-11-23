@@ -87,6 +87,9 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
   if (url.pathname === "/health") {
     return json({ ok: true, version: "0.1.0" });
   }
+  if (url.pathname === "/api/health" && request.method === "GET") {
+    return json({ ok: true });
+  }
   if (url.pathname === "/mcp") {
     return mcp(request, env);
   }
