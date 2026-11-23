@@ -1,4 +1,4 @@
-name = "mcp-bridge"
+name = "folderlink"
 main = "src/index.ts"
 compatibility_date = "2026-11-01"
 
@@ -20,6 +20,6 @@ new_sqlite_classes = ["DeviceAgent"]
 
 [[d1_databases]]
 binding = "DB"
-database_name = "mcp-bridge"
+database_name = "folderlink"
 database_id = "00000000-0000-0000-0000-000000000001"
 migrations_dir = "migrations"

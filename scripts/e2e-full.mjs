@@ -54,7 +54,7 @@ async function api(path, { method = "GET", token, body } = {}) {
   const headers = {};
   if (body) headers["content-type"] = "application/json";
   if (token) headers.authorization = `Bearer ${token}`;
-  if (method !== "GET") headers["x-requested-with"] = "mcp-bridge";
+  if (method !== "GET") headers["x-requested-with"] = "folderlink";
   const response = await fetch(`${server}${path}`, {
     method,
     headers,
@@ -193,9 +193,9 @@ function toolText(response) {
 }
 
 function startBridge(home, project) {
-  const child = spawn(join(state, "mcp-bridge"), ["--server", server, "--home", home], {
+  const child = spawn(join(state, "folderlink"), ["--server", server, "--home", home], {
     cwd: join(root, "apps", "bridge"),
-    env: { ...process.env, MCP_BRIDGE_HOME: home },
+    env: { ...process.env, FOLDERLINK_HOME: home },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let log = "";
@@ -223,7 +223,7 @@ async function waitFor(fn, label) {
 
 async function main() {
   const { execFileSync } = await import("node:child_process");
-  execFileSync("go", ["build", "-o", join(state, "mcp-bridge"), "./cmd/bridge"], {
+  execFileSync("go", ["build", "-o", join(state, "folderlink"), "./cmd/bridge"], {
     cwd: join(root, "apps", "bridge"),
     stdio: "inherit",
   });
@@ -243,7 +243,7 @@ async function main() {
       "d1",
       "migrations",
       "apply",
-      "mcp-bridge",
+      "folderlink",
       "--local",
       "--persist-to",
       state,
@@ -380,7 +380,7 @@ async function main() {
   mkdirSync(join(betaProj, "notes"), { recursive: true });
   writeFileSync(join(betaProj, "notes/only-beta.txt"), "beta only\n");
 
-  const bin = join(state, "mcp-bridge");
+  const bin = join(state, "folderlink");
   execFileSync(
     bin,
     [

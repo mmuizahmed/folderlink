@@ -164,7 +164,7 @@ export function Pair() {
       <div className="glow" />
       <header className="pair-top">
         <div className="pair-top-inner">
-          <Link to="/" aria-label="bridge home">
+          <Link to="/" aria-label="FolderLink home">
             <Mark />
           </Link>
           {user ? (
@@ -184,7 +184,7 @@ export function Pair() {
           &gt;_
         </div>
         <h1>Connect a device</h1>
-        <p className="sub">Enter the code from your bridge terminal.</p>
+        <p className="sub">Enter the code from the FolderLink bridge.</p>
         {!user ? (
           <div className="pair-actions" style={{ marginTop: 28 }}>
             {google ? (

@@ -22,17 +22,17 @@ var version = "0.1.0"
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
-		fmt.Fprintf(os.Stderr, "mcp-bridge: %s\n", err)
+		fmt.Fprintf(os.Stderr, "folderlink: %s\n", err)
 		os.Exit(1)
 	}
 }
 
 func run(args []string) error {
-	fs := flag.NewFlagSet("mcp-bridge", flag.ContinueOnError)
+	fs := flag.NewFlagSet("folderlink", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	serverFlag := fs.String("server", "", "worker base URL, for example http://127.0.0.1:8787")
 	webFlag := fs.String("web", "", "control panel URL")
-	homeFlag := fs.String("home", "", "config directory (default: MCP_BRIDGE_HOME or the user config dir)")
+	homeFlag := fs.String("home", "", "config directory (default: FOLDERLINK_HOME or the user config dir)")
 	labelFlag := fs.String("label", "", "folder label")
 	cmd, rest := splitCommand(args)
 	if err := fs.Parse(orderFlagsFirst(rest)); err != nil {
@@ -86,7 +86,7 @@ func run(args []string) error {
 		return runBridge(id, store, cfg)
 	case "allow":
 		if len(rest) != 1 {
-			return errors.New("usage: mcp-bridge allow <directory>")
+			return errors.New("usage: folderlink allow <directory>")
 		}
 		folder, err := store.Allow(rest[0], *labelFlag)
 		if err != nil {
@@ -100,7 +100,7 @@ func run(args []string) error {
 			target = rest[0]
 		}
 		if target == "" || len(rest) > 1 {
-			return errors.New("usage: mcp-bridge unallow <label>")
+			return errors.New("usage: folderlink unallow <label>")
 		}
 		return store.Unallow(target)
 	case "folders":
@@ -124,7 +124,7 @@ func runBridge(id *identity.Identity, store *config.Store, cfg config.File) erro
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})))
-	fmt.Printf("mcp-bridge %s\n", version)
+	fmt.Printf("folderlink %s\n", version)
 	fmt.Printf("server: %s\n", cfg.Server)
 	return client.Run(ctx, client.Config{
 		Server:   cfg.Server,
@@ -198,14 +198,14 @@ func homeDir(flagValue string) (string, error) {
 	if flagValue != "" {
 		return flagValue, nil
 	}
-	if env := os.Getenv("MCP_BRIDGE_HOME"); env != "" {
+	if env := os.Getenv("FOLDERLINK_HOME"); env != "" {
 		return env, nil
 	}
 	base, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(base, "mcp-bridge"), nil
+	return filepath.Join(base, "folderlink"), nil
 }
 
 func defaultWeb(server string) string {

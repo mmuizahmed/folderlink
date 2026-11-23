@@ -11,7 +11,7 @@ export function Landing() {
       <div className="dots" />
       <header className="top">
         <div className="top-inner">
-          <Link to="/" aria-label="bridge home">
+          <Link to="/" aria-label="FolderLink home">
             <Mark />
           </Link>
           <nav className="nav" aria-label="Primary">
@@ -36,20 +36,20 @@ export function Landing() {
           v0.1.0 · open source · MIT
         </div>
         <h1 className="display">
-          Your AI, your folders.
+          Your folders.
           <br />
-          <span>Nothing else.</span>
+          <span>Your AI.</span>
         </h1>
         <p className="lede">
-          A 5 MB bridge that lets ChatGPT and Claude read the project folders you choose —
-          read-only, logged, revocable in one click.
+          A 5 MB FolderLink bridge that lets ChatGPT and Claude read the project folders you choose
+          — read-only, logged, revocable in one click.
         </p>
         <div className="cta">
           <a className="btn" href={RELEASES}>
             Download
           </a>
           <a className="chip" href={SOURCE}>
-            <span className="dollar">$</span> go run ./cmd/bridge
+            <span className="dollar">$</span> folderlink
           </a>
         </div>
         <div className="terminal edge" aria-label="Sample bridge output">
@@ -59,10 +59,10 @@ export function Landing() {
               <i />
               <i />
             </div>
-            <span className="terminal-title">~/projects/raffle — mcp-bridge</span>
+            <span className="terminal-title">~/projects/raffle — folderlink</span>
           </div>
           <pre>
-            <span className="faint">$</span> <span className="fg">mcp-bridge</span>
+            <span className="faint">$</span> <span className="fg">folderlink</span>
             {"\n"}
             <span className="go">✓</span> device key ready{"      "}
             <span className="faint">ed25519 · 9F3A…C21E</span>

@@ -48,7 +48,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     headers.set("content-type", "application/json");
   }
   if (init.method && init.method !== "GET" && init.method !== "HEAD") {
-    headers.set("x-requested-with", "mcp-bridge");
+    headers.set("x-requested-with", "folderlink");
   }
   const response = await fetch(path, { ...init, headers, credentials: "include" });
   if (!response.ok) {

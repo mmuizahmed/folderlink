@@ -82,7 +82,7 @@ export async function handleMcpMessage(
       body: rpcResult(rpc.id, {
         protocolVersion: protocol,
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: "mcp-bridge", version: "0.1.0" },
+        serverInfo: { name: "FolderLink", version: "0.1.0" },
         instructions: instructions(folders),
       }),
     };

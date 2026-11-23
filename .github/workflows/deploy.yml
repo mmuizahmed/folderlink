@@ -22,7 +22,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
         working-directory: .
       - name: Apply D1 migrations
-        run: pnpm exec wrangler d1 migrations apply mcp-bridge --remote
+        run: pnpm exec wrangler d1 migrations apply folderlink --remote
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

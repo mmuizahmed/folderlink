@@ -313,7 +313,7 @@ function DeviceCard({
             </span>
           </div>
           <div className="device-sub path">
-            {device.os || "unknown"} · {device.arch || "unknown"} · bridge {device.version} ·{" "}
+            {device.os || "unknown"} · {device.arch || "unknown"} · folderlink {device.version} ·{" "}
             {device.fingerprint}
           </div>
         </div>
@@ -365,7 +365,7 @@ function DeviceList({
 }) {
   if (data.devices.length === 0)
     return (
-      <Empty title="No devices" body="Run mcp-bridge on a laptop and enter the pairing code." />
+      <Empty title="No devices" body="Run folderlink on a laptop and enter the pairing code." />
     );
   return (
     <div>
@@ -390,7 +390,7 @@ function FolderList({
       <div className="section-head">
         <h2>Folders</h2>
         <span className="hint">
-          add with <code>mcp-bridge allow ./path --label name</code>
+          add with <code>folderlink allow ./path --label name</code>
         </span>
       </div>
       <div className="list edge">

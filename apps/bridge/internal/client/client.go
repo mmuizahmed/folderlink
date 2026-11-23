@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
 	"net/url"
 	"os"
 	"sort"
@@ -216,13 +217,22 @@ func waitActive(ctx context.Context, cfg Config, deadline time.Time) (bool, erro
 	}
 }
 
+func userAgent(version string) string {
+	if version == "" {
+		return "FolderLink"
+	}
+	return "FolderLink/" + version
+}
+
 func serveOnce(ctx context.Context, cfg Config) error {
 	wsURL, err := WebSocketURL(cfg.Server, cfg.Identity.DeviceID)
 	if err != nil {
 		return err
 	}
 	dialCtx, cancelDial := context.WithTimeout(ctx, 15*time.Second)
-	conn, _, err := websocket.Dial(dialCtx, wsURL, nil)
+	header := make(http.Header)
+	header.Set("User-Agent", userAgent(cfg.Version))
+	conn, _, err := websocket.Dial(dialCtx, wsURL, &websocket.DialOptions{HTTPHeader: header})
 	cancelDial()
 	if err != nil {
 		return err

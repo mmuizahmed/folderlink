@@ -85,5 +85,5 @@ export function csrfOk(request: Request, via: "bearer" | "session"): boolean {
   if (request.method === "GET" || request.method === "HEAD" || request.method === "OPTIONS") {
     return true;
   }
-  return request.headers.get("x-requested-with") === "mcp-bridge";
+  return request.headers.get("x-requested-with") === "folderlink";
 }

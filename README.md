@@ -1,10 +1,14 @@
-# mcp-bridge
+# FolderLink
+
+![FolderLink](docs/brand/logo-lockup.png)
+
+Your folders. Your AI.
 
 A small program on a laptop keeps an outbound connection so an agent can read folders a student chose, without pasting the project into a chat.
 
-The bridge is a single Go binary. It opens a WebSocket to a Cloudflare Worker, proves it holds the device key, and answers two read-only tools: `list_files` and `read_file`. The allowlist is enforced on the laptop. The server stores folder labels, not paths, and it cannot add a directory the bridge does not already have.
+The FolderLink bridge is a single Go binary. It opens a WebSocket to a Cloudflare Worker, proves it holds the device key, and answers two read-only tools: `list_files` and `read_file`. The allowlist is enforced on the laptop. The server stores folder labels, not paths, and it cannot add a directory the bridge does not already have.
 
-This repository is the phase 1 slice: the bridge, the Worker and its Durable Object, a minimal control panel, and the protocol they share. It is MIT licensed and meant to be self-hosted.
+This repository is the phase 1 slice: the bridge, the Worker and its Durable Object, a minimal control panel, and the protocol they share. It is MIT licensed and meant to be self-hosted. The source lives at [mmuizahmed/mcp-bridge](https://github.com/mmuizahmed/mcp-bridge).
 
 ## Control panel
 
@@ -58,7 +62,7 @@ You need Node.js 22, pnpm 10, and Go 1.22. These steps were run against `wrangle
 ```bash
 pnpm install
 cp apps/worker/.dev.vars.example apps/worker/.dev.vars
-pnpm --filter @mcp-bridge/worker exec wrangler d1 migrations apply mcp-bridge --local
+pnpm --filter @mcp-bridge/worker exec wrangler d1 migrations apply folderlink --local
 ```
 
 Terminal 1, the worker:
@@ -80,7 +84,7 @@ Open http://localhost:5173. Google sign-in stays off until client credentials ex
 Terminal 3, the bridge. Pick an empty config directory so you do not touch a real one:
 
 ```bash
-export MCP_BRIDGE_HOME=/tmp/mcp-bridge-home
+export FOLDERLINK_HOME=/tmp/folderlink-home
 mkdir -p /tmp/demo-notes
 printf 'hello from the bridge\n' > /tmp/demo-notes/hello.txt
 printf 'SUPERSECRETVALUE\n' > /tmp/demo-notes/.env
@@ -143,13 +147,13 @@ Development sign-in exists only when `DEV_AUTH=true` and the request host is loc
 
 The hosted shape is a free Cloudflare account: one Worker, SQLite-backed Durable Objects, and one D1 database. Tokens live in D1. KV is intentionally unused because the free plan allows very few writes per day.
 
-1. Create a D1 database named `mcp-bridge` and put its id in `apps/worker/wrangler.toml`.
+1. Create a D1 database named `folderlink` and put its id in `apps/worker/wrangler.toml`.
 2. Set `WEB_ORIGIN` and `PUBLIC_BASE_URL` to the public origins. Leave `DEV_AUTH` unset.
 3. To turn on Google sign-in, set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The redirect URI is `{PUBLIC_BASE_URL}/api/auth/google/callback`.
 4. Apply migrations and deploy with the manual workflow in `.github/workflows/deploy.yml`, or locally:
 
 ```bash
-pnpm --filter @mcp-bridge/worker exec wrangler d1 migrations apply mcp-bridge --remote
+pnpm --filter @mcp-bridge/worker exec wrangler d1 migrations apply folderlink --remote
 pnpm --filter @mcp-bridge/worker exec wrangler deploy
 ```
 
@@ -160,7 +164,7 @@ pnpm --filter @mcp-bridge/worker exec wrangler deploy
 Point the bridge at the deployment:
 
 ```bash
-mcp-bridge --server https://mcp.muiz.pk
+folderlink --server https://mcp.muiz.pk
 ```
 
 Agents use `https://mcp.muiz.pk/mcp`.
@@ -179,14 +183,14 @@ pnpm test
 Bridge commands:
 
 ```text
-mcp-bridge allow <directory> --label notes
-mcp-bridge unallow notes
-mcp-bridge folders
-mcp-bridge status
-mcp-bridge version
+folderlink allow <directory> --label notes
+folderlink unallow notes
+folderlink folders
+folderlink status
+folderlink version
 ```
 
-Config and the device key live in `$MCP_BRIDGE_HOME`, or in the user config directory under `mcp-bridge` when that variable is unset. The key file is mode `0600`.
+Config and the device key live in `$FOLDERLINK_HOME`, or in the user config directory under `folderlink` when that variable is unset. The key file is mode `0600`.
 
 ## Security
 

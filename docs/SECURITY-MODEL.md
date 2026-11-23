@@ -21,7 +21,7 @@ The bridge is a read window onto folders a person picked. The interesting failur
 
 **Stolen access token.** The token is opaque, stored only as SHA-256, and expires in 45 minutes. It can be used until then to read folders that user has approved. Revoking the device closes the socket, so later calls fail even if the token has not expired. The panel can mint a replacement token; it does not reveal old ones. Refresh-token reuse detection is implemented for the OAuth design and is not yet reachable over HTTP. See [OAUTH.md](OAUTH.md).
 
-**Stolen panel cookie.** Cookies are HTTP-only and `SameSite=Lax`. State-changing panel calls that authenticated with the cookie require `X-Requested-With: mcp-bridge`. The MCP route ignores cookies, so a browser page cannot ride the session into a tool call.
+**Stolen panel cookie.** Cookies are HTTP-only and `SameSite=Lax`. State-changing panel calls that authenticated with the cookie require `X-Requested-With: folderlink`. The MCP route ignores cookies, so a browser page cannot ride the session into a tool call.
 
 **Stolen laptop.** The seed is in a mode `0600` file. Revoking the device on the panel closes the socket and rejects the next hello. A person who can read the seed can ask for a new pairing code; that is the same as holding the device.
 

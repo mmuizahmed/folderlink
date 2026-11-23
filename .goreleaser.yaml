@@ -1,12 +1,12 @@
 version: 2
 
-project_name: mcp-bridge
+project_name: folderlink
 
 builds:
   - id: bridge
     dir: apps/bridge
     main: ./cmd/bridge
-    binary: mcp-bridge
+    binary: folderlink
     env:
       - CGO_ENABLED=0
     flags:

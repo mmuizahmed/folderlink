@@ -60,7 +60,7 @@ test.describe("visual and glitch checks", () => {
       const errors = await quiet(page);
       await page.goto("/");
       await page.evaluate(() => document.fonts.ready);
-      await expect(page.getByRole("heading", { name: /Your AI, your folders/ })).toBeVisible();
+      await expect(page.getByRole("heading", { name: /Your folders/ })).toBeVisible();
       await noOverflow(page);
       expect(errors).toEqual([]);
       await expect(page).toHaveScreenshot(`landing-${width}.png`, { fullPage: true });
@@ -140,7 +140,7 @@ test.describe("visual and glitch checks", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
     await page.keyboard.press("Tab");
-    await expect(page.getByRole("link", { name: "bridge home" })).toBeFocused();
+    await expect(page.getByRole("link", { name: "FolderLink home" })).toBeFocused();
     for (let step = 0; step < 5; step += 1) {
       await page.keyboard.press("Tab");
     }

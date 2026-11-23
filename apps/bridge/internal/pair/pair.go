@@ -133,6 +133,7 @@ func (c Client) post(ctx context.Context, path string, body protocol.SignedBody,
 	}
 	req.Header.Set("content-type", "application/json")
 	req.Header.Set("accept", "application/json")
+	req.Header.Set("user-agent", "FolderLink/0.1.0")
 	client := c.HTTP
 	if client == nil {
 		client = &http.Client{Timeout: 20 * time.Second}

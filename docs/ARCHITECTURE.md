@@ -1,6 +1,6 @@
 # Architecture
 
-mcp-bridge has three deployable parts and one shared protocol package.
+FolderLink has three deployable parts and one shared protocol package.
 
 ## Components
 
@@ -40,7 +40,7 @@ A device that is already active cannot be moved by requesting a new code. After 
 | D1                    | Users, devices, public keys, folder labels and approval, hashed session and access tokens, hashed refresh tokens, pairing-code hashes, MCP sessions | Filesystem paths, raw tokens |
 | Durable Object SQLite | Recent hello nonces, a last-seen throttle                                                                                                           | User records                 |
 
-Access tokens are opaque, stored as SHA-256, and last 45 minutes (`TOKEN_TTL_SECONDS`, clamped to 60–3600, default 2700). Panel sessions last 14 days and are HTTP-only cookies. Mutations that rely on the cookie require `X-Requested-With: mcp-bridge`.
+Access tokens are opaque, stored as SHA-256, and last 45 minutes (`TOKEN_TTL_SECONDS`, clamped to 60–3600, default 2700). Panel sessions last 14 days and are HTTP-only cookies. Mutations that rely on the cookie require `X-Requested-With: folderlink`.
 
 ## Account state
 

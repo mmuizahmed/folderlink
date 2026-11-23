@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping with mcp-bridge. The project is a small Go program, a Cloudflare Worker, and a web control panel in one pnpm workspace.
+Thanks for helping with FolderLink. The project is a small Go program, a Cloudflare Worker, and a web control panel in one pnpm workspace.
 
 ## Setup
 

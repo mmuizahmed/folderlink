@@ -1,6 +1,6 @@
 # Releasing the bridge
 
-`.goreleaser.yaml` builds `mcp-bridge` for linux, darwin, and windows on amd64 and arm64. `CGO_ENABLED=0`, `-trimpath`, and `-s -w`. A local stripped linux/amd64 build of phase 1 was 5,771,416 bytes, under the 6 MB target.
+`.goreleaser.yaml` builds `folderlink` for linux, darwin, and windows on amd64 and arm64. `CGO_ENABLED=0`, `-trimpath`, and `-s -w`. A local stripped linux/amd64 build of phase 1 was 5,771,416 bytes, under the 6 MB target.
 
 Tag `vX.Y.Z` and run the Release workflow, or `goreleaser release` from a checkout of that tag. The workflow is manual and is not run by pull requests.
 
