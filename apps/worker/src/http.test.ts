@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { localDevEnabled } from "./http.ts";
+import { applyCors, localDevEnabled } from "./http.ts";
 import type { Env } from "./env.ts";
 
 function request(url: string, host: string): Request {
@@ -21,5 +21,36 @@ describe("localDevEnabled", () => {
         DEV_AUTH: "false",
       } as Env),
     ).toBe(false);
+  });
+});
+
+describe("applyCors", () => {
+  it("allows the configured site and a same-origin call", () => {
+    const env = { WEB_ORIGIN: "https://mcp.muiz.pk" } as Env;
+    const site = applyCors(
+      new Request("https://mcp.muiz.pk/api/me", { headers: { origin: "https://mcp.muiz.pk" } }),
+      new Response("ok"),
+      env,
+    );
+    expect(site.headers.get("access-control-allow-origin")).toBe("https://mcp.muiz.pk");
+    expect(site.headers.get("access-control-allow-credentials")).toBe("true");
+
+    const preview = applyCors(
+      new Request("https://preview.example/api/me", {
+        headers: { origin: "https://preview.example" },
+      }),
+      new Response("ok"),
+      env,
+    );
+    expect(preview.headers.get("access-control-allow-origin")).toBe("https://preview.example");
+  });
+
+  it("does not allow a different site", () => {
+    const response = applyCors(
+      new Request("https://mcp.muiz.pk/api/me", { headers: { origin: "https://evil.example" } }),
+      new Response("ok"),
+      { WEB_ORIGIN: "https://mcp.muiz.pk" } as Env,
+    );
+    expect(response.headers.get("access-control-allow-origin")).toBeNull();
   });
 });

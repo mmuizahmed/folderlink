@@ -38,7 +38,8 @@ export function applyCors(request: Request, response: Response, env: Env): Respo
     headers.set("access-control-expose-headers", "mcp-session-id");
   } else if (path.startsWith("/api/")) {
     const origin = request.headers.get("origin");
-    if (origin === webOrigin(env)) {
+    const sameOrigin = origin === new URL(request.url).origin;
+    if (origin && (origin === webOrigin(env) || sameOrigin)) {
       headers.set("access-control-allow-origin", origin);
       headers.set("access-control-allow-credentials", "true");
       headers.set("access-control-allow-headers", "authorization, content-type, x-requested-with");
