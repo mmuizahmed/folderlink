@@ -24,6 +24,7 @@ export default tseslint.config(
         process: "readonly",
         setTimeout: "readonly",
         TextEncoder: "readonly",
+        URL: "readonly",
         WebSocket: "readonly",
       },
     },
