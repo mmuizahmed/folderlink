@@ -102,6 +102,13 @@ export const api = {
     request<{ id: string; label: string }>(`/api/devices/${deviceId}/folders/pick`, {
       method: "POST",
     }),
+  renameFolder: (id: string, label: string) =>
+    request<{ ok: boolean }>(`/api/folders/${id}/rename`, {
+      method: "POST",
+      body: JSON.stringify({ label }),
+    }),
+  removeFolder: (id: string) =>
+    request<{ ok: boolean }>(`/api/folders/${id}/remove`, { method: "POST" }),
   apps: () =>
     request<{ apps: Array<{ id: string; name: string; scope: string; createdAt: string }> }>(
       "/api/apps",

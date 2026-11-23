@@ -71,7 +71,7 @@ Access tokens are opaque, stored as SHA-256, and last 45 minutes (`TOKEN_TTL_SEC
 
 The free plan is the constraint. Durable Objects give one hibernating WebSocket per device without a paid always-on process. D1 is the token store because Workers KV on the free plan allows 1,000 writes per day, which a reconnecting fleet would burn through. The object class is created with `new_sqlite_classes` so the nonce table survives hibernation.
 
-Google sign-in is implemented and does nothing until `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `PUBLIC_BASE_URL` are set. MCP OAuth 2.1 is specified in [OAUTH.md](OAUTH.md). The refresh-token rotation code is implemented and tested; the authorization-server routes are not mounted.
+Google sign-in is implemented and does nothing until `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `PUBLIC_BASE_URL` are set. MCP OAuth 2.1 is mounted: protected-resource metadata, dynamic client registration, PKCE authorization, and refresh tokens. The flow is in [OAUTH.md](OAUTH.md).
 
 ## Local development
 

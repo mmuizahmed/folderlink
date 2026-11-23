@@ -388,6 +388,13 @@ h1.display span {
   font-size: 22px;
   letter-spacing: -0.03em;
 }
+.product-shot {
+  display: block;
+  width: min(920px, 100%);
+  margin: 28px auto 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
 .install-lines {
   display: grid;
   gap: 8px;
@@ -400,7 +407,8 @@ h1.display span {
 .install-lines pre {
   margin: 0;
   padding: 12px 14px;
-  overflow-x: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
   border-radius: 8px;
   background: var(--panel);
   font-family: var(--mono);
@@ -411,8 +419,14 @@ h1.display span {
   gap: 16px;
 }
 .faq h3,
-.docs-article h1 {
+.docs-article h1,
+.docs-article h2 {
   margin: 0;
+}
+.docs-article h2 {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 500;
 }
 .docs-layout {
   display: grid;
@@ -431,8 +445,10 @@ h1.display span {
   color: var(--fg);
 }
 .docs-article {
+  min-width: 0;
   padding: 0;
   margin: 0;
+  overflow: hidden;
 }
 @media (max-width: 800px) {
   .docs-layout {
@@ -1093,6 +1109,111 @@ code.mono {
 .folder-row,
 .app-row {
   padding: 12px 16px;
+}
+.folder-main {
+  flex: 1;
+  min-width: 0;
+}
+.row-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+@media (max-width: 800px) {
+  .folder-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .folder-main {
+    flex: 1 1 160px;
+  }
+  .folder-row .path {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .row-actions {
+    margin-left: auto;
+  }
+}
+.checklist {
+  margin-bottom: 16px;
+  padding: 8px 18px 4px;
+  border-radius: 12px;
+  background: var(--panel);
+}
+.checklist h2 {
+  margin: 12px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+.checklist ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.checklist li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 12px 0;
+}
+.checklist li + li {
+  border-top: 1px solid var(--line);
+}
+.checklist strong {
+  display: block;
+  font-weight: 500;
+}
+.checklist p {
+  margin: 2px 0 8px;
+  color: var(--faint);
+  font-size: 13px;
+}
+.step-no {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  font-size: 12px;
+  color: var(--sub);
+}
+.checklist li.done .step-no {
+  background: var(--go);
+  color: #04120a;
+  border-color: transparent;
+}
+.copy-line {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+.copy-line code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.docs-code {
+  margin: 0;
+  max-width: 100%;
+  padding: 12px 14px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  border-radius: 8px;
+  background: var(--raise);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--fg);
 }
 .list > * + * {
   border-top: 1px solid var(--line);

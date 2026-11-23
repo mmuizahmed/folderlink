@@ -2,13 +2,14 @@ import { Link } from "react-router-dom";
 import { AccountMenu } from "../components/AccountMenu.tsx";
 import { SiteFooter } from "../components/SiteFooter.tsx";
 import { Mark } from "../components/Icons.tsx";
+import { downloadForThisComputer } from "../downloads.ts";
 import { usePageTitle, useSession } from "../session.ts";
 
 const RELEASES = "https://github.com/mmuizahmed/mcp-bridge/releases";
-const SOURCE = "https://github.com/mmuizahmed/mcp-bridge";
 
 export function Landing() {
   const session = useSession();
+  const download = downloadForThisComputer();
   usePageTitle("FolderLink");
   return (
     <div className="hero">
@@ -22,7 +23,7 @@ export function Landing() {
           <nav className="nav" aria-label="Primary">
             <a href="#how">How it works</a>
             <a href="#security">Security</a>
-            <a href={`${SOURCE}/blob/main/docs/ARCHITECTURE.md`}>Docs</a>
+            <Link to="/docs/getting-started">Docs</Link>
             <a href={RELEASES}>Changelog</a>
           </nav>
           <div className="top-actions">
@@ -33,8 +34,8 @@ export function Landing() {
                 Sign in
               </Link>
             )}
-            <a className="btn small" href={RELEASES}>
-              Download
+            <a className="btn small" href={download.href}>
+              {download.label}
             </a>
           </div>
         </div>
@@ -54,12 +55,12 @@ export function Landing() {
           — read-only, logged, revocable in one click.
         </p>
         <div className="cta">
-          <a className="btn" href={RELEASES}>
-            Download
+          <a className="btn" href={download.href}>
+            {download.label}
           </a>
-          <a className="chip" href={SOURCE}>
-            <span className="dollar">$</span> folderlink
-          </a>
+          <Link className="chip" to="/docs/getting-started">
+            Getting started
+          </Link>
         </div>
         <div className="terminal edge" aria-label="Sample bridge output">
           <div className="terminal-bar">
@@ -68,35 +69,25 @@ export function Landing() {
               <i />
               <i />
             </div>
-            <span className="terminal-title">~/projects/raffle — folderlink</span>
+            <span className="terminal-title">FolderLink</span>
           </div>
           <pre>
-            <span className="faint">$</span> <span className="fg">folderlink</span>
+            <span className="go">✓</span> Opening the browser to connect
             {"\n"}
-            <span className="go">✓</span> device key ready{"      "}
-            <span className="faint">ed25519 · 9F3A…C21E</span>
+            <span className="go">✓</span> Connected to folderlink.muiz.pk
             {"\n"}
-            <span className="go">✓</span> connected{"             "}
-            <span className="faint">folderlink.muiz.pk · 38 ms</span>
+            <span className="go">✓</span> Paired to muiz@example.com
             {"\n\n"}
-            {"  "}Pair this laptop at <span className="linkish">folderlink.muiz.pk/pair</span> with
-            code
-            {"  "}
-            <span className="code-pill">K7QM-2XPA</span>
-            {"\n\n"}
-            <span className="go">✓</span> paired to muiz@example.com
+            <span className="faint">14:32:07</span> read raffle/src/draw.ts
             {"\n"}
-            <span className="faint">14:32:07</span>
-            {"  read   ~/projects/raffle/src/draw.ts      "}
-            <span className="faint">4.1 KB chatgpt</span>
-            {"\n"}
-            <span className="faint">14:32:09</span>
-            {"  "}
-            <span className="bad">deny</span>
-            {"   ~/projects/raffle/.env              "}
-            <span className="faint">secret file</span>
+            <span className="faint">14:32:09</span> <span className="bad">deny</span> raffle/.env
           </pre>
         </div>
+        <img
+          className="product-shot"
+          src="/product.png"
+          alt="FolderLink dashboard showing a connected computer and the folders it may read"
+        />
       </div>
       <div className="steps" id="how">
         <article>
@@ -160,6 +151,11 @@ export function Landing() {
       <section className="band" id="download">
         <h2>Download</h2>
         <p className="sub">The installer checks checksums.txt, then opens FolderLink.</p>
+        <p>
+          <a className="btn small" href={download.href}>
+            {download.label}
+          </a>
+        </p>
         <div className="install-lines">
           <pre>irm https://folderlink.muiz.pk/install.ps1 | iex</pre>
           <pre>curl -fsSL https://folderlink.muiz.pk/install.sh | sh</pre>

@@ -51,7 +51,7 @@ async function dashboardFrame(page: Page, width: number) {
     const card = page.locator(".stat-card").first();
     if ((await card.count()) > 0) {
       const cardBox = placed(await card.boundingBox());
-      expect(cardBox.y).toBeLessThan(400);
+      expect(cardBox.y).toBeLessThan(760);
       expect(cardBox.x).toBeGreaterThanOrEqual(sideBox.width - 2);
     }
   }

@@ -8,62 +8,115 @@ const PAGES = [
     slug: "getting-started",
     title: "Getting started",
     body: [
-      "Install FolderLink with one command, then leave the window open.",
-      "Windows: irm https://folderlink.muiz.pk/install.ps1 | iex",
-      "macOS and Linux: curl -fsSL https://folderlink.muiz.pk/install.sh | sh",
-      "The app opens your browser to connect this computer. Sign in with Google and choose Allow.",
-      "On the dashboard, choose Add folder and pick a project. The path stays on this computer. Only the folder name is stored.",
+      { kind: "p", text: "Install FolderLink with one command, then leave the window open." },
+      { kind: "h", text: "Windows" },
+      { kind: "code", text: "irm https://folderlink.muiz.pk/install.ps1 | iex" },
+      { kind: "h", text: "macOS and Linux" },
+      { kind: "code", text: "curl -fsSL https://folderlink.muiz.pk/install.sh | sh" },
+      {
+        kind: "p",
+        text: "The app opens your browser to connect this computer. Sign in with Google and choose Allow.",
+      },
+      {
+        kind: "p",
+        text: "On the dashboard, choose Add folder and pick a project. The path stays on this computer. Only the folder name is stored.",
+      },
     ],
   },
   {
     slug: "chatgpt",
     title: "Connect ChatGPT",
     body: [
-      "In ChatGPT, open Settings, then Apps or Connectors, and add a custom connector.",
-      "Use the MCP address https://folderlink.muiz.pk/mcp.",
-      "ChatGPT opens FolderLink to ask for read-only access. Choose Allow.",
-      "Ask it to read a file in a folder you turned on. A folder that is paused, or a secret such as .env, is refused.",
+      {
+        kind: "p",
+        text: "In ChatGPT, open Settings, then Apps or Connectors, and add a custom connector.",
+      },
+      { kind: "code", text: "https://folderlink.muiz.pk/mcp" },
+      { kind: "p", text: "ChatGPT opens FolderLink to ask for read-only access. Choose Allow." },
+      {
+        kind: "p",
+        text: "Ask it to read a file in a folder you turned on. A folder that is paused, or a secret such as .env, is refused.",
+      },
     ],
   },
   {
     slug: "claude",
     title: "Connect Claude",
     body: [
-      "In Claude, add a custom connector and set the MCP address to https://folderlink.muiz.pk/mcp.",
-      "Sign in with the same Google account you used for FolderLink and allow read-only access.",
-      "Claude can then list and read files in folders you have approved.",
+      { kind: "p", text: "In Claude, add a custom connector with this address." },
+      { kind: "code", text: "https://folderlink.muiz.pk/mcp" },
+      {
+        kind: "p",
+        text: "Sign in with the same Google account you used for FolderLink and allow read-only access.",
+      },
+      { kind: "p", text: "Claude can then list and read files in folders you have approved." },
     ],
   },
   {
     slug: "security",
     title: "Security",
     body: [
-      "The laptop dials out. Nothing on it accepts incoming connections.",
-      "FolderLink can read files. It cannot write them or run commands.",
-      "You choose each folder. Pausing a folder or disconnecting the computer stops new reads.",
-      "Names such as .env, private keys, and certificates are refused on the laptop.",
-      "Report a vulnerability to the address in SECURITY.md. Do not include file contents.",
+      { kind: "p", text: "The laptop dials out. Nothing on it accepts incoming connections." },
+      { kind: "p", text: "FolderLink can read files. It cannot write them or run commands." },
+      {
+        kind: "p",
+        text: "You choose each folder. Pausing a folder or disconnecting the computer stops new reads.",
+      },
+      {
+        kind: "p",
+        text: "Names such as .env, private keys, and certificates are refused on the laptop.",
+      },
+      {
+        kind: "p",
+        text: "Report a vulnerability to the address in SECURITY.md. Do not include file contents.",
+      },
     ],
   },
   {
     slug: "self-hosting",
     title: "Self-hosting",
     body: [
-      "The hosted service is folderlink.muiz.pk. You can run the same worker on your Cloudflare account.",
-      "From a checkout, run pnpm setup and follow the printed commands. pnpm setup --apply runs them.",
-      "Create the D1 database, paste its id into wrangler.toml, set the Google sign-in secrets, apply migrations, and deploy.",
-      "Point the laptop at your host with folderlink --server https://your-host.",
+      {
+        kind: "p",
+        text: "The hosted service is folderlink.muiz.pk. You can run the same worker on your Cloudflare account.",
+      },
+      { kind: "p", text: "From a checkout, print the steps or run them:" },
+      { kind: "code", text: "pnpm setup" },
+      { kind: "code", text: "pnpm setup --apply" },
+      {
+        kind: "p",
+        text: "Create the D1 database, paste its id into wrangler.toml, set the Google sign-in secrets, apply migrations, and deploy.",
+      },
+      {
+        kind: "p",
+        text: "Point the laptop at your host with folderlink --server and the address of your site.",
+      },
     ],
   },
   {
     slug: "troubleshooting",
     title: "Troubleshooting",
     body: [
-      "If the browser does not open, copy the pair address printed in the FolderLink window.",
-      "If Add folder says the computer is not connected, leave the FolderLink window open and try again.",
-      "If ChatGPT cannot connect, confirm the address is https://folderlink.muiz.pk/mcp and that you chose Allow.",
-      "A paused folder or a disconnected computer returns an error instead of file contents.",
-      "The checksum check fails closed. Download again if install.ps1 or install.sh reports a mismatch.",
+      {
+        kind: "p",
+        text: "If the browser does not open, copy the pair address printed in the FolderLink window.",
+      },
+      {
+        kind: "p",
+        text: "If Add folder says the computer is not connected, leave the FolderLink window open and try again.",
+      },
+      {
+        kind: "p",
+        text: "If ChatGPT cannot connect, confirm the address is https://folderlink.muiz.pk/mcp and that you chose Allow.",
+      },
+      {
+        kind: "p",
+        text: "A paused folder or a disconnected computer returns an error instead of file contents.",
+      },
+      {
+        kind: "p",
+        text: "The checksum check fails closed. Download again if install.ps1 or install.sh reports a mismatch.",
+      },
     ],
   },
 ] as const;
@@ -101,9 +154,17 @@ export function Docs() {
         </nav>
         <article className="legal-main docs-article">
           <h1>{page.title}</h1>
-          {page.body.map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
-          ))}
+          {page.body.map((block) =>
+            block.kind === "code" ? (
+              <pre key={block.text} className="docs-code">
+                {block.text}
+              </pre>
+            ) : block.kind === "h" ? (
+              <h2 key={block.text}>{block.text}</h2>
+            ) : (
+              <p key={block.text}>{block.text}</p>
+            ),
+          )}
         </article>
       </div>
       <SiteFooter />

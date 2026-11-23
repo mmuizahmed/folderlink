@@ -54,4 +54,4 @@ case ":${PATH}:" in
 esac
 
 echo "FolderLink is installed. Opening it to connect this computer."
-PATH="${bindir}:${PATH}" "${bindir}/folderlink" >/dev/null 2>&1 &
+PATH="${bindir}:${PATH}" exec "${bindir}/folderlink"
