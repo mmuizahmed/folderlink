@@ -1,8 +1,8 @@
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/logo-lockup.svg">
-    <source media="(prefers-color-scheme: light)" srcset="docs/brand/logo-lockup-light.svg">
-    <img alt="FolderLink" src="docs/brand/logo-lockup.svg" height="64">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/logo-mark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/brand/logo-mark-light.svg">
+    <img alt="FolderLink" src="docs/brand/logo-mark.svg" height="64">
   </picture>
   <h1>FolderLink</h1>
   <p><strong>Your folders. Your AI.</strong></p>
