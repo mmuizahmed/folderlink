@@ -1,68 +1,132 @@
 import { Link } from "react-router-dom";
+import { Mark } from "../components/Icons.tsx";
+
+const RELEASES = "https://github.com/mmuizahmed/mcp-bridge/releases";
+const SOURCE = "https://github.com/mmuizahmed/mcp-bridge";
 
 export function Landing() {
   return (
-    <article className="page">
-      <p className="eyebrow">A laptop, a pairing code, and two read-only tools</p>
-      <h1>Read a project folder without pasting it into the chat.</h1>
-      <p className="lede">
-        mcp-bridge runs on the computer that has the files. It keeps an outbound connection to the
-        server you pair. Agents call <code>list_files</code> and <code>read_file</code>. They only
-        see folders you added locally and approved here.
-      </p>
-      <div className="actions">
-        <Link className="button" to="/connect">
-          Pair a device
-        </Link>
-        <a className="button quiet" href="https://github.com/mmuizahmed/mcp-bridge#local-test">
-          Local test
-        </a>
-      </div>
-
-      <ol className="steps">
-        <li>
-          <span>01</span>
-          <div>
-            <h2>Run the bridge</h2>
-            <p>The terminal shows a short code. The real folder path stays on the laptop.</p>
-          </div>
-        </li>
-        <li>
-          <span>02</span>
-          <div>
-            <h2>Approve the folder</h2>
-            <p>Add it with the bridge command, then approve the label on this site.</p>
-          </div>
-        </li>
-        <li>
-          <span>03</span>
-          <div>
-            <h2>Connect an agent</h2>
-            <p>
-              Point the client at <code>/mcp</code> with a bearer token. The server picks your
-              device from that token.
-            </p>
-          </div>
-        </li>
-      </ol>
-
-      <section className="flow" aria-label="Request path">
-        <h2>How a tool call moves</h2>
-        <div className="flow-row">
-          <div>
-            <strong>Laptop</strong>
-            <span>Allowlist and signature</span>
-          </div>
-          <div>
-            <strong>Worker</strong>
-            <span>Token, then one device</span>
-          </div>
-          <div>
-            <strong>Agent</strong>
-            <span>list_files and read_file</span>
+    <div className="hero">
+      <div className="glow" />
+      <div className="dots" />
+      <header className="top">
+        <div className="top-inner">
+          <Link to="/" aria-label="bridge home">
+            <Mark />
+          </Link>
+          <nav className="nav" aria-label="Primary">
+            <a href="#how">How it works</a>
+            <a href="#security">Security</a>
+            <a href={`${SOURCE}/blob/main/docs/ARCHITECTURE.md`}>Docs</a>
+            <a href={RELEASES}>Changelog</a>
+          </nav>
+          <div className="top-actions">
+            <Link className="signin" to="/pair">
+              Sign in
+            </Link>
+            <a className="btn small" href={RELEASES}>
+              Download
+            </a>
           </div>
         </div>
-      </section>
-    </article>
+      </header>
+      <div className="hero-inner">
+        <div className="pill">
+          <span className="dot" />
+          v0.1.0 · open source · MIT
+        </div>
+        <h1 className="display">
+          Your AI, your folders.
+          <br />
+          <span>Nothing else.</span>
+        </h1>
+        <p className="lede">
+          A 5 MB bridge that lets ChatGPT and Claude read the project folders you choose —
+          read-only, logged, revocable in one click.
+        </p>
+        <div className="cta">
+          <a className="btn" href={RELEASES}>
+            Download
+          </a>
+          <a className="chip" href={SOURCE}>
+            <span className="dollar">$</span> go run ./cmd/bridge
+          </a>
+        </div>
+        <div className="terminal edge" aria-label="Sample bridge output">
+          <div className="terminal-bar">
+            <div className="lights" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </div>
+            <span className="terminal-title">~/projects/raffle — mcp-bridge</span>
+          </div>
+          <pre>
+            <span className="faint">$</span> <span className="fg">mcp-bridge</span>
+            {"\n"}
+            <span className="go">✓</span> device key ready{"      "}
+            <span className="faint">ed25519 · 9F3A…C21E</span>
+            {"\n"}
+            <span className="go">✓</span> connected{"             "}
+            <span className="faint">mcp.muiz.pk · 38 ms</span>
+            {"\n\n"}
+            {"  "}Pair this laptop at <span className="linkish">mcp.muiz.pk/pair</span> with code
+            {"  "}
+            <span className="code-pill">K7QM-2XPA</span>
+            {"\n\n"}
+            <span className="go">✓</span> paired to muiz@example.com
+            {"\n"}
+            <span className="faint">14:32:07</span>
+            {"  read   ~/projects/raffle/src/draw.ts      "}
+            <span className="faint">4.1 KB chatgpt</span>
+            {"\n"}
+            <span className="faint">14:32:09</span>
+            {"  "}
+            <span className="bad">deny</span>
+            {"   ~/projects/raffle/.env              "}
+            <span className="faint">secret file</span>
+          </pre>
+        </div>
+      </div>
+      <div className="steps" id="how">
+        <article>
+          <div className="kicker">01 run</div>
+          <h3>Run one file</h3>
+          <p>No installer. It runs as your user and prints a pairing code.</p>
+        </article>
+        <article>
+          <div className="kicker">02 pair</div>
+          <h3>Pair and choose folders</h3>
+          <p>Sign in with Google, enter the code, switch folders on or off.</p>
+        </article>
+        <article>
+          <div className="kicker">03 connect</div>
+          <h3>Add to ChatGPT or Claude</h3>
+          <p>
+            Point the connector at <span className="fg mono">mcp.muiz.pk/mcp</span>. Done.
+          </p>
+        </article>
+      </div>
+      <div className="audit" id="security">
+        <div>
+          <h3>Built to be audited</h3>
+          <p>Every line is public. Self-host the whole stack if you would rather not trust ours.</p>
+        </div>
+        <div>
+          <div className="kicker">read-only</div>
+          <p>Writes and commands do not exist in v0.1.</p>
+        </div>
+        <div>
+          <div className="kicker">local allowlist</div>
+          <p>Folders are enforced on your laptop, not our server.</p>
+        </div>
+        <div>
+          <div className="kicker">secrets blocked</div>
+          <p>
+            <span className="fg mono">.env</span>, keys and certs are never sent.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }

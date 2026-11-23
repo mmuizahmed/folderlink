@@ -6,6 +6,18 @@ The bridge is a single Go binary. It opens a WebSocket to a Cloudflare Worker, p
 
 This repository is the phase 1 slice: the bridge, the Worker and its Durable Object, a minimal control panel, and the protocol they share. It is MIT licensed and meant to be self-hosted.
 
+## Control panel
+
+The panel is a dark terminal layout. These are the landing, pair, and dashboard screens:
+
+![Landing](docs/images/landing.png)
+
+![Pair](docs/images/pair.png)
+
+![Dashboard](docs/images/dashboard.png)
+
+`scripts/e2e-full.mjs` runs the live path (pairing, sockets, and tool calls) against a local worker. The matrix is [docs/TEST-MATRIX.md](docs/TEST-MATRIX.md).
+
 ## Architecture
 
 ```mermaid

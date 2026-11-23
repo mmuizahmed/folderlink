@@ -6,11 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:ui": "playwright test"
   },
   "dependencies": {
-    "@fontsource/newsreader": "^5.2.8",
-    "@fontsource/public-sans": "^5.2.6",
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
     "@mcp-bridge/shared": "workspace:*",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -21,6 +22,7 @@
     "@types/react-dom": "^19.2.2",
     "@vitejs/plugin-react": "^5.1.0",
     "typescript": "^5.9.3",
-    "vite": "^7.2.2"
+    "vite": "^7.2.2",
+    "@playwright/test": "^1.56.1"
   }
 }

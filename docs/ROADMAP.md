@@ -17,7 +17,7 @@ Done:
 Prepared, not finished:
 
 - MCP OAuth 2.1 HTTP endpoints are not mounted. Access tokens are opaque bearers minted by the panel. Refresh-token rotation with reuse detection is implemented and covered by tests. The flow is specified in [OAUTH.md](OAUTH.md).
-- The control panel is a shell. It is not the full management UI.
+- The control panel shows device, folder, and token state. Activity history and connected-app rows are not stored by the worker yet, so those panels are empty unless the page is opened with fixture data for design review.
 - Release signing is configured but inactive until `COSIGN_YES` is set. See [RELEASING.md](RELEASING.md).
 
 ## Phase 2 — Sign-in and MCP OAuth
@@ -36,6 +36,7 @@ Prepared, not finished:
 
 TODO:
 
+- A one-line install script for the bridge binary.
 - File write.
 - Command execution.
 - Approval mode, where the person at the laptop confirms a tool call before it runs.

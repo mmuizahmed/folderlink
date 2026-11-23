@@ -1,17 +1,15 @@
 import { Route, Routes } from "react-router-dom";
-import { Shell } from "./components/Shell.tsx";
-import { Connect } from "./pages/Connect.tsx";
 import { Dashboard } from "./pages/Dashboard.tsx";
 import { Landing } from "./pages/Landing.tsx";
+import { Pair } from "./pages/Pair.tsx";
 
 export function App() {
   return (
     <Routes>
-      <Route element={<Shell />}>
-        <Route path="/" element={<Landing />} />
-        <Route path="/connect" element={<Connect />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-      </Route>
+      <Route path="/" element={<Landing />} />
+      <Route path="/pair" element={<Pair />} />
+      <Route path="/connect" element={<Pair />} />
+      <Route path="/dashboard" element={<Dashboard />} />
     </Routes>
   );
 }

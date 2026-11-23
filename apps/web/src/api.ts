@@ -1,9 +1,13 @@
+import type { PairPreview } from "./data/types.ts";
+
 export class ApiError extends Error {
   status: number;
+  code: string;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code = "") {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -24,6 +28,10 @@ export interface Device {
   status: string;
   lastSeenAt: string | null;
   online: boolean;
+  os: string;
+  arch: string;
+  fingerprint: string;
+  network: string;
 }
 
 export interface Folder {
@@ -32,12 +40,6 @@ export interface Folder {
   approval: string;
   deviceId: string;
   deviceName: string;
-}
-
-export interface IssuedToken {
-  id: string;
-  token: string;
-  expiresAt: string;
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -51,15 +53,17 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(path, { ...init, headers, credentials: "include" });
   if (!response.ok) {
     let message = response.statusText;
+    let code = "";
     try {
-      const body = (await response.json()) as { error?: { message?: string } };
+      const body = (await response.json()) as { error?: { message?: string; code?: string } };
       if (body.error?.message) {
         message = body.error.message;
       }
+      code = body.error?.code ?? "";
     } catch {
       // The body was not JSON.
     }
-    throw new ApiError(message, response.status);
+    throw new ApiError(message, response.status, code);
   }
   if (response.status === 204) {
     return undefined as T;
@@ -72,6 +76,8 @@ export const api = {
   me: () => request<{ user: User }>("/api/me"),
   devSession: () => request<{ user: User }>("/api/dev/session", { method: "POST" }),
   logout: () => request<{ ok: boolean }>("/api/session/logout", { method: "POST" }),
+  preview: (code: string) =>
+    request<PairPreview>(`/api/pair/preview?code=${encodeURIComponent(code)}`),
   completePair: (code: string) =>
     request<{ deviceId: string; status: string }>("/api/pair/complete", {
       method: "POST",
@@ -86,5 +92,6 @@ export const api = {
     }),
   revokeDevice: (id: string) =>
     request<{ ok: boolean }>(`/api/devices/${id}/revoke`, { method: "POST" }),
-  createToken: () => request<IssuedToken>("/api/tokens", { method: "POST" }),
+  createToken: () =>
+    request<{ id: string; token: string; expiresAt: string }>("/api/tokens", { method: "POST" }),
 };
