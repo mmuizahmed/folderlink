@@ -10,9 +10,46 @@ FolderLink has three deployable parts and one shared protocol package.
 
 **Device Durable Object.** One SQLite-backed object per device. The object's name is the device id. It accepts the bridge's WebSocket with the Hibernation API, checks the hello signature, and holds the socket while the isolate is evicted. Tool calls are RPC methods on that object: it writes a request frame and waits for the matching response.
 
-**Control panel (`apps/web`).** A Vite + React shell. Landing, pairing, and a dashboard for devices, folder approval, and a one-time agent token. It does not display filesystem paths because the API never returns them.
+**Control panel (`apps/web`).** A Vite + React shell. Landing, pairing, docs, and a dashboard for devices and folder approval. It does not display filesystem paths because the API never returns them. AI apps sign in with OAuth and never receive a token to copy.
 
 **Shared package (`packages/shared`).** Canonical JSON, message parsers, and pairing-code rules. The Go module mirrors the canonical form and is checked against the same test vectors.
+
+```mermaid
+flowchart LR
+  laptop[FolderLink on the laptop]
+  worker[Worker and Durable Object]
+  app[ChatGPT or Claude]
+  laptop -->|outbound WebSocket| worker
+  app -->|MCP over HTTPS| worker
+  worker -->|read request| laptop
+```
+
+```mermaid
+sequenceDiagram
+  participant App as FolderLink
+  participant Worker
+  participant Browser
+  App->>Worker: POST /api/pair/begin, signed by the device key
+  Worker-->>App: Code, valid for 10 minutes
+  App->>Browser: Open /pair?code=...
+  Browser->>Worker: Google session, then approve the code
+  App->>Worker: WebSocket hello, signed, with folder labels
+```
+
+```mermaid
+sequenceDiagram
+  participant AI as ChatGPT or Claude
+  participant Worker
+  participant Object as Durable Object
+  participant App as FolderLink
+  AI->>Worker: POST /mcp, Bearer access token
+  Worker->>Worker: Hash the token, load the user, choose their device
+  Worker->>Object: Tool call
+  Object->>App: request frame
+  App->>App: Match the folder id, resolve the path, refuse secrets
+  App-->>Object: response frame
+  Object-->>AI: MCP tool result
+```
 
 ## Tool-call path
 
@@ -50,7 +87,7 @@ Access tokens are opaque, stored as SHA-256, and last 45 minutes (`TOKEN_TTL_SEC
 
 The free plan is the constraint. Durable Objects give one hibernating WebSocket per device without a paid always-on process. D1 is the token store because Workers KV on the free plan allows 1,000 writes per day, which a reconnecting fleet would burn through. The object class is created with `new_sqlite_classes` so the nonce table survives hibernation.
 
-Google sign-in is implemented and does nothing until `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `PUBLIC_BASE_URL` are set. MCP OAuth 2.1 is specified in [OAUTH.md](OAUTH.md). The refresh-token rotation code is implemented and tested; the authorization-server routes are not mounted.
+Google sign-in is implemented and does nothing until `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `PUBLIC_BASE_URL` are set. MCP OAuth 2.1 is mounted: protected-resource metadata, dynamic client registration, PKCE authorization, and refresh tokens. The flow is in [OAUTH.md](OAUTH.md).
 
 ## Local development
 

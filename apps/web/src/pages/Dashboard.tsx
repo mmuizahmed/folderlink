@@ -203,6 +203,58 @@ export function Dashboard() {
     }
   }
 
+  async function renameFolder(id: string, label: string) {
+    if (state.status !== "ready") return;
+    try {
+      if (mode === "live") await api.renameFolder(id, label);
+      setNotice("");
+      setState({
+        status: "ready",
+        data: {
+          ...state.data,
+          folders: state.data.folders.map((folder) =>
+            folder.id === id ? { ...folder, label } : folder,
+          ),
+        },
+      });
+    } catch (err) {
+      setNotice(err instanceof ApiError ? err.message : "The folder could not be renamed.");
+    }
+  }
+
+  async function removeFolder(id: string) {
+    if (state.status !== "ready") return;
+    try {
+      if (mode === "live") await api.removeFolder(id);
+      setNotice("");
+      setState({
+        status: "ready",
+        data: {
+          ...state.data,
+          folders: state.data.folders.filter((folder) => folder.id !== id),
+        },
+      });
+    } catch (err) {
+      setNotice(err instanceof ApiError ? err.message : "The folder could not be removed.");
+    }
+  }
+
+  async function revokeApp(id: string) {
+    if (state.status !== "ready") return;
+    try {
+      if (mode === "live") await api.revokeApp(id);
+      setState({
+        status: "ready",
+        data: {
+          ...state.data,
+          apps: state.data.apps.filter((app) => app.id !== id),
+        },
+      });
+    } catch (err) {
+      setNotice(err instanceof ApiError ? err.message : "The app could not be disconnected.");
+    }
+  }
+
   const ready = state.status === "ready" ? state.data : null;
 
   return (
@@ -272,18 +324,30 @@ export function Dashboard() {
           {ready && section === "overview" ? (
             <Overview
               data={ready}
+              notice={notice}
               onToggle={toggleFolder}
               onRemove={removeDevice}
               onRename={renameDevice}
+              onAdd={addFolder}
+              onRenameFolder={renameFolder}
+              onRemoveFolder={removeFolder}
+              onRevoke={revokeApp}
             />
           ) : null}
           {ready && section === "devices" ? (
             <DeviceList data={ready} onRemove={removeDevice} onRename={renameDevice} />
           ) : null}
           {ready && section === "folders" ? (
-            <FolderList data={ready} onToggle={toggleFolder} onAdd={addFolder} notice={notice} />
+            <FolderList
+              data={ready}
+              onToggle={toggleFolder}
+              onAdd={addFolder}
+              onRename={renameFolder}
+              onRemove={removeFolder}
+              notice={notice}
+            />
           ) : null}
-          {ready && section === "apps" ? <AppList apps={ready.apps} /> : null}
+          {ready && section === "apps" ? <AppList apps={ready.apps} onRevoke={revokeApp} /> : null}
           {ready && section === "activity" ? <ActivityList rows={ready.activity} /> : null}
           {ready && section === "settings" ? (
             <section>
@@ -307,39 +371,119 @@ export function Dashboard() {
 
 function Overview({
   data,
+  notice,
   onToggle,
   onRemove,
   onRename,
+  onAdd,
+  onRenameFolder,
+  onRemoveFolder,
+  onRevoke,
 }: {
   data: DashboardData;
+  notice: string;
   onToggle: (folder: FolderView) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
   onRename: (id: string, name: string) => Promise<void>;
+  onAdd: () => Promise<void>;
+  onRenameFolder: (id: string, label: string) => Promise<void>;
+  onRemoveFolder: (id: string) => Promise<void>;
+  onRevoke: (id: string) => Promise<void>;
 }) {
   const device = data.devices[0];
   return (
     <>
+      <Checklist data={data} onAdd={onAdd} />
       {device ? (
         <DeviceCard device={device} onRemove={onRemove} onRename={onRename} />
       ) : (
         <div className="state">
           <strong>No device yet</strong>
-          Download FolderLink, open it, and approve the connection in your browser.
-          <div style={{ marginTop: 12 }}>
-            <a className="btn small" href={downloadForThisComputer().href}>
-              {downloadForThisComputer().label}
-            </a>
-          </div>
+          Open FolderLink. It connects automatically.
         </div>
       )}
       <div className="split">
         <div>
-          <FolderList data={data} onToggle={onToggle} onAdd={async () => undefined} notice="" />
-          <AppList apps={data.apps} />
+          <FolderList
+            data={data}
+            onToggle={onToggle}
+            onAdd={onAdd}
+            onRename={onRenameFolder}
+            onRemove={onRemoveFolder}
+            notice={notice}
+          />
+          <AppList apps={data.apps} onRevoke={onRevoke} />
         </div>
         <ActivityList rows={data.activity} live={Boolean(device?.online)} />
       </div>
     </>
+  );
+}
+
+const MCP_URL = "https://folderlink.muiz.pk/mcp";
+
+function Checklist({ data, onAdd }: { data: DashboardData; onAdd: () => Promise<void> }) {
+  const [copied, setCopied] = useState(false);
+  const download = downloadForThisComputer();
+  const hasDevice = data.devices.some((device) => device.status !== "revoked");
+  const connected = data.devices.some((device) => device.online && device.status === "active");
+  const hasFolder = data.folders.some((folder) => folder.approval === "approved");
+  const hasApp = data.apps.length > 0;
+  const steps = [
+    { done: hasDevice, title: "Download FolderLink", body: "Open it. It connects automatically." },
+    {
+      done: connected,
+      title: "This computer is connected",
+      body: "Leave the FolderLink window open.",
+    },
+    { done: hasFolder, title: "Add a folder", body: "The path stays on this computer." },
+    {
+      done: hasApp,
+      title: "Connect ChatGPT or Claude",
+      body: "Add this address as a custom connector.",
+    },
+  ];
+  return (
+    <section className="checklist edge" aria-label="Getting started">
+      <h2>Getting started</h2>
+      <ol>
+        {steps.map((step, index) => (
+          <li key={step.title} className={step.done ? "done" : undefined}>
+            <span className="step-no">{step.done ? "✓" : index + 1}</span>
+            <div>
+              <strong>{step.title}</strong>
+              <p>{step.body}</p>
+              {index === 0 && !hasDevice ? (
+                <a className="btn small" href={download.href}>
+                  {download.label}
+                </a>
+              ) : null}
+              {index === 2 && !hasFolder ? (
+                <button type="button" className="btn small" onClick={() => void onAdd()}>
+                  Add folder
+                </button>
+              ) : null}
+              {index === 3 ? (
+                <div className="copy-line">
+                  <code>{MCP_URL}</code>
+                  <button
+                    type="button"
+                    className="btn quiet small"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(MCP_URL).then(() => {
+                        setCopied(true);
+                      });
+                    }}
+                  >
+                    {copied ? "Copied" : "Copy"}
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
@@ -435,7 +579,10 @@ function DeviceList({
 }) {
   if (data.devices.length === 0)
     return (
-      <Empty title="No devices" body="Run folderlink on a laptop and enter the pairing code." />
+      <Empty
+        title="No devices"
+        body="Download FolderLink and open it. It connects automatically."
+      />
     );
   return (
     <div>
@@ -452,11 +599,15 @@ function FolderList({
   data,
   onToggle,
   onAdd,
+  onRename,
+  onRemove,
   notice,
 }: {
   data: DashboardData;
   onToggle: (folder: FolderView) => Promise<void>;
   onAdd: () => Promise<void>;
+  onRename: (id: string, label: string) => Promise<void>;
+  onRemove: (id: string) => Promise<void>;
   notice: string;
 }) {
   return (
@@ -487,13 +638,32 @@ function FolderList({
                 aria-label={`${on ? "Pause" : "Allow"} ${folder.label}`}
                 onClick={() => void onToggle(folder)}
               />
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="folder-main">
                 <div className={on ? "path" : "path paused"} title={folder.label}>
                   {folder.label}
                 </div>
                 <div className="minor">{folder.detail}</div>
               </div>
               <span className={on ? "tag" : "tag dim"}>read-only</span>
+              <span className="row-actions">
+                <button
+                  type="button"
+                  className="btn quiet small"
+                  onClick={() => {
+                    const label = window.prompt("Rename this folder", folder.label);
+                    if (label?.trim()) void onRename(folder.id, label.trim());
+                  }}
+                >
+                  Rename
+                </button>
+                <button
+                  type="button"
+                  className="btn danger small"
+                  onClick={() => void onRemove(folder.id)}
+                >
+                  Remove
+                </button>
+              </span>
             </div>
           );
         })}
@@ -505,7 +675,7 @@ function FolderList({
   );
 }
 
-function AppList({ apps }: { apps: AppView[] }) {
+function AppList({ apps, onRevoke }: { apps: AppView[]; onRevoke: (id: string) => Promise<void> }) {
   return (
     <section>
       <div className="section-head">
@@ -525,7 +695,11 @@ function AppList({ apps }: { apps: AppView[] }) {
                 <div>{app.name}</div>
                 <div className="minor">{app.detail}</div>
               </div>
-              <button type="button" className="btn danger small">
+              <button
+                type="button"
+                className="btn danger small"
+                onClick={() => void onRevoke(app.id)}
+              >
                 Revoke
               </button>
             </div>

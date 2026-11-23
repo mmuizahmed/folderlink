@@ -2,13 +2,14 @@ import { Link } from "react-router-dom";
 import { AccountMenu } from "../components/AccountMenu.tsx";
 import { SiteFooter } from "../components/SiteFooter.tsx";
 import { Mark } from "../components/Icons.tsx";
+import { downloadForThisComputer } from "../downloads.ts";
 import { usePageTitle, useSession } from "../session.ts";
 
 const RELEASES = "https://github.com/mmuizahmed/mcp-bridge/releases";
-const SOURCE = "https://github.com/mmuizahmed/mcp-bridge";
 
 export function Landing() {
   const session = useSession();
+  const download = downloadForThisComputer();
   usePageTitle("FolderLink");
   return (
     <div className="hero">
@@ -22,7 +23,7 @@ export function Landing() {
           <nav className="nav" aria-label="Primary">
             <a href="#how">How it works</a>
             <a href="#security">Security</a>
-            <a href={`${SOURCE}/blob/main/docs/ARCHITECTURE.md`}>Docs</a>
+            <Link to="/docs/getting-started">Docs</Link>
             <a href={RELEASES}>Changelog</a>
           </nav>
           <div className="top-actions">
@@ -33,8 +34,8 @@ export function Landing() {
                 Sign in
               </Link>
             )}
-            <a className="btn small" href={RELEASES}>
-              Download
+            <a className="btn small" href={download.href}>
+              {download.label}
             </a>
           </div>
         </div>
@@ -54,12 +55,12 @@ export function Landing() {
           — read-only, logged, revocable in one click.
         </p>
         <div className="cta">
-          <a className="btn" href={RELEASES}>
-            Download
+          <a className="btn" href={download.href}>
+            {download.label}
           </a>
-          <a className="chip" href={SOURCE}>
-            <span className="dollar">$</span> folderlink
-          </a>
+          <Link className="chip" to="/docs/getting-started">
+            Getting started
+          </Link>
         </div>
         <div className="terminal edge" aria-label="Sample bridge output">
           <div className="terminal-bar">
@@ -68,46 +69,36 @@ export function Landing() {
               <i />
               <i />
             </div>
-            <span className="terminal-title">~/projects/raffle — folderlink</span>
+            <span className="terminal-title">FolderLink</span>
           </div>
           <pre>
-            <span className="faint">$</span> <span className="fg">folderlink</span>
+            <span className="go">✓</span> Opening the browser to connect
             {"\n"}
-            <span className="go">✓</span> device key ready{"      "}
-            <span className="faint">ed25519 · 9F3A…C21E</span>
+            <span className="go">✓</span> Connected to folderlink.muiz.pk
             {"\n"}
-            <span className="go">✓</span> connected{"             "}
-            <span className="faint">folderlink.muiz.pk · 38 ms</span>
+            <span className="go">✓</span> Paired to muiz@example.com
             {"\n\n"}
-            {"  "}Pair this laptop at <span className="linkish">folderlink.muiz.pk/pair</span> with
-            code
-            {"  "}
-            <span className="code-pill">K7QM-2XPA</span>
-            {"\n\n"}
-            <span className="go">✓</span> paired to muiz@example.com
+            <span className="faint">14:32:07</span> read raffle/src/draw.ts
             {"\n"}
-            <span className="faint">14:32:07</span>
-            {"  read   ~/projects/raffle/src/draw.ts      "}
-            <span className="faint">4.1 KB chatgpt</span>
-            {"\n"}
-            <span className="faint">14:32:09</span>
-            {"  "}
-            <span className="bad">deny</span>
-            {"   ~/projects/raffle/.env              "}
-            <span className="faint">secret file</span>
+            <span className="faint">14:32:09</span> <span className="bad">deny</span> raffle/.env
           </pre>
         </div>
+        <img
+          className="product-shot"
+          src="/product.png"
+          alt="FolderLink dashboard showing a connected computer and the folders it may read"
+        />
       </div>
       <div className="steps" id="how">
         <article>
           <div className="kicker">01 run</div>
-          <h3>Run one file</h3>
-          <p>No installer. It runs as your user and prints a pairing code.</p>
+          <h3>Open FolderLink</h3>
+          <p>One command installs it. Opening it connects this computer in your browser.</p>
         </article>
         <article>
           <div className="kicker">02 pair</div>
-          <h3>Pair and choose folders</h3>
-          <p>Sign in with Google, enter the code, switch folders on or off.</p>
+          <h3>Approve and add a folder</h3>
+          <p>Sign in with Google, allow this computer, then pick a project from the dashboard.</p>
         </article>
         <article>
           <div className="kicker">03 connect</div>
@@ -137,6 +128,61 @@ export function Landing() {
           </p>
         </div>
       </div>
+      <section className="band" id="apps">
+        <h2>Works with the apps you already use</h2>
+        <div className="steps">
+          <article>
+            <div className="kicker">ChatGPT</div>
+            <h3>Custom connector</h3>
+            <p>Add https://folderlink.muiz.pk/mcp and allow read-only access.</p>
+          </article>
+          <article>
+            <div className="kicker">Claude</div>
+            <h3>Custom connector</h3>
+            <p>The same address. Claude asks you before the first read.</p>
+          </article>
+          <article>
+            <div className="kicker">Others</div>
+            <h3>Any MCP client</h3>
+            <p>Clients that speak MCP OAuth can connect. The scope is read-only.</p>
+          </article>
+        </div>
+      </section>
+      <section className="band" id="download">
+        <h2>Download</h2>
+        <p className="sub">The installer checks checksums.txt, then opens FolderLink.</p>
+        <p>
+          <a className="btn small" href={download.href}>
+            {download.label}
+          </a>
+        </p>
+        <div className="install-lines">
+          <pre>irm https://folderlink.muiz.pk/install.ps1 | iex</pre>
+          <pre>curl -fsSL https://folderlink.muiz.pk/install.sh | sh</pre>
+        </div>
+        <p>
+          <Link to="/docs/getting-started">Getting started</Link>
+        </p>
+      </section>
+      <section className="band" id="faq">
+        <h2>Questions</h2>
+        <div className="faq">
+          <article>
+            <h3>Does a file get uploaded ahead of time?</h3>
+            <p>No. A file leaves the laptop only when an app asks for it, and it is not stored.</p>
+          </article>
+          <article>
+            <h3>Can it change my files?</h3>
+            <p>
+              No. This version only reads, and it refuses secrets such as .env and private keys.
+            </p>
+          </article>
+          <article>
+            <h3>What do I install?</h3>
+            <p>One program for Windows, macOS, or Linux. It does not need administrator rights.</p>
+          </article>
+        </div>
+      </section>
       <SiteFooter />
     </div>
   );

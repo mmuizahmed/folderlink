@@ -15,7 +15,8 @@
     "test": "vitest run && pnpm test:go",
     "test:go": "cd apps/bridge && go test ./...",
     "dev:web": "pnpm --filter @mcp-bridge/web dev",
-    "dev:worker": "pnpm --filter @mcp-bridge/worker dev"
+    "dev:worker": "pnpm --filter @mcp-bridge/worker dev",
+    "setup": "node scripts/setup-host.mjs"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
