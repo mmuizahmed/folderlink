@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { api, ApiError, type AuthConfig } from "./api.ts";
-import { fixtureUser } from "./data/fixture.ts";
 import { screenMode, type ScreenMode } from "./data/mode.ts";
 import type { SessionUser } from "./data/types.ts";
 
@@ -66,6 +65,9 @@ export function useSession(): SessionState {
 }
 
 function previewState(mode: ScreenMode): SessionState {
+  if (import.meta.env.PROD || mode === "live") {
+    return { status: "loading", google: false, dev: false, user: null };
+  }
   if (mode === "loading") {
     return { status: "loading", google: true, dev: false, user: null };
   }
@@ -73,7 +75,12 @@ function previewState(mode: ScreenMode): SessionState {
     return { status: "out", google: true, dev: false, user: null };
   }
   if (signedInModes.has(mode)) {
-    return { status: "in", google: true, dev: false, user: fixtureUser };
+    return {
+      status: "in",
+      google: true,
+      dev: false,
+      user: { id: "user-fixture", email: "muiz@example.com", name: "Muiz Ahmed" },
+    };
   }
   return { status: "loading", google: false, dev: false, user: null };
 }

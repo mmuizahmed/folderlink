@@ -50,10 +50,11 @@ async function signedBody(keys, payload) {
   return { payload, sig: await sign(keys.key, payload) };
 }
 
-async function api(path, { method = "GET", token, body } = {}) {
+async function api(path, { method = "GET", token, cookie, body } = {}) {
   const headers = {};
   if (body) headers["content-type"] = "application/json";
   if (token) headers.authorization = `Bearer ${token}`;
+  if (cookie) headers.cookie = cookie;
   if (method !== "GET") headers["x-requested-with"] = "folderlink";
   const response = await fetch(`${server}${path}`, {
     method,
@@ -92,7 +93,7 @@ async function begin(keys, name = "laptop") {
 async function session(email) {
   const response = await api("/api/dev/session", {
     method: "POST",
-    body: { email, name: email, issueToken: true },
+    body: { email, name: email },
   });
   if (response.status !== 200) {
     throw new Error(`session ${email} ${response.status} ${JSON.stringify(response.json)}`);
@@ -100,11 +101,14 @@ async function session(email) {
   const cookie = (response.headers.getSetCookie?.() ?? [])
     .map((item) => item.split(";")[0])
     .join("; ");
-  return { ...response.json, cookie };
+  if (response.json.token || response.json.access_token) {
+    throw new Error("dev session minted an access token");
+  }
+  return { user: response.json.user, cookie };
 }
 
-async function complete(token, code) {
-  return api("/api/pair/complete", { method: "POST", token, body: { code } });
+async function complete(cookie, code) {
+  return api("/api/pair/complete", { method: "POST", cookie, body: { code } });
 }
 
 async function hello(keys, { bad = false, folders = [] } = {}) {
@@ -191,31 +195,13 @@ async function tool(token, sessionId, name, args) {
   );
 }
 
-async function oauthConnector(cookie) {
-  const bare = await fetch(`${server}/mcp`, {
-    method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json" },
-    body: "{}",
-  });
-  const challenge = bare.headers.get("www-authenticate") ?? "";
-  record(
-    "mcp without a token points at OAuth metadata",
-    bare.status === 401 && challenge.includes("oauth-protected-resource"),
-  );
-  const metadata = await (await fetch(`${server}/.well-known/oauth-protected-resource`)).json();
-  record("protected resource metadata names /mcp", metadata.resource === `${server}/mcp`);
-  const directory = await (await fetch(`${server}/.well-known/oauth-authorization-server`)).json();
-  record(
-    "authorization server requires S256",
-    directory.code_challenge_methods_supported?.includes("S256") &&
-      directory.registration_endpoint?.endsWith("/oauth/register"),
-  );
+async function grantAccess(cookie, clientName) {
   const registered = await (
     await fetch(`${server}/oauth/register`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        client_name: "e2e",
+        client_name: clientName,
         redirect_uris: ["http://127.0.0.1:9/callback"],
         token_endpoint_auth_method: "none",
       }),
@@ -238,7 +224,6 @@ async function oauthConnector(cookie) {
     redirect: "manual",
   });
   const html = await consent.text();
-  record("consent screen names the app", consent.status === 200 && html.includes("Allow e2e"));
   const allowed = await fetch(`${server}/oauth/authorize`, {
     method: "POST",
     headers: { cookie, "content-type": "application/x-www-form-urlencoded" },
@@ -246,41 +231,71 @@ async function oauthConnector(cookie) {
     body: new URLSearchParams({ ...Object.fromEntries(params), decision: "allow" }),
   });
   const location = new URL(allowed.headers.get("location") ?? "http://127.0.0.1:9/callback");
-  const code = location.searchParams.get("code");
-  record(
-    "authorization code is returned",
-    Boolean(code) && location.searchParams.get("state") === "e2e-state",
-  );
   const issued = await (
     await fetch(`${server}/oauth/token`, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         grant_type: "authorization_code",
-        code: code ?? "",
+        code: location.searchParams.get("code") ?? "",
         redirect_uri: "http://127.0.0.1:9/callback",
         client_id: registered.client_id,
         code_verifier: verifier,
       }),
     })
   ).json();
+  return {
+    html,
+    consentStatus: consent.status,
+    code: location.searchParams.get("code"),
+    state: location.searchParams.get("state"),
+    accessToken: issued.access_token,
+    refreshToken: issued.refresh_token,
+  };
+}
+
+async function oauthConnector(cookie) {
+  const bare = await fetch(`${server}/mcp`, {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json" },
+    body: "{}",
+  });
+  const challenge = bare.headers.get("www-authenticate") ?? "";
+  record(
+    "mcp without a token points at OAuth metadata",
+    bare.status === 401 && challenge.includes("oauth-protected-resource"),
+  );
+  const metadata = await (await fetch(`${server}/.well-known/oauth-protected-resource`)).json();
+  record("protected resource metadata names /mcp", metadata.resource === `${server}/mcp`);
+  const directory = await (await fetch(`${server}/.well-known/oauth-authorization-server`)).json();
+  record(
+    "authorization server requires S256",
+    directory.code_challenge_methods_supported?.includes("S256") &&
+      directory.registration_endpoint?.endsWith("/oauth/register"),
+  );
+  const granted = await grantAccess(cookie, "e2e");
+  record(
+    "consent screen names the app",
+    granted.consentStatus === 200 && granted.html.includes("Allow e2e"),
+  );
+  record("authorization code is returned", Boolean(granted.code) && granted.state === "e2e-state");
   record(
     "token endpoint returns access and refresh tokens",
-    Boolean(issued.access_token && issued.refresh_token),
+    Boolean(granted.accessToken && granted.refreshToken),
   );
-  const oauthSession = await mcpSession(issued.access_token);
+  const oauthSession = await mcpSession(granted.accessToken);
   const listed = await mcp(
-    issued.access_token,
+    granted.accessToken,
     { jsonrpc: "2.0", id: "tools", method: "tools/list" },
     oauthSession,
   );
   record("tools/list includes read_file", JSON.stringify(listed.json).includes("read_file"));
-  const read = await tool(issued.access_token, oauthSession, "read_file", {
+  const read = await tool(granted.accessToken, oauthSession, "read_file", {
     folder: "alpha",
     path: "hello.txt",
   });
   record("oauth token reads an allowed file", toolText(read).includes("hello from the bridge"));
-  const secret = await tool(issued.access_token, oauthSession, "read_file", {
+  const secret = await tool(granted.accessToken, oauthSession, "read_file", {
     folder: "alpha",
     path: ".env",
   });
@@ -291,6 +306,7 @@ async function oauthConnector(cookie) {
     "connected app is stored",
     Array.isArray(appsJson.apps) && appsJson.apps.some((app) => app.name === "e2e"),
   );
+  return granted.accessToken;
 }
 
 function toolText(response) {
@@ -393,28 +409,45 @@ async function main() {
     JSON.stringify(issued.json),
   );
   const owner = await session("owner@localhost");
-  const wrong = await complete(owner.token, "ZZZZ-ZZZZ");
+  const manual = "mb_manuallegacytoken";
+  const manualHash = [
+    ...new Uint8Array(await webcrypto.subtle.digest("SHA-256", new TextEncoder().encode(manual))),
+  ]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+  const sqlite = execFileSync(
+    "bash",
+    ["-lc", `find ${state} -path '*d1*' -name '*.sqlite' | head -1`],
+    {
+      encoding: "utf8",
+    },
+  ).trim();
+  execFileSync("python3", [
+    "-c",
+    'import sqlite3,sys; db=sqlite3.connect(sys.argv[1]); db.execute("INSERT INTO access_tokens (id, user_id, token_hash, expires_at, created_at, grant_id) VALUES (?,?,?,?,?,NULL)", ("manual-1", sys.argv[2], sys.argv[3], "2099-01-01T00:00:00.000Z", "2020-01-01T00:00:00.000Z")); db.commit()',
+    sqlite,
+    owner.user.id,
+    manualHash,
+  ]);
+  const rejected = await api("/api/devices", { token: manual });
+  record("manual token is rejected", rejected.status === 401, String(rejected.status));
+  const wrong = await complete(owner.cookie, "ZZZZ-ZZZZ");
   record(
     "wrong pairing code rejected",
     wrong.status === 400 && wrong.json.error.code === "invalid_code",
   );
-  const once = await complete(owner.token, issued.json.code);
+  const once = await complete(owner.cookie, issued.json.code);
   record("pairing code single use accepts first time", once.status === 200);
-  const twice = await complete(owner.token, issued.json.code);
+  const twice = await complete(owner.cookie, issued.json.code);
   record("pairing code cannot be reused", twice.status === 400);
 
   const expiring = await generate();
   const exp = await begin(expiring, "expiring");
-  const sqlite = execFileSync(
-    "bash",
-    ["-lc", `find ${state} -path '*d1*' -name '*.sqlite' | head -1`],
-    { encoding: "utf8" },
-  ).trim();
   execFileSync("python3", [
     "-c",
     `import sqlite3; db=sqlite3.connect(${JSON.stringify(sqlite)}); db.execute("UPDATE pairing_codes SET expires_at='2000-01-01T00:00:00.000Z' WHERE consumed_at IS NULL"); db.commit()`,
   ]);
-  const expired = await complete(owner.token, exp.json.code);
+  const expired = await complete(owner.cookie, exp.json.code);
   record(
     "expired pairing code rejected",
     expired.status === 400 && expired.json.error.code === "expired",
@@ -424,7 +457,7 @@ async function main() {
   const limited = await session("limited@localhost");
   let limitedStatus = 0;
   for (let attempt = 0; attempt < 9; attempt += 1) {
-    const response = await complete(limited.token, "ABCD-EFGH");
+    const response = await complete(limited.cookie, "ABCD-EFGH");
     limitedStatus = response.status;
   }
   record("pairing attempts are rate limited", limitedStatus === 429, String(limitedStatus));
@@ -432,7 +465,7 @@ async function main() {
   const challenger = await generate();
   const challengeCode = await begin(challenger, "challenger");
   const challengeUser = await session("challenge@localhost");
-  await complete(challengeUser.token, challengeCode.json.code);
+  await complete(challengeUser.cookie, challengeCode.json.code);
   const good = await hello(challenger);
   record("device hello signature accepted", Boolean(good.frame?.payload?.ok));
   good.ws.close();
@@ -447,17 +480,18 @@ async function main() {
   const sleeper = await generate();
   const sleepCode = await begin(sleeper, "sleeper");
   const sleepUser = await session("sleeper@localhost");
-  await complete(sleepUser.token, sleepCode.json.code);
+  await complete(sleepUser.cookie, sleepCode.json.code);
   const hungFolder = randomUUID();
   const hung = await hello(sleeper, { folders: [{ id: hungFolder, label: "hung" }] });
-  const sleepFolders = await api("/api/folders", { token: sleepUser.token });
+  const sleepFolders = await api("/api/folders", { cookie: sleepUser.cookie });
   await api(`/api/folders/${sleepFolders.json.folders[0].id}/approval`, {
     method: "POST",
-    token: sleepUser.token,
+    cookie: sleepUser.cookie,
     body: { approval: "approved" },
   });
-  const sleepSession = await mcpSession(sleepUser.token);
-  const timed = await tool(sleepUser.token, sleepSession, "read_file", {
+  const sleepAccess = (await grantAccess(sleepUser.cookie, "sleeper")).accessToken;
+  const sleepSession = await mcpSession(sleepAccess);
+  const timed = await tool(sleepAccess, sleepSession, "read_file", {
     folder: "hung",
     path: "a.txt",
   });
@@ -514,8 +548,8 @@ async function main() {
   const betaCode = decodeURIComponent(beta.text().match(/pair\?code=([^\s]+)/)[1]);
   const userA = await session("a@localhost");
   const userB = await session("b@localhost");
-  const pairedA = await complete(userA.token, alphaCode);
-  const pairedB = await complete(userB.token, betaCode);
+  const pairedA = await complete(userA.cookie, alphaCode);
+  const pairedB = await complete(userB.cookie, betaCode);
   record("two devices pair to two users", pairedA.status === 200 && pairedB.status === 200);
   await waitFor(
     () => /Connected\./.test(alpha.text()) && /Connected\./.test(beta.text()),
@@ -523,8 +557,8 @@ async function main() {
   );
   record("bridges connect over the websocket", true);
 
-  const foldersA = await api("/api/folders", { token: userA.token });
-  const foldersB = await api("/api/folders", { token: userB.token });
+  const foldersA = await api("/api/folders", { cookie: userA.cookie });
+  const foldersB = await api("/api/folders", { cookie: userB.cookie });
   record(
     "folder lists stay on the owning user",
     foldersA.json.folders.every((folder) => folder.label === "alpha") &&
@@ -532,19 +566,20 @@ async function main() {
   );
   await api(`/api/folders/${foldersA.json.folders[0].id}/approval`, {
     method: "POST",
-    token: userA.token,
+    cookie: userA.cookie,
     body: { approval: "approved" },
   });
   await api(`/api/folders/${foldersB.json.folders[0].id}/approval`, {
     method: "POST",
-    token: userB.token,
+    cookie: userB.cookie,
     body: { approval: "approved" },
   });
-  const sessionA = await mcpSession(userA.token);
-  await oauthConnector(userA.cookie);
-  const sessionB = await mcpSession(userB.token);
+  const accessA = await oauthConnector(userA.cookie);
+  const sessionA = await mcpSession(accessA);
+  const accessB = (await grantAccess(userB.cookie, "e2e-b")).accessToken;
+  const sessionB = await mcpSession(accessB);
 
-  const allowed = await tool(userA.token, sessionA, "read_file", {
+  const allowed = await tool(accessA, sessionA, "read_file", {
     folder: "alpha",
     path: "hello.txt",
     deviceId: pairedB.json.deviceId,
@@ -554,12 +589,12 @@ async function main() {
     toolText(allowed).includes("hello from the bridge") &&
       !toolText(allowed).includes('"isError":true'),
   );
-  const secret = await tool(userA.token, sessionA, "read_file", { folder: "alpha", path: ".env" });
+  const secret = await tool(accessA, sessionA, "read_file", { folder: "alpha", path: ".env" });
   record(
     "secret file is denied",
     /denylist|refused/i.test(toolText(secret)) && !toolText(secret).includes("SUPERSECRETVALUE"),
   );
-  const escaped = await tool(userA.token, sessionA, "read_file", {
+  const escaped = await tool(accessA, sessionA, "read_file", {
     folder: "alpha",
     path: "escape",
   });
@@ -567,17 +602,17 @@ async function main() {
     "symlink escape is denied",
     /outside/i.test(toolText(escaped)) && !toolText(escaped).includes("OUTSIDESECRET"),
   );
-  const outsidePath = await tool(userA.token, sessionA, "read_file", {
+  const outsidePath = await tool(accessA, sessionA, "read_file", {
     folder: "alpha",
     path: "../../secret.txt",
   });
   record("path outside the folder is denied", /outside/i.test(toolText(outsidePath)));
-  const binary = await tool(userA.token, sessionA, "read_file", {
+  const binary = await tool(accessA, sessionA, "read_file", {
     folder: "alpha",
     path: "bin.dat",
   });
   record("binary file is denied", /binary/i.test(toolText(binary)));
-  const chunk = await tool(userA.token, sessionA, "read_file", {
+  const chunk = await tool(accessA, sessionA, "read_file", {
     folder: "alpha",
     path: "big.txt",
     max_bytes: 1000,
@@ -586,25 +621,25 @@ async function main() {
     "large file is chunked",
     /"truncated":true/.test(toolText(chunk)) && /nextByteOffset/.test(toolText(chunk)),
   );
-  const page = await tool(userA.token, sessionA, "list_files", {
+  const page = await tool(accessA, sessionA, "list_files", {
     folder: "alpha",
     path: "",
     limit: 2,
   });
   record("directory listing is paginated", /nextCursor":"[^"]+"/.test(toolText(page)));
-  const cross = await tool(userA.token, sessionA, "read_file", {
+  const cross = await tool(accessA, sessionA, "read_file", {
     folder: "beta",
     path: "only-beta.txt",
   });
   record("token cannot read another user's folder", !toolText(cross).includes("beta only"));
-  const crossList = await api("/api/folders", { token: userA.token });
+  const crossList = await api("/api/folders", { token: accessA });
   record(
     "token cannot list another user's folders",
     !JSON.stringify(crossList.json).includes("beta"),
   );
 
-  await api(`/api/devices/${pairedA.json.deviceId}/revoke`, { method: "POST", token: userA.token });
-  const after = await tool(userA.token, sessionA, "read_file", {
+  await api(`/api/devices/${pairedA.json.deviceId}/revoke`, { method: "POST", token: accessA });
+  const after = await tool(accessA, sessionA, "read_file", {
     folder: "alpha",
     path: "hello.txt",
   });
@@ -614,14 +649,14 @@ async function main() {
     toolText(after).slice(0, 180),
   );
 
-  const other = await tool(userB.token, sessionB, "read_file", {
+  const other = await tool(accessB, sessionB, "read_file", {
     folder: "beta",
     path: "only-beta.txt",
   });
   record("the other user's device still answers", toolText(other).includes("beta only"));
   beta.child.kill("SIGTERM");
   await new Promise((resolve) => setTimeout(resolve, 500));
-  const offline = await tool(userB.token, sessionB, "read_file", {
+  const offline = await tool(accessB, sessionB, "read_file", {
     folder: "beta",
     path: "only-beta.txt",
   });

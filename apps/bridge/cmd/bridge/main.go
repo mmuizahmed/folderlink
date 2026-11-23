@@ -124,7 +124,9 @@ func runBridge(id *identity.Identity, store *config.Store, cfg config.File) erro
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})))
-	fmt.Println("FolderLink is running. Leave this window open.")
+	fmt.Println("FolderLink is running.")
+	fmt.Println("Leave this window open. An AI app can read a folder only while this window stays open.")
+	fmt.Println("The first time, your browser opens so you can connect this computer.")
 	return client.Run(ctx, client.Config{
 		Server:   cfg.Server,
 		Web:      cfg.Web,

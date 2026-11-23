@@ -23,7 +23,6 @@ const longPath =
 export function fixtureDashboard(longNames = false): DashboardData {
   return {
     user: fixtureUser,
-    relay: "relay ok · 38 ms",
     devices: [
       {
         id: "device-thinkpad",
@@ -132,7 +131,7 @@ export function fixtureDashboard(longNames = false): DashboardData {
 }
 
 export function emptyDashboard(user: SessionUser): DashboardData {
-  return { user, devices: [], folders: [], apps: [], activity: [], relay: "relay idle" };
+  return { user, devices: [], folders: [], apps: [], activity: [] };
 }
 
 export function offlineDashboard(): DashboardData {
@@ -142,6 +141,5 @@ export function offlineDashboard(): DashboardData {
     device.online = false;
     device.status = "active";
   }
-  data.relay = "relay idle";
   return data;
 }

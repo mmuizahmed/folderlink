@@ -5,7 +5,8 @@ Overall: pass
 | Case                                             | Result | Detail                                                                                                                                |
 | ------------------------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------- |
 | worker health                                    | pass   |                                                                                                                                       |
-| pairing code issued                              | pass   | {"deviceId":"9c61aa11-6e9b-49f5-a0e8-9d57db6bbc79","code":"JRGB-375K","expiresAt":"2026-11-23T02:20:19.296Z"}                         |
+| pairing code issued                              | pass   | {"deviceId":"c6f5f0ca-217c-414a-868f-fc1fb6cc9232","code":"A7T5-QLV9","expiresAt":"2026-11-23T02:48:21.184Z"}                         |
+| manual token is rejected                         | pass   | 401                                                                                                                                   |
 | wrong pairing code rejected                      | pass   |                                                                                                                                       |
 | pairing code single use accepts first time       | pass   |                                                                                                                                       |
 | pairing code cannot be reused                    | pass   |                                                                                                                                       |

@@ -47,28 +47,11 @@ go run ./cmd/bridge --server http://127.0.0.1:8787 allow /tmp/demo-notes --label
 go run ./cmd/bridge --server http://127.0.0.1:8787
 ```
 
-The process prints a code such as `AB3D-EF2H`. With the worker in development mode you can pair it from the terminal:
-
-```bash
-curl -sS -X POST http://127.0.0.1:8787/api/dev/pair \
-  -H 'content-type: application/json' \
-  -d '{"code":"AB3D-EF2H"}'
-```
-
-That returns a bearer token and marks the laptop active. FolderLink then prints `Connected.` Save the token as `TOKEN`. It is shown only once by that call.
-
-Approve the folder:
-
-```bash
-curl -sS http://127.0.0.1:8787/api/folders -H "authorization: Bearer $TOKEN"
-curl -sS -X POST "http://127.0.0.1:8787/api/folders/FOLDER_ID/approval" \
-  -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' \
-  -d '{"approval":"approved"}'
-```
+The process opens your browser at `/pair?code=...`. Sign in there and choose Allow. FolderLink then prints `Connected.` Approve the folder from the dashboard. Nothing in this repository issues a token for you to copy.
 
 ## Call a tool
 
-Streamable HTTP answers a single JSON body.
+An AI app receives an access token from `POST /oauth/token` after you choose Allow. Streamable HTTP answers a single JSON body. `TOKEN` below is that OAuth access token.
 
 ```bash
 curl -sS -D - http://127.0.0.1:8787/mcp \
@@ -94,7 +77,7 @@ curl -sS http://127.0.0.1:8787/mcp \
 
 `scripts/e2e-local.sh` runs that sequence against a worker that is already up. It is not part of CI. `scripts/e2e-full.mjs` starts the worker and a real binary. That script runs in CI. The matrix is [TEST-MATRIX.md](TEST-MATRIX.md).
 
-MCP clients discover `/.well-known/oauth-protected-resource` and sign in with OAuth. Local tests can still ask `POST /api/dev/session` for a bearer token when `DEV_AUTH=true`.
+MCP clients discover `/.well-known/oauth-protected-resource` and sign in with OAuth. `POST /api/dev/session` only starts a localhost browser session when `DEV_AUTH=true`. It does not create an access token.
 
 Development sign-in exists only when `DEV_AUTH=true` and the request host is localhost. Do not set `DEV_AUTH` on a public deployment.
 

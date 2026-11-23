@@ -6,6 +6,9 @@ import (
 )
 
 func TestSplitCommand(t *testing.T) {
+	if cmd, _ := splitCommand(nil); cmd != "run" {
+		t.Fatalf("no arguments should start the app, got %s", cmd)
+	}
 	cmd, rest := splitCommand([]string{"--server", "http://127.0.0.1:8787", "allow", "/tmp/notes", "--label", "notes"})
 	if cmd != "allow" {
 		t.Fatal(cmd)

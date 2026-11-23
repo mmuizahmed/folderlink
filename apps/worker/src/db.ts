@@ -151,15 +151,13 @@ export async function issueAccessToken(
   db: D1Database,
   userId: string,
   ttlSeconds: number,
-  grantId?: string,
+  grantId: string,
 ): Promise<{ id: string; token: string; expiresAt: string }> {
   const now = nowIso();
-  if (grantId) {
-    await db
-      .prepare(`UPDATE access_tokens SET revoked_at = ? WHERE grant_id = ? AND revoked_at IS NULL`)
-      .bind(now, grantId)
-      .run();
-  }
+  await db
+    .prepare(`UPDATE access_tokens SET revoked_at = ? WHERE grant_id = ? AND revoked_at IS NULL`)
+    .bind(now, grantId)
+    .run();
   const active = await db
     .prepare(
       `SELECT COUNT(*) AS n FROM access_tokens
@@ -178,7 +176,7 @@ export async function issueAccessToken(
       `INSERT INTO access_tokens (id, user_id, token_hash, expires_at, created_at, grant_id)
        VALUES (?, ?, ?, ?, ?, ?)`,
     )
-    .bind(id, userId, await sha256Hex(token), expiresAt, now, grantId ?? null)
+    .bind(id, userId, await sha256Hex(token), expiresAt, now, grantId)
     .run();
   return { id, token, expiresAt };
 }
@@ -193,7 +191,8 @@ export async function userForAccessToken(
        JOIN users ON users.id = access_tokens.user_id
        WHERE access_tokens.token_hash = ?
          AND access_tokens.revoked_at IS NULL
-         AND access_tokens.expires_at > ?`,
+         AND access_tokens.expires_at > ?
+         AND access_tokens.grant_id IS NOT NULL`,
     )
     .bind(await sha256Hex(rawToken), nowIso())
     .first<UserRow>();
