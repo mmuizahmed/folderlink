@@ -93,6 +93,11 @@ export const api = {
     }),
   revokeDevice: (id: string) =>
     request<{ ok: boolean }>(`/api/devices/${id}/revoke`, { method: "POST" }),
+  renameDevice: (deviceId: string, name: string) =>
+    request<{ ok: boolean; name: string }>(`/api/devices/${deviceId}/rename`, {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }),
   pickFolder: (deviceId: string) =>
     request<{ id: string; label: string }>(`/api/devices/${deviceId}/folders/pick`, {
       method: "POST",

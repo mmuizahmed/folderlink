@@ -97,7 +97,10 @@ async function session(email) {
   if (response.status !== 200) {
     throw new Error(`session ${email} ${response.status} ${JSON.stringify(response.json)}`);
   }
-  return response.json;
+  const cookie = (response.headers.getSetCookie?.() ?? [])
+    .map((item) => item.split(";")[0])
+    .join("; ");
+  return { ...response.json, cookie };
 }
 
 async function complete(token, code) {
@@ -185,6 +188,108 @@ async function tool(token, sessionId, name, args) {
     token,
     { jsonrpc: "2.0", id: name, method: "tools/call", params: { name, arguments: args } },
     sessionId,
+  );
+}
+
+async function oauthConnector(cookie) {
+  const bare = await fetch(`${server}/mcp`, {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json" },
+    body: "{}",
+  });
+  const challenge = bare.headers.get("www-authenticate") ?? "";
+  record(
+    "mcp without a token points at OAuth metadata",
+    bare.status === 401 && challenge.includes("oauth-protected-resource"),
+  );
+  const metadata = await (await fetch(`${server}/.well-known/oauth-protected-resource`)).json();
+  record("protected resource metadata names /mcp", metadata.resource === `${server}/mcp`);
+  const directory = await (await fetch(`${server}/.well-known/oauth-authorization-server`)).json();
+  record(
+    "authorization server requires S256",
+    directory.code_challenge_methods_supported?.includes("S256") &&
+      directory.registration_endpoint?.endsWith("/oauth/register"),
+  );
+  const registered = await (
+    await fetch(`${server}/oauth/register`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        client_name: "e2e",
+        redirect_uris: ["http://127.0.0.1:9/callback"],
+        token_endpoint_auth_method: "none",
+      }),
+    })
+  ).json();
+  const verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
+  const challengeCode = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM";
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id: registered.client_id,
+    redirect_uri: "http://127.0.0.1:9/callback",
+    code_challenge: challengeCode,
+    code_challenge_method: "S256",
+    state: "e2e-state",
+    scope: "folderlink:read",
+    resource: `${server}/mcp`,
+  });
+  const consent = await fetch(`${server}/oauth/authorize?${params}`, {
+    headers: { cookie },
+    redirect: "manual",
+  });
+  const html = await consent.text();
+  record("consent screen names the app", consent.status === 200 && html.includes("Allow e2e"));
+  const allowed = await fetch(`${server}/oauth/authorize`, {
+    method: "POST",
+    headers: { cookie, "content-type": "application/x-www-form-urlencoded" },
+    redirect: "manual",
+    body: new URLSearchParams({ ...Object.fromEntries(params), decision: "allow" }),
+  });
+  const location = new URL(allowed.headers.get("location") ?? "http://127.0.0.1:9/callback");
+  const code = location.searchParams.get("code");
+  record(
+    "authorization code is returned",
+    Boolean(code) && location.searchParams.get("state") === "e2e-state",
+  );
+  const issued = await (
+    await fetch(`${server}/oauth/token`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code: code ?? "",
+        redirect_uri: "http://127.0.0.1:9/callback",
+        client_id: registered.client_id,
+        code_verifier: verifier,
+      }),
+    })
+  ).json();
+  record(
+    "token endpoint returns access and refresh tokens",
+    Boolean(issued.access_token && issued.refresh_token),
+  );
+  const oauthSession = await mcpSession(issued.access_token);
+  const listed = await mcp(
+    issued.access_token,
+    { jsonrpc: "2.0", id: "tools", method: "tools/list" },
+    oauthSession,
+  );
+  record("tools/list includes read_file", JSON.stringify(listed.json).includes("read_file"));
+  const read = await tool(issued.access_token, oauthSession, "read_file", {
+    folder: "alpha",
+    path: "hello.txt",
+  });
+  record("oauth token reads an allowed file", toolText(read).includes("hello from the bridge"));
+  const secret = await tool(issued.access_token, oauthSession, "read_file", {
+    folder: "alpha",
+    path: ".env",
+  });
+  record("oauth token cannot read a secret", !toolText(secret).includes("SUPERSECRETVALUE"));
+  const apps = await fetch(`${server}/api/apps`, { headers: { cookie } });
+  const appsJson = await apps.json();
+  record(
+    "connected app is stored",
+    Array.isArray(appsJson.apps) && appsJson.apps.some((app) => app.name === "e2e"),
   );
 }
 
@@ -435,6 +540,7 @@ async function main() {
     body: { approval: "approved" },
   });
   const sessionA = await mcpSession(userA.token);
+  await oauthConnector(userA.cookie);
   const sessionB = await mcpSession(userB.token);
 
   const allowed = await tool(userA.token, sessionA, "read_file", {

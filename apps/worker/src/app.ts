@@ -11,8 +11,8 @@ import {
   authorizeGet,
   authorizePost,
   createD1OAuthStore,
-  issuer,
   mcpAuthenticateHeader,
+  originOf,
   metadataResponse,
   protectedResourceMetadata,
   registerClient,
@@ -114,10 +114,10 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
     url.pathname === "/.well-known/oauth-protected-resource" ||
     url.pathname === "/.well-known/oauth-protected-resource/mcp"
   ) {
-    return metadataResponse(protectedResourceMetadata(issuer(env)));
+    return metadataResponse(protectedResourceMetadata(originOf(request, env)));
   }
   if (url.pathname === "/.well-known/oauth-authorization-server") {
-    return metadataResponse(authorizationServerMetadata(issuer(env)));
+    return metadataResponse(authorizationServerMetadata(originOf(request, env)));
   }
   if (url.pathname === "/oauth/register" && request.method === "POST") {
     return registerClient(request, createD1OAuthStore(env.DB));
@@ -127,7 +127,7 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
       request,
       createD1OAuthStore(env.DB),
       await sessionUser(request, env),
-      issuer(env),
+      originOf(request, env),
     );
   }
   if (url.pathname === "/oauth/authorize" && request.method === "POST") {
@@ -135,7 +135,7 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
       request,
       createD1OAuthStore(env.DB),
       await sessionUser(request, env),
-      issuer(env),
+      originOf(request, env),
     );
   }
   if (url.pathname === "/oauth/token" && request.method === "POST") {
@@ -243,7 +243,7 @@ async function mcp(request: Request, env: Env): Promise<Response> {
   if (!auth.ok) {
     if (auth.response.status === 401) {
       const headers = new Headers(auth.response.headers);
-      headers.set("WWW-Authenticate", mcpAuthenticateHeader(issuer(env)));
+      headers.set("WWW-Authenticate", mcpAuthenticateHeader(originOf(request, env)));
       return new Response(auth.response.body, { status: 401, headers });
     }
     return auth.response;

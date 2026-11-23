@@ -700,3 +700,11 @@ function mapGrant(row: {
 export function issuer(env: Env): string {
   return publicBaseUrl(env).replace(/\/$/, "");
 }
+
+export function originOf(request: Request, env: Env): string {
+  const url = new URL(request.url);
+  if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+    return url.origin;
+  }
+  return issuer(env);
+}

@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { api, ApiError, type Device, type Folder } from "../api.ts";
 import { downloadForThisComputer } from "../downloads.ts";
+import { usePageTitle } from "../session.ts";
 import {
   IconActivity,
   IconApps,
@@ -48,6 +49,7 @@ export function Dashboard() {
   const [menu, setMenu] = useState(false);
   const [state, setState] = useState<ViewState<DashboardData>>({ status: "loading" });
   const [notice, setNotice] = useState("");
+  usePageTitle("Dashboard · FolderLink");
 
   useEffect(() => {
     if (mode === "loading") {
@@ -148,6 +150,22 @@ export function Dashboard() {
   async function logout() {
     if (mode === "live") await api.logout();
     navigate("/");
+  }
+
+  async function renameDevice(id: string, name: string) {
+    if (state.status !== "ready") return;
+    if (mode === "live") {
+      await api.renameDevice(id, name);
+    }
+    setState({
+      status: "ready",
+      data: {
+        ...state.data,
+        devices: state.data.devices.map((device) =>
+          device.id === id ? { ...device, name } : device,
+        ),
+      },
+    });
   }
 
   async function addFolder() {
@@ -252,10 +270,15 @@ export function Dashboard() {
             </p>
           ) : null}
           {ready && section === "overview" ? (
-            <Overview data={ready} onToggle={toggleFolder} onRemove={removeDevice} />
+            <Overview
+              data={ready}
+              onToggle={toggleFolder}
+              onRemove={removeDevice}
+              onRename={renameDevice}
+            />
           ) : null}
           {ready && section === "devices" ? (
-            <DeviceList data={ready} onRemove={removeDevice} />
+            <DeviceList data={ready} onRemove={removeDevice} onRename={renameDevice} />
           ) : null}
           {ready && section === "folders" ? (
             <FolderList data={ready} onToggle={toggleFolder} onAdd={addFolder} notice={notice} />
@@ -286,16 +309,18 @@ function Overview({
   data,
   onToggle,
   onRemove,
+  onRename,
 }: {
   data: DashboardData;
   onToggle: (folder: FolderView) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
+  onRename: (id: string, name: string) => Promise<void>;
 }) {
   const device = data.devices[0];
   return (
     <>
       {device ? (
-        <DeviceCard device={device} onRemove={onRemove} />
+        <DeviceCard device={device} onRemove={onRemove} onRename={onRename} />
       ) : (
         <div className="state">
           <strong>No device yet</strong>
@@ -321,9 +346,11 @@ function Overview({
 function DeviceCard({
   device,
   onRemove,
+  onRename,
 }: {
   device: DashboardData["devices"][number];
   onRemove: (id: string) => Promise<void>;
+  onRename: (id: string, name: string) => Promise<void>;
 }) {
   const label = device.status === "revoked" ? "revoked" : device.online ? "online" : "offline";
   return (
@@ -350,7 +377,16 @@ function DeviceCard({
           </div>
         </div>
         <div className="stat-actions">
-          <button type="button" className="btn quiet small" disabled>
+          <button
+            type="button"
+            className="btn quiet small"
+            onClick={() => {
+              const name = window.prompt("Name this computer", device.name);
+              if (name && name.trim()) {
+                void onRename(device.id, name.trim());
+              }
+            }}
+          >
             Rename
           </button>
           <button
@@ -391,9 +427,11 @@ function Stat({ label, value, bad }: { label: string; value: string; bad?: boole
 function DeviceList({
   data,
   onRemove,
+  onRename,
 }: {
   data: DashboardData;
   onRemove: (id: string) => Promise<void>;
+  onRename: (id: string, name: string) => Promise<void>;
 }) {
   if (data.devices.length === 0)
     return (
@@ -403,7 +441,7 @@ function DeviceList({
     <div>
       {data.devices.map((device) => (
         <div key={device.id} style={{ marginBottom: 16 }}>
-          <DeviceCard device={device} onRemove={onRemove} />
+          <DeviceCard device={device} onRemove={onRemove} onRename={onRename} />
         </div>
       ))}
     </div>

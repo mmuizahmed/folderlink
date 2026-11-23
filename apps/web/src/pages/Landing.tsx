@@ -1,11 +1,15 @@
 import { Link } from "react-router-dom";
+import { AccountMenu } from "../components/AccountMenu.tsx";
 import { SiteFooter } from "../components/SiteFooter.tsx";
 import { Mark } from "../components/Icons.tsx";
+import { usePageTitle, useSession } from "../session.ts";
 
 const RELEASES = "https://github.com/mmuizahmed/mcp-bridge/releases";
 const SOURCE = "https://github.com/mmuizahmed/mcp-bridge";
 
 export function Landing() {
+  const session = useSession();
+  usePageTitle("FolderLink");
   return (
     <div className="hero">
       <div className="glow" />
@@ -22,9 +26,13 @@ export function Landing() {
             <a href={RELEASES}>Changelog</a>
           </nav>
           <div className="top-actions">
-            <Link className="signin" to="/pair">
-              Sign in
-            </Link>
+            {session.status === "in" ? (
+              <AccountMenu user={session.user} />
+            ) : (
+              <Link className="signin" to="/pair">
+                Sign in
+              </Link>
+            )}
             <a className="btn small" href={RELEASES}>
               Download
             </a>

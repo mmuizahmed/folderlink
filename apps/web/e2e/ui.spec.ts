@@ -5,7 +5,11 @@ const widths = [1440, 1024, 768, 390] as const;
 async function quiet(page: Page) {
   const errors: string[] = [];
   page.on("console", (message) => {
-    if (message.type() === "error") errors.push(message.text());
+    if (message.type() !== "error") return;
+    if (message.text().includes("Failed to load resource") && message.text().includes("401")) {
+      return;
+    }
+    errors.push(message.text());
   });
   page.on("pageerror", (error) => errors.push(error.message));
   await page.emulateMedia({ reducedMotion: "reduce" });
