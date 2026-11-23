@@ -24,6 +24,8 @@ type request struct {
 	EndLine    int    `json:"endLine"`
 	ByteOffset int64  `json:"byteOffset"`
 	MaxBytes   int    `json:"maxBytes"`
+	Query      string `json:"query"`
+	MaxMatches int    `json:"maxMatches"`
 }
 
 type failure struct {
@@ -63,6 +65,16 @@ func Dispatch(ctx context.Context, store *config.Store, raw json.RawMessage) any
 			return fail("bad_request", err.Error())
 		}
 		return success{OK: true, Result: map[string]string{"name": req.Name}}
+	case "list_folders":
+		cfg, err := store.Load()
+		if err != nil {
+			return fail("internal", "The local configuration could not be read.")
+		}
+		folders := make([]map[string]string, 0, len(cfg.Folders))
+		for _, folder := range cfg.Folders {
+			folders = append(folders, map[string]string{"id": folder.ID, "label": folder.Label})
+		}
+		return success{OK: true, Result: map[string]any{"folders": folders}}
 	}
 	if req.FolderID == "" {
 		return fail("bad_request", "The request is not valid.")
@@ -95,6 +107,24 @@ func Dispatch(ctx context.Context, store *config.Store, raw json.RawMessage) any
 			ByteOffset: req.ByteOffset,
 			MaxBytes:   req.MaxBytes,
 		})
+		if err != nil {
+			return fromErr(err)
+		}
+		return success{OK: true, Result: result}
+	case "search_files":
+		result, err := guard.Search(ctx, folder.Path, req.Path, req.Query, req.MaxMatches)
+		if err != nil {
+			return fromErr(err)
+		}
+		return success{OK: true, Result: result}
+	case "read_media":
+		result, err := guard.Media(ctx, folder.Path, req.Path, req.MaxBytes)
+		if err != nil {
+			return fromErr(err)
+		}
+		return success{OK: true, Result: result}
+	case "file_info":
+		result, err := guard.Info(ctx, folder.Path, req.Path)
 		if err != nil {
 			return fromErr(err)
 		}

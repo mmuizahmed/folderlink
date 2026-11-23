@@ -556,6 +556,76 @@ export async function syncFolders(
   return approved.results.map((row) => row.id);
 }
 
+export interface ActivityRow {
+  id: string;
+  user_id: string;
+  device_id: string | null;
+  client: string;
+  op: string;
+  folder: string | null;
+  path: string | null;
+  ok: number;
+  error_code: string | null;
+  created_at: string;
+}
+
+// logActivity records one tool call in the audit log. Only metadata is
+// stored: the operation, folder label and path. File contents are never
+// stored. A logging failure is the caller's problem to swallow, so this
+// throws and the caller decides.
+export async function logActivity(
+  db: D1Database,
+  entry: {
+    userId: string;
+    deviceId: string | null;
+    client: string;
+    op: string;
+    folder: string | null;
+    path: string | null;
+    ok: boolean;
+    errorCode: string | null;
+  },
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO activity (id, user_id, device_id, client, op, folder, path, ok, error_code, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      crypto.randomUUID(),
+      entry.userId,
+      entry.deviceId,
+      entry.client,
+      entry.op,
+      entry.folder,
+      entry.path,
+      entry.ok ? 1 : 0,
+      entry.errorCode,
+      nowIso(),
+    )
+    .run();
+}
+
+// listActivity returns the newest audit rows for a user and prunes rows older
+// than 30 days on the same trip, so no scheduled job is needed to enforce
+// retention.
+export async function listActivity(
+  db: D1Database,
+  userId: string,
+  limit = 100,
+): Promise<ActivityRow[]> {
+  const cutoff = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+  await db.prepare("DELETE FROM activity WHERE created_at < ?").bind(cutoff).run();
+  const result = await db
+    .prepare(
+      `SELECT id, user_id, device_id, client, op, folder, path, ok, error_code, created_at
+       FROM activity WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`,
+    )
+    .bind(userId, Math.min(Math.max(limit, 1), 100))
+    .all<ActivityRow>();
+  return result.results;
+}
+
 export async function createMcpSession(
   db: D1Database,
   userId: string,

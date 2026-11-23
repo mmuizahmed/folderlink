@@ -129,7 +129,7 @@ export function instructions(folders: Array<{ label: string; approval: string }>
     parts.push(`Waiting for approval: ${pending.join(", ")}.`);
   }
   parts.push(
-    "Paths are relative to the folder. list_files is paginated. read_file accepts a line range or a byte offset.",
+    "Paths are relative to the folder. list_files is paginated. read_file accepts a line range or a byte offset. search_files finds text across a folder. list_folders lists the approved folders.",
   );
   return parts.join(" ");
 }
@@ -170,6 +170,64 @@ function toolDefinitions(): unknown[] {
           max_bytes: { type: "integer", minimum: 1, maximum: 262144 },
         },
         required: ["folder", "path"],
+        additionalProperties: false,
+      },
+    },
+    {
+      name: "search_files",
+      description:
+        "Find files whose name contains the query and lines of text files that contain it, inside an approved folder. Secrets, ignored files, and binaries are skipped. At most 100 matches.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          folder: { type: "string" },
+          path: {
+            type: "string",
+            description: "Directory relative to the folder. Empty searches the whole folder.",
+          },
+          query: { type: "string", description: "Text to find, 1 to 200 characters." },
+          max_matches: { type: "integer", minimum: 1, maximum: 100 },
+        },
+        required: ["folder", "query"],
+        additionalProperties: false,
+      },
+    },
+    {
+      name: "read_media",
+      description:
+        "Read an image or other media file inside an approved folder. Returns base64 and the MIME type. Refuses secrets, binaries that are not media, and text files: use read_file for those. At most 200 KB.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          folder: { type: "string" },
+          path: { type: "string" },
+          max_bytes: { type: "integer", minimum: 1, maximum: 204800 },
+        },
+        required: ["folder", "path"],
+        additionalProperties: false,
+      },
+    },
+    {
+      name: "file_info",
+      description:
+        "Report size, kind, modification time, and whether .gitignore ignores a path inside an approved folder. Returns metadata only, never file contents.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          folder: { type: "string" },
+          path: { type: "string" },
+        },
+        required: ["folder", "path"],
+        additionalProperties: false,
+      },
+    },
+    {
+      name: "list_folders",
+      description:
+        "List the approved folders for this account, with their labels. Works even when no computer is online.",
+      inputSchema: {
+        type: "object",
+        properties: {},
         additionalProperties: false,
       },
     },

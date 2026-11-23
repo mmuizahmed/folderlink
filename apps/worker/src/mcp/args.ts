@@ -8,14 +8,34 @@ export type ParsedCall =
       endLine?: number;
       byteOffset?: number;
       maxBytes?: number;
-    };
+    }
+  | {
+      name: "search_files";
+      folder: string;
+      path: string;
+      query: string;
+      maxMatches?: number;
+    }
+  | { name: "read_media"; folder: string; path: string; maxBytes?: number }
+  | { name: "file_info"; folder: string; path: string }
+  | { name: "list_folders" };
 
 export function parseToolCall(
   name: unknown,
   args: unknown,
 ): { ok: true; call: ParsedCall } | { ok: false; message: string } {
-  if (name !== "list_files" && name !== "read_file") {
+  if (
+    name !== "list_files" &&
+    name !== "read_file" &&
+    name !== "search_files" &&
+    name !== "read_media" &&
+    name !== "file_info" &&
+    name !== "list_folders"
+  ) {
     return { ok: false, message: "Unknown tool." };
+  }
+  if (name === "list_folders") {
+    return { ok: true, call: { name } };
   }
   if (!isRecord(args)) {
     return { ok: false, message: "Tool arguments must be an object." };
@@ -38,6 +58,35 @@ export function parseToolCall(
       call.cursor = cursor;
     }
     return { ok: true, call };
+  }
+  if (name === "search_files") {
+    const query = typeof args.query === "string" ? args.query.trim() : "";
+    if (query === "" || query.length > 200) {
+      return { ok: false, message: "query is required, 1 to 200 characters." };
+    }
+    const maxMatches = optionalInt(args.max_matches);
+    if (maxMatches === "bad" || (typeof maxMatches === "number" && maxMatches > 100)) {
+      return { ok: false, message: "search_files arguments are not valid." };
+    }
+    const call: ParsedCall = { name, folder: args.folder, path, query };
+    if (typeof maxMatches === "number") {
+      call.maxMatches = maxMatches;
+    }
+    return { ok: true, call };
+  }
+  if (name === "read_media") {
+    const maxBytes = optionalInt(args.max_bytes);
+    if (maxBytes === "bad") {
+      return { ok: false, message: "read_media arguments are not valid." };
+    }
+    const call: ParsedCall = { name, folder: args.folder, path };
+    if (typeof maxBytes === "number") {
+      call.maxBytes = maxBytes;
+    }
+    return { ok: true, call };
+  }
+  if (name === "file_info") {
+    return { ok: true, call: { name, folder: args.folder, path } };
   }
   const call: ParsedCall = { name, folder: args.folder, path };
   const startLine = optionalInt(args.start_line);

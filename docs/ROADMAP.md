@@ -16,11 +16,13 @@ Done:
 
 Prepared, not finished:
 
-- MCP OAuth 2.1 HTTP endpoints are not mounted. Access tokens are opaque bearers minted by the panel. Refresh-token rotation with reuse detection is implemented and covered by tests. The flow is specified in [OAUTH.md](OAUTH.md).
-- The control panel shows device, folder, and token state. Activity history and connected-app rows are not stored by the worker yet, so those panels are empty unless the page is opened with fixture data for design review.
+- MCP OAuth 2.1 HTTP endpoints are mounted and live: authorization, token, dynamic client registration, revocation, and protected-resource metadata. Verified end to end on Nov 23, 2026 with a real client connection (ChatGPT/Claude-style OAuth 2.0 authorization-code flow against https://folderlink.muiz.pk). Access tokens are opaque bearers minted by the panel. Refresh-token rotation with reuse detection is implemented and covered by tests. The flow is specified in [OAUTH.md](OAUTH.md).
+- The control panel shows device, folder, and token state. Activity history is stored by the worker in the `activity` D1 table (one row per tool call, metadata only, 30-day retention) and shown in the dashboard Activity panel; connected-app rows come from stored OAuth grants.
 - Release signing is configured but inactive until `COSIGN_YES` is set. See [RELEASING.md](RELEASING.md).
 
 ## Phase 2 — Sign-in and MCP OAuth
+
+Done (Nov 23, 2026, verified with a real client connection):
 
 - Google sign-in configured for the hosted site.
 - OAuth 2.1 authorization server: PKCE S256, dynamic client registration, access tokens of 30–60 minutes, rotating refresh tokens, reuse detection that revokes the token family.
@@ -30,7 +32,7 @@ Prepared, not finished:
 
 - Folder and device management with clearer empty and error states.
 - A list of agent tokens and a way to revoke one from the panel.
-- Presence that distinguishes "paired" from "socket open" without polling surprises.
+- Presence that distinguishes "paired" from "socket open" without polling surprises. Done: the worker records each device's last-seen time from bridge heartbeats (D1 `last_seen_at`), the dashboard shows online/offline from it, and the MCP offline error reports when the device was last seen instead of only "no device connected".
 
 ## Phase 4 — Later capabilities
 

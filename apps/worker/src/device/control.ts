@@ -4,6 +4,10 @@ export interface InvokeRequest {
   op:
     | "list_files"
     | "read_file"
+    | "search_files"
+    | "read_media"
+    | "file_info"
+    | "list_folders"
     | "pick_folder"
     | "rename_folder"
     | "remove_folder"
@@ -18,6 +22,8 @@ export interface InvokeRequest {
   endLine?: number;
   byteOffset?: number;
   maxBytes?: number;
+  query?: string;
+  maxMatches?: number;
 }
 
 export interface DeviceControl {
