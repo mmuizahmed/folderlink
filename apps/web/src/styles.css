@@ -812,15 +812,6 @@ h1.display span {
     display: none;
   }
 }
-.kbd {
-  font-family: var(--mono);
-  font-size: 11px;
-  padding: 1px 5px;
-  border-radius: 4px;
-  border: 1px solid #c9c9cf;
-  color: #55555c;
-}
-
 .shell {
   min-height: 100vh;
   display: flex;
@@ -846,16 +837,6 @@ h1.display span {
   display: flex;
   align-items: center;
   border-bottom: 1px solid var(--line);
-}
-.kbd-dark {
-  margin-left: auto;
-  font-family: var(--mono);
-  font-size: 11px;
-  padding: 1px 5px;
-  border-radius: 4px;
-  border: 1px solid var(--line-2);
-  color: var(--sub);
-  background: var(--raise);
 }
 .side-nav {
   padding: 8px;
@@ -894,24 +875,6 @@ h1.display span {
   margin-top: auto;
   padding: 12px;
   border-top: 1px solid var(--line);
-}
-.relay {
-  border-radius: 8px;
-  background: var(--panel);
-  padding: 12px;
-  font-size: 12px;
-}
-.relay .line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--mono);
-  color: var(--sub);
-}
-.relay .ver {
-  margin-top: 4px;
-  color: var(--faint);
-  font-family: var(--mono);
 }
 .account {
   margin-top: 12px;

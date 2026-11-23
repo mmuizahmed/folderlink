@@ -53,7 +53,6 @@ export interface DashboardData {
   folders: FolderView[];
   apps: AppView[];
   activity: ActivityView[];
-  relay: string;
 }
 
 export interface PairPreview {

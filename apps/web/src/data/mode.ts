@@ -13,6 +13,9 @@ export type ScreenMode =
 export function screenMode(
   search = typeof location === "undefined" ? "" : location.search,
 ): ScreenMode {
+  if (import.meta.env.PROD) {
+    return "live";
+  }
   const value = new URLSearchParams(search).get("fixture");
   if (
     value === "empty" ||

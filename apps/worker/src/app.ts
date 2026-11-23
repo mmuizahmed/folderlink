@@ -30,7 +30,6 @@ import {
   ensureLocalUser,
   getDevice,
   insertDevice,
-  issueAccessToken,
   listDevicesForUser,
   listFoldersForUser,
   lookupPairingCode,
@@ -53,7 +52,7 @@ import {
   userForSession,
 } from "./db.ts";
 import type { Env } from "./env.ts";
-import { publicBaseUrl, tokenTtlSeconds, webOrigin } from "./env.ts";
+import { publicBaseUrl, webOrigin } from "./env.ts";
 import {
   applyCors,
   clearSessionCookie,
@@ -429,7 +428,6 @@ async function devSession(request: Request, env: Env): Promise<Response> {
   const text = await request.text();
   let email = "dev@localhost";
   let name = "Local dev";
-  let issueToken = false;
   if (text.length > 0) {
     let body: unknown;
     try {
@@ -447,7 +445,6 @@ async function devSession(request: Request, env: Env): Promise<Response> {
       if (typeof body.name === "string" && body.name.length > 0 && body.name.length <= 60) {
         name = body.name;
       }
-      issueToken = body.issueToken === true;
     }
   }
   const user =
@@ -464,30 +461,18 @@ async function devSession(request: Request, env: Env): Promise<Response> {
     "set-cookie",
     sessionCookie(token, publicBaseUrl(env).startsWith("https://"), 14 * 24 * 3600),
   );
-  if (!issueToken) {
-    return json(
-      {
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          avatarUrl: user.avatar_url,
-        },
+  return json(
+    {
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.avatar_url,
       },
-      200,
-      headers,
-    );
-  }
-  try {
-    const issued = await issueAccessToken(env.DB, user.id, tokenTtlSeconds(env));
-    return json(
-      { user: { id: user.id, email: user.email, name: user.name }, ...issued },
-      200,
-      headers,
-    );
-  } catch {
-    return error(429, "too_many_tokens", "Too many agent tokens are still valid.");
-  }
+    },
+    200,
+    headers,
+  );
 }
 
 async function devPair(request: Request, env: Env): Promise<Response> {
@@ -498,17 +483,7 @@ async function devPair(request: Request, env: Env): Promise<Response> {
   if (user.status !== "active") {
     return error(403, "suspended", "This account is suspended.");
   }
-  const paired = await completeCode(request, env, user.id);
-  if (!paired.ok) {
-    return paired;
-  }
-  const body = (await paired.json()) as { deviceId: string };
-  try {
-    const issued = await issueAccessToken(env.DB, user.id, tokenTtlSeconds(env));
-    return json({ ...issued, deviceId: body.deviceId, userId: user.id });
-  } catch {
-    return error(429, "too_many_tokens", "Too many agent tokens are still valid.");
-  }
+  return completeCode(request, env, user.id);
 }
 
 async function startGoogle(request: Request, env: Env): Promise<Response> {

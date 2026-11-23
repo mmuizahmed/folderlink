@@ -5,7 +5,6 @@ import { AccountMenu, Avatar } from "../components/AccountMenu.tsx";
 import { GoogleButton } from "../components/GoogleButton.tsx";
 import { IconLaptop, Mark } from "../components/Icons.tsx";
 import { api, ApiError } from "../api.ts";
-import { fixturePreview } from "../data/fixture.ts";
 import { screenMode } from "../data/mode.ts";
 import { googleSignInHref, usePageTitle, useSession } from "../session.ts";
 import type { PairPreview } from "../data/types.ts";
@@ -20,11 +19,9 @@ export function Pair() {
   const session = useSession();
   const user = session.user;
   usePageTitle("Connect a device · FolderLink");
-  const [step, setStep] = useState<Step>(mode === "fixture" ? "confirm" : "code");
-  const [chars, setChars] = useState<string[]>(mode === "fixture" ? "K7QM2XPA".split("") : EMPTY);
-  const [preview, setPreview] = useState<PairPreview | null>(
-    mode === "fixture" ? fixturePreview : null,
-  );
+  const [step, setStep] = useState<Step>("code");
+  const [chars, setChars] = useState<string[]>(EMPTY);
+  const [preview, setPreview] = useState<PairPreview | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -32,6 +29,17 @@ export function Pair() {
   const code = chars.join("");
   const normalized = normalizePairingCode(code);
   const returnTo = `/pair${normalized ? `?code=${normalized}` : ""}`;
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || mode !== "fixture") {
+      return;
+    }
+    void import("../data/fixture.ts").then(({ fixturePreview }) => {
+      setPreview(fixturePreview);
+      setChars("K7QM2XPA".split(""));
+      setStep("confirm");
+    });
+  }, [mode]);
 
   useEffect(() => {
     if (mode !== "live" || !user || step !== "code") {
@@ -127,7 +135,8 @@ export function Pair() {
     if (!normalized) {
       return;
     }
-    if (mode !== "live") {
+    if (import.meta.env.DEV && mode !== "live") {
+      const { fixturePreview } = await import("../data/fixture.ts");
       setPreview(fixturePreview);
       setStep("confirm");
       setError("");

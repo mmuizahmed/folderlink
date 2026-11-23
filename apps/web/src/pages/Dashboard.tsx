@@ -12,12 +12,6 @@ import {
   IconSettings,
   Mark,
 } from "../components/Icons.tsx";
-import {
-  emptyDashboard,
-  fixtureDashboard,
-  fixtureUser,
-  offlineDashboard,
-} from "../data/fixture.ts";
 import { initials, screenMode } from "../data/mode.ts";
 import type { ActivityView, AppView, DashboardData, FolderView, ViewState } from "../data/types.ts";
 
@@ -49,28 +43,38 @@ export function Dashboard() {
   const [menu, setMenu] = useState(false);
   const [state, setState] = useState<ViewState<DashboardData>>({ status: "loading" });
   const [notice, setNotice] = useState("");
+  const [adding, setAdding] = useState(false);
   usePageTitle("Dashboard · FolderLink");
 
   useEffect(() => {
-    if (mode === "loading") {
-      setState({ status: "loading" });
-      return;
-    }
-    if (mode === "error") {
-      setState({ status: "error", message: "The control service is not reachable." });
-      return;
-    }
-    if (mode === "fixture" || mode === "long") {
-      setState({ status: "ready", data: fixtureDashboard(mode === "long") });
-      return;
-    }
-    if (mode === "offline") {
-      setState({ status: "ready", data: offlineDashboard() });
-      return;
-    }
-    if (mode === "empty") {
-      setState({ status: "ready", data: emptyDashboard(fixtureUser) });
-      return;
+    if (import.meta.env.DEV && mode !== "live") {
+      let gone = false;
+      void (async () => {
+        const preview = await import("../data/fixture.ts");
+        if (gone) return;
+        if (mode === "loading") {
+          setState({ status: "loading" });
+          return;
+        }
+        if (mode === "error") {
+          setState({ status: "error", message: "The control service is not reachable." });
+          return;
+        }
+        if (mode === "fixture" || mode === "long") {
+          setState({ status: "ready", data: preview.fixtureDashboard(mode === "long") });
+          return;
+        }
+        if (mode === "offline") {
+          setState({ status: "ready", data: preview.offlineDashboard() });
+          return;
+        }
+        if (mode === "empty") {
+          setState({ status: "ready", data: preview.emptyDashboard(preview.fixtureUser) });
+        }
+      })();
+      return () => {
+        gone = true;
+      };
     }
     let gone = false;
     async function load() {
@@ -82,17 +86,19 @@ export function Dashboard() {
           api.apps().catch(() => ({ apps: [] as Array<{ id: string; name: string }> })),
         ]);
         if (gone) return;
-        const data = emptyDashboard(me.user);
-        data.devices = devices.devices.map(toDevice);
-        data.folders = folders.folders.map(toFolder);
-        data.apps = apps.apps.map((app) => ({
-          id: app.id,
-          name: app.name,
-          mark: app.name.slice(0, 1).toUpperCase() || "A",
-          tone: "gpt" as const,
-          detail: "Read-only",
-        }));
-        data.relay = data.devices.some((device) => device.online) ? "relay ok" : "relay idle";
+        const data: DashboardData = {
+          user: me.user,
+          devices: devices.devices.map(toDevice),
+          folders: folders.folders.map(toFolder),
+          apps: apps.apps.map((app) => ({
+            id: app.id,
+            name: app.name,
+            mark: app.name.slice(0, 1).toUpperCase() || "A",
+            tone: "gpt" as const,
+            detail: "Read-only",
+          })),
+          activity: [],
+        };
         setState({ status: "ready", data });
       } catch (err) {
         if (gone) return;
@@ -179,9 +185,11 @@ export function Dashboard() {
       setNotice("The folder picker runs on your computer.");
       return;
     }
-    setNotice("");
+    setAdding(true);
+    setNotice("Choose a folder in the window on this computer.");
     try {
       const picked = await api.pickFolder(device.id);
+      setNotice(`Added ${picked.label}.`);
       setState({
         status: "ready",
         data: {
@@ -199,7 +207,13 @@ export function Dashboard() {
         },
       });
     } catch (err) {
-      setNotice(err instanceof ApiError ? err.message : "The folder could not be added.");
+      if (err instanceof ApiError && err.code === "canceled") {
+        setNotice("No folder was selected.");
+      } else {
+        setNotice(err instanceof ApiError ? err.message : "The folder could not be added.");
+      }
+    } finally {
+      setAdding(false);
     }
   }
 
@@ -329,6 +343,7 @@ export function Dashboard() {
               onRemove={removeDevice}
               onRename={renameDevice}
               onAdd={addFolder}
+              adding={adding}
               onRenameFolder={renameFolder}
               onRemoveFolder={removeFolder}
               onRevoke={revokeApp}
@@ -342,6 +357,7 @@ export function Dashboard() {
               data={ready}
               onToggle={toggleFolder}
               onAdd={addFolder}
+              adding={adding}
               onRename={renameFolder}
               onRemove={removeFolder}
               notice={notice}
@@ -376,6 +392,7 @@ function Overview({
   onRemove,
   onRename,
   onAdd,
+  adding,
   onRenameFolder,
   onRemoveFolder,
   onRevoke,
@@ -386,6 +403,7 @@ function Overview({
   onRemove: (id: string) => Promise<void>;
   onRename: (id: string, name: string) => Promise<void>;
   onAdd: () => Promise<void>;
+  adding: boolean;
   onRenameFolder: (id: string, label: string) => Promise<void>;
   onRemoveFolder: (id: string) => Promise<void>;
   onRevoke: (id: string) => Promise<void>;
@@ -393,7 +411,7 @@ function Overview({
   const device = data.devices[0];
   return (
     <>
-      <Checklist data={data} onAdd={onAdd} />
+      <Checklist data={data} onAdd={onAdd} adding={adding} />
       {device ? (
         <DeviceCard device={device} onRemove={onRemove} onRename={onRename} />
       ) : (
@@ -408,6 +426,7 @@ function Overview({
             data={data}
             onToggle={onToggle}
             onAdd={onAdd}
+            adding={adding}
             onRename={onRenameFolder}
             onRemove={onRemoveFolder}
             notice={notice}
@@ -422,7 +441,15 @@ function Overview({
 
 const MCP_URL = "https://folderlink.muiz.pk/mcp";
 
-function Checklist({ data, onAdd }: { data: DashboardData; onAdd: () => Promise<void> }) {
+function Checklist({
+  data,
+  onAdd,
+  adding,
+}: {
+  data: DashboardData;
+  onAdd: () => Promise<void>;
+  adding: boolean;
+}) {
   const [copied, setCopied] = useState(false);
   const download = downloadForThisComputer();
   const hasDevice = data.devices.some((device) => device.status !== "revoked");
@@ -459,8 +486,13 @@ function Checklist({ data, onAdd }: { data: DashboardData; onAdd: () => Promise<
                 </a>
               ) : null}
               {index === 2 && !hasFolder ? (
-                <button type="button" className="btn small" onClick={() => void onAdd()}>
-                  Add folder
+                <button
+                  type="button"
+                  className="btn small"
+                  disabled={adding}
+                  onClick={() => void onAdd()}
+                >
+                  {adding ? "Choosing a folder…" : "Add folder"}
                 </button>
               ) : null}
               {index === 3 ? (
@@ -599,6 +631,7 @@ function FolderList({
   data,
   onToggle,
   onAdd,
+  adding,
   onRename,
   onRemove,
   notice,
@@ -606,6 +639,7 @@ function FolderList({
   data: DashboardData;
   onToggle: (folder: FolderView) => Promise<void>;
   onAdd: () => Promise<void>;
+  adding: boolean;
   onRename: (id: string, label: string) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
   notice: string;
@@ -614,13 +648,22 @@ function FolderList({
     <section>
       <div className="section-head">
         <h2>Folders</h2>
-        <button type="button" className="btn small" onClick={() => void onAdd()}>
-          Add folder
+        <button type="button" className="btn small" disabled={adding} onClick={() => void onAdd()}>
+          {adding ? "Choosing a folder…" : "Add folder"}
         </button>
       </div>
       <div className="list edge">
         {notice ? (
-          <p className="alert" role="alert">
+          <p
+            className={
+              notice.startsWith("Added ") ||
+              notice.startsWith("Choose ") ||
+              notice.startsWith("No folder")
+                ? "match"
+                : "alert"
+            }
+            role="status"
+          >
             {notice}
           </p>
         ) : null}
