@@ -4,9 +4,9 @@ package pick
 // Open is the folder dialog. Tests replace it.
 var Open = openNative
 
-// Cancelled means the person closed the dialog.
-var ErrCancelled = errCancelled{}
+// Canceled means the person closed the dialog.
+var ErrCanceled = errCanceled{}
 
-type errCancelled struct{}
+type errCanceled struct{}
 
-func (errCancelled) Error() string { return "folder selection was cancelled" }
+func (errCanceled) Error() string { return "folder selection was cancelled" }

@@ -107,7 +107,7 @@ func Dispatch(ctx context.Context, store *config.Store, raw json.RawMessage) any
 func pickFolder(ctx context.Context, store *config.Store) any {
 	path, err := pick.Open(ctx)
 	if err != nil {
-		if errors.Is(err, pick.ErrCancelled) {
+		if errors.Is(err, pick.ErrCanceled) {
 			return fail("cancelled", "No folder was selected.")
 		}
 		return fail("unavailable", "The folder picker could not be opened.")

@@ -84,7 +84,7 @@ func TestPickFolderUsesTheInjectedDialog(t *testing.T) {
 	if !strings.Contains(body, `"ok":true`) || !strings.Contains(body, filepath.Base(chosen)) {
 		t.Fatal(body)
 	}
-	cancelled := pick.ErrCancelled
+	cancelled := pick.ErrCanceled
 	pick.Open = func(context.Context) (string, error) { return "", cancelled }
 	denied := call(t, context.Background(), store, map[string]any{"op": "pick_folder"})
 	if !strings.Contains(denied, "cancelled") {

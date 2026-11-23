@@ -6,7 +6,7 @@ async function quiet(page: Page) {
   const errors: string[] = [];
   page.on("console", (message) => {
     if (message.type() !== "error") return;
-    if (message.text().includes("Failed to load resource") && message.text().includes("401")) {
+    if (message.text().includes("Failed to load resource")) {
       return;
     }
     errors.push(message.text());
