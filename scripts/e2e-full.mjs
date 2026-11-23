@@ -352,6 +352,7 @@ async function main() {
       "--local",
       "--persist-to",
       state,
+      "--force",
     ],
     { cwd: root, stdio: "inherit" },
   );
