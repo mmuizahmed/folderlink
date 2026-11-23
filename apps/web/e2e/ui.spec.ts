@@ -123,9 +123,15 @@ test.describe("visual and glitch checks", () => {
     await page.evaluate(() => document.fonts.ready);
     await dashboardFrame(page, 390);
     await noOverflow(page);
-    const clipped = await page.locator(".path").evaluateAll((nodes) =>
-      nodes.every((node) => node.scrollWidth <= node.clientWidth + 1 || getComputedStyle(node).textOverflow === "ellipsis"),
-    );
+    const clipped = await page
+      .locator(".path")
+      .evaluateAll((nodes) =>
+        nodes.every(
+          (node) =>
+            node.scrollWidth <= node.clientWidth + 1 ||
+            getComputedStyle(node).textOverflow === "ellipsis",
+        ),
+      );
     expect(clipped).toBe(true);
     expect(errors).toEqual([]);
   });

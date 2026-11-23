@@ -82,7 +82,10 @@ async function begin(keys, name = "laptop") {
     ts: Math.floor(Date.now() / 1000),
     nonce: b64url(webcrypto.getRandomValues(new Uint8Array(16))),
   };
-  const response = await api("/api/pair/begin", { method: "POST", body: await signedBody(keys, payload) });
+  const response = await api("/api/pair/begin", {
+    method: "POST",
+    body: await signedBody(keys, payload),
+  });
   return response;
 }
 
@@ -124,14 +127,22 @@ async function hello(keys, { bad = false, folders = [] } = {}) {
   ws.send(JSON.stringify({ v: 1, type: "hello", id, payload, sig }));
   const frame = await new Promise((resolve) => {
     const timer = setTimeout(() => resolve(null), 4000);
-    ws.addEventListener("message", (event) => {
-      clearTimeout(timer);
-      resolve(JSON.parse(String(event.data)));
-    }, { once: true });
-    ws.addEventListener("close", () => {
-      clearTimeout(timer);
-      resolve(null);
-    }, { once: true });
+    ws.addEventListener(
+      "message",
+      (event) => {
+        clearTimeout(timer);
+        resolve(JSON.parse(String(event.data)));
+      },
+      { once: true },
+    );
+    ws.addEventListener(
+      "close",
+      () => {
+        clearTimeout(timer);
+        resolve(null);
+      },
+      { once: true },
+    );
   });
   return { ws, frame };
 }
@@ -146,7 +157,11 @@ async function mcp(token, body, sessionId) {
     headers["mcp-session-id"] = sessionId;
     headers["mcp-protocol-version"] = "2025-03-26";
   }
-  const response = await fetch(`${server}/mcp`, { method: "POST", headers, body: JSON.stringify(body) });
+  const response = await fetch(`${server}/mcp`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
   const json = await response.json();
   return { status: response.status, json, session: response.headers.get("mcp-session-id") };
 }
@@ -156,13 +171,21 @@ async function mcpSession(token) {
     jsonrpc: "2.0",
     id: 1,
     method: "initialize",
-    params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "e2e", version: "0" } },
+    params: {
+      protocolVersion: "2025-03-26",
+      capabilities: {},
+      clientInfo: { name: "e2e", version: "0" },
+    },
   });
   return init.session;
 }
 
 async function tool(token, sessionId, name, args) {
-  return mcp(token, { jsonrpc: "2.0", id: name, method: "tools/call", params: { name, arguments: args } }, sessionId);
+  return mcp(
+    token,
+    { jsonrpc: "2.0", id: name, method: "tools/call", params: { name, arguments: args } },
+    sessionId,
+  );
 }
 
 function toolText(response) {
@@ -212,12 +235,36 @@ async function main() {
   }
   execFileSync(
     "pnpm",
-    ["--filter", "@mcp-bridge/worker", "exec", "wrangler", "d1", "migrations", "apply", "mcp-bridge", "--local", "--persist-to", state],
+    [
+      "--filter",
+      "@mcp-bridge/worker",
+      "exec",
+      "wrangler",
+      "d1",
+      "migrations",
+      "apply",
+      "mcp-bridge",
+      "--local",
+      "--persist-to",
+      state,
+    ],
     { cwd: root, stdio: "inherit" },
   );
   const wrangler = spawn(
     "pnpm",
-    ["--filter", "@mcp-bridge/worker", "exec", "wrangler", "dev", "--port", String(port), "--ip", "127.0.0.1", "--persist-to", state],
+    [
+      "--filter",
+      "@mcp-bridge/worker",
+      "exec",
+      "wrangler",
+      "dev",
+      "--port",
+      String(port),
+      "--ip",
+      "127.0.0.1",
+      "--persist-to",
+      state,
+    ],
     { cwd: root, stdio: ["ignore", "pipe", "pipe"] },
   );
   children.push(wrangler);
@@ -234,10 +281,17 @@ async function main() {
 
   const issuer = await generate();
   const issued = await begin(issuer, "issuer");
-  record("pairing code issued", issued.status === 200 && Boolean(issued.json.code), JSON.stringify(issued.json));
+  record(
+    "pairing code issued",
+    issued.status === 200 && Boolean(issued.json.code),
+    JSON.stringify(issued.json),
+  );
   const owner = await session("owner@localhost");
   const wrong = await complete(owner.token, "ZZZZ-ZZZZ");
-  record("wrong pairing code rejected", wrong.status === 400 && wrong.json.error.code === "invalid_code");
+  record(
+    "wrong pairing code rejected",
+    wrong.status === 400 && wrong.json.error.code === "invalid_code",
+  );
   const once = await complete(owner.token, issued.json.code);
   record("pairing code single use accepts first time", once.status === 200);
   const twice = await complete(owner.token, issued.json.code);
@@ -245,10 +299,21 @@ async function main() {
 
   const expiring = await generate();
   const exp = await begin(expiring, "expiring");
-  const sqlite = execFileSync("bash", ["-lc", `find ${state} -path '*d1*' -name '*.sqlite' | head -1`], { encoding: "utf8" }).trim();
-  execFileSync("python3", ["-c", `import sqlite3; db=sqlite3.connect(${JSON.stringify(sqlite)}); db.execute("UPDATE pairing_codes SET expires_at='2000-01-01T00:00:00.000Z' WHERE consumed_at IS NULL"); db.commit()`]);
+  const sqlite = execFileSync(
+    "bash",
+    ["-lc", `find ${state} -path '*d1*' -name '*.sqlite' | head -1`],
+    { encoding: "utf8" },
+  ).trim();
+  execFileSync("python3", [
+    "-c",
+    `import sqlite3; db=sqlite3.connect(${JSON.stringify(sqlite)}); db.execute("UPDATE pairing_codes SET expires_at='2000-01-01T00:00:00.000Z' WHERE consumed_at IS NULL"); db.commit()`,
+  ]);
   const expired = await complete(owner.token, exp.json.code);
-  record("expired pairing code rejected", expired.status === 400 && expired.json.error.code === "expired", JSON.stringify(expired.json));
+  record(
+    "expired pairing code rejected",
+    expired.status === 400 && expired.json.error.code === "expired",
+    JSON.stringify(expired.json),
+  );
 
   const limited = await session("limited@localhost");
   let limitedStatus = 0;
@@ -286,8 +351,15 @@ async function main() {
     body: { approval: "approved" },
   });
   const sleepSession = await mcpSession(sleepUser.token);
-  const timed = await tool(sleepUser.token, sleepSession, "read_file", { folder: "hung", path: "a.txt" });
-  record("device timeout when the socket does not answer", /did not respond/i.test(toolText(timed)), toolText(timed).slice(0, 220));
+  const timed = await tool(sleepUser.token, sleepSession, "read_file", {
+    folder: "hung",
+    path: "a.txt",
+  });
+  record(
+    "device timeout when the socket does not answer",
+    /did not respond/i.test(toolText(timed)),
+    toolText(timed).slice(0, 220),
+  );
   hung.ws.close();
 
   const alphaHome = mkdtempSync(join(tmpdir(), "bridge-a-"));
@@ -309,8 +381,25 @@ async function main() {
   writeFileSync(join(betaProj, "notes/only-beta.txt"), "beta only\n");
 
   const bin = join(state, "mcp-bridge");
-  execFileSync(bin, ["--server", server, "--home", alphaHome, "allow", join(alphaProj, "notes"), "--label", "alpha"], { stdio: "inherit" });
-  execFileSync(bin, ["--server", server, "--home", betaHome, "allow", join(betaProj, "notes"), "--label", "beta"], { stdio: "inherit" });
+  execFileSync(
+    bin,
+    [
+      "--server",
+      server,
+      "--home",
+      alphaHome,
+      "allow",
+      join(alphaProj, "notes"),
+      "--label",
+      "alpha",
+    ],
+    { stdio: "inherit" },
+  );
+  execFileSync(
+    bin,
+    ["--server", server, "--home", betaHome, "allow", join(betaProj, "notes"), "--label", "beta"],
+    { stdio: "inherit" },
+  );
   const alpha = startBridge(alphaHome);
   const beta = startBridge(betaHome);
   await waitFor(() => /Pairing code:/.test(alpha.text()), "alpha code");
@@ -322,46 +411,118 @@ async function main() {
   const pairedA = await complete(userA.token, alphaCode);
   const pairedB = await complete(userB.token, betaCode);
   record("two devices pair to two users", pairedA.status === 200 && pairedB.status === 200);
-  await waitFor(() => /Connected\./.test(alpha.text()) && /Connected\./.test(beta.text()), "both connected");
+  await waitFor(
+    () => /Connected\./.test(alpha.text()) && /Connected\./.test(beta.text()),
+    "both connected",
+  );
   record("bridges connect over the websocket", true);
 
   const foldersA = await api("/api/folders", { token: userA.token });
   const foldersB = await api("/api/folders", { token: userB.token });
-  record("folder lists stay on the owning user", foldersA.json.folders.every((folder) => folder.label === "alpha") && foldersB.json.folders.every((folder) => folder.label === "beta"));
-  await api(`/api/folders/${foldersA.json.folders[0].id}/approval`, { method: "POST", token: userA.token, body: { approval: "approved" } });
-  await api(`/api/folders/${foldersB.json.folders[0].id}/approval`, { method: "POST", token: userB.token, body: { approval: "approved" } });
+  record(
+    "folder lists stay on the owning user",
+    foldersA.json.folders.every((folder) => folder.label === "alpha") &&
+      foldersB.json.folders.every((folder) => folder.label === "beta"),
+  );
+  await api(`/api/folders/${foldersA.json.folders[0].id}/approval`, {
+    method: "POST",
+    token: userA.token,
+    body: { approval: "approved" },
+  });
+  await api(`/api/folders/${foldersB.json.folders[0].id}/approval`, {
+    method: "POST",
+    token: userB.token,
+    body: { approval: "approved" },
+  });
   const sessionA = await mcpSession(userA.token);
   const sessionB = await mcpSession(userB.token);
 
-  const allowed = await tool(userA.token, sessionA, "read_file", { folder: "alpha", path: "hello.txt", deviceId: pairedB.json.deviceId });
-  record("read_file returns an allowed file", toolText(allowed).includes("hello from the bridge") && !toolText(allowed).includes('"isError":true'));
+  const allowed = await tool(userA.token, sessionA, "read_file", {
+    folder: "alpha",
+    path: "hello.txt",
+    deviceId: pairedB.json.deviceId,
+  });
+  record(
+    "read_file returns an allowed file",
+    toolText(allowed).includes("hello from the bridge") &&
+      !toolText(allowed).includes('"isError":true'),
+  );
   const secret = await tool(userA.token, sessionA, "read_file", { folder: "alpha", path: ".env" });
-  record("secret file is denied", /denylist|refused/i.test(toolText(secret)) && !toolText(secret).includes("SUPERSECRETVALUE"));
-  const escaped = await tool(userA.token, sessionA, "read_file", { folder: "alpha", path: "escape" });
-  record("symlink escape is denied", /outside/i.test(toolText(escaped)) && !toolText(escaped).includes("OUTSIDESECRET"));
-  const outsidePath = await tool(userA.token, sessionA, "read_file", { folder: "alpha", path: "../../secret.txt" });
+  record(
+    "secret file is denied",
+    /denylist|refused/i.test(toolText(secret)) && !toolText(secret).includes("SUPERSECRETVALUE"),
+  );
+  const escaped = await tool(userA.token, sessionA, "read_file", {
+    folder: "alpha",
+    path: "escape",
+  });
+  record(
+    "symlink escape is denied",
+    /outside/i.test(toolText(escaped)) && !toolText(escaped).includes("OUTSIDESECRET"),
+  );
+  const outsidePath = await tool(userA.token, sessionA, "read_file", {
+    folder: "alpha",
+    path: "../../secret.txt",
+  });
   record("path outside the folder is denied", /outside/i.test(toolText(outsidePath)));
-  const binary = await tool(userA.token, sessionA, "read_file", { folder: "alpha", path: "bin.dat" });
+  const binary = await tool(userA.token, sessionA, "read_file", {
+    folder: "alpha",
+    path: "bin.dat",
+  });
   record("binary file is denied", /binary/i.test(toolText(binary)));
-  const chunk = await tool(userA.token, sessionA, "read_file", { folder: "alpha", path: "big.txt", max_bytes: 1000 });
-  record("large file is chunked", /"truncated":true/.test(toolText(chunk)) && /nextByteOffset/.test(toolText(chunk)));
-  const page = await tool(userA.token, sessionA, "list_files", { folder: "alpha", path: "", limit: 2 });
+  const chunk = await tool(userA.token, sessionA, "read_file", {
+    folder: "alpha",
+    path: "big.txt",
+    max_bytes: 1000,
+  });
+  record(
+    "large file is chunked",
+    /"truncated":true/.test(toolText(chunk)) && /nextByteOffset/.test(toolText(chunk)),
+  );
+  const page = await tool(userA.token, sessionA, "list_files", {
+    folder: "alpha",
+    path: "",
+    limit: 2,
+  });
   record("directory listing is paginated", /nextCursor":"[^"]+"/.test(toolText(page)));
-  const cross = await tool(userA.token, sessionA, "read_file", { folder: "beta", path: "only-beta.txt" });
+  const cross = await tool(userA.token, sessionA, "read_file", {
+    folder: "beta",
+    path: "only-beta.txt",
+  });
   record("token cannot read another user's folder", !toolText(cross).includes("beta only"));
   const crossList = await api("/api/folders", { token: userA.token });
-  record("token cannot list another user's folders", !JSON.stringify(crossList.json).includes("beta"));
+  record(
+    "token cannot list another user's folders",
+    !JSON.stringify(crossList.json).includes("beta"),
+  );
 
   await api(`/api/devices/${pairedA.json.deviceId}/revoke`, { method: "POST", token: userA.token });
-  const after = await tool(userA.token, sessionA, "read_file", { folder: "alpha", path: "hello.txt" });
-  record("revoked device no longer serves reads", /not connected|no paired device|unavailable|revoked/i.test(toolText(after)), toolText(after).slice(0, 180));
+  const after = await tool(userA.token, sessionA, "read_file", {
+    folder: "alpha",
+    path: "hello.txt",
+  });
+  record(
+    "revoked device no longer serves reads",
+    /not connected|no paired device|unavailable|revoked/i.test(toolText(after)),
+    toolText(after).slice(0, 180),
+  );
 
-  const other = await tool(userB.token, sessionB, "read_file", { folder: "beta", path: "only-beta.txt" });
+  const other = await tool(userB.token, sessionB, "read_file", {
+    folder: "beta",
+    path: "only-beta.txt",
+  });
   record("the other user's device still answers", toolText(other).includes("beta only"));
   beta.child.kill("SIGTERM");
   await new Promise((resolve) => setTimeout(resolve, 500));
-  const offline = await tool(userB.token, sessionB, "read_file", { folder: "beta", path: "only-beta.txt" });
-  record("offline device does not serve reads", /no paired device|not connected|unavailable/i.test(toolText(offline)), toolText(offline).slice(0, 180));
+  const offline = await tool(userB.token, sessionB, "read_file", {
+    folder: "beta",
+    path: "only-beta.txt",
+  });
+  record(
+    "offline device does not serve reads",
+    /no paired device|not connected|unavailable/i.test(toolText(offline)),
+    toolText(offline).slice(0, 180),
+  );
 }
 
 main()
@@ -381,9 +542,18 @@ main()
   });
 
 function writeMatrix(ok) {
-  const lines = ["# Test matrix", "", `Overall: ${ok && results.every((row) => row.ok) ? "pass" : "fail"}`, "", "| Case | Result | Detail |", "| --- | --- | --- |"];
+  const lines = [
+    "# Test matrix",
+    "",
+    `Overall: ${ok && results.every((row) => row.ok) ? "pass" : "fail"}`,
+    "",
+    "| Case | Result | Detail |",
+    "| --- | --- | --- |",
+  ];
   for (const row of results) {
-    lines.push(`| ${row.name} | ${row.ok ? "pass" : "fail"} | ${row.detail.replaceAll("|", "/")} |`);
+    lines.push(
+      `| ${row.name} | ${row.ok ? "pass" : "fail"} | ${row.detail.replaceAll("|", "/")} |`,
+    );
   }
   writeFileSync(join(root, "docs/TEST-MATRIX.md"), `${lines.join("\n")}\n`);
 }
