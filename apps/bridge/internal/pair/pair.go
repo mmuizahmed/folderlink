@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"runtime"
 	"time"
 
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/identity"
@@ -67,6 +68,8 @@ func (c Client) Begin(ctx context.Context, id *identity.Identity, name string) (
 		"deviceId":  id.DeviceID,
 		"publicKey": id.PublicB64(),
 		"name":      name,
+		"os":        runtime.GOOS,
+		"arch":      runtime.GOARCH,
 		"ts":        time.Now().Unix(),
 		"nonce":     nonce,
 	})

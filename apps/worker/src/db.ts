@@ -23,6 +23,10 @@ export interface DeviceRecord {
   last_seen_at: string | null;
   created_at: string;
   updated_at: string;
+  os: string;
+  arch: string;
+  client_ip: string;
+  client_region: string;
 }
 
 export function nowIso(): string {
@@ -74,10 +78,14 @@ export async function upsertGoogleUser(
   return created;
 }
 
-export async function ensureDevUser(db: D1Database): Promise<UserRow> {
+export async function ensureLocalUser(
+  db: D1Database,
+  email: string,
+  name: string,
+): Promise<UserRow> {
   const existing = await db
     .prepare("SELECT * FROM users WHERE email = ?")
-    .bind("dev@localhost")
+    .bind(email)
     .first<UserRow>();
   if (existing) {
     return existing;
@@ -87,15 +95,19 @@ export async function ensureDevUser(db: D1Database): Promise<UserRow> {
   await db
     .prepare(
       `INSERT INTO users (id, email, name, avatar_url, status, created_at, updated_at)
-       VALUES (?, 'dev@localhost', 'Local dev', '', 'active', ?, ?)`,
+       VALUES (?, ?, ?, '', 'active', ?, ?)`,
     )
-    .bind(id, ts, ts)
+    .bind(id, email, name, ts, ts)
     .run();
   const created = await getUser(db, id);
   if (!created) {
-    throw new Error("dev user was not created");
+    throw new Error("local user was not created");
   }
   return created;
+}
+
+export async function ensureDevUser(db: D1Database): Promise<UserRow> {
+  return ensureLocalUser(db, "dev@localhost", "Local dev");
 }
 
 export async function createSession(
@@ -241,15 +253,69 @@ export async function deviceByPublicKey(
 
 export async function insertDevice(
   db: D1Database,
-  device: { id: string; publicKey: string; name: string },
+  device: {
+    id: string;
+    publicKey: string;
+    name: string;
+    os?: string;
+    arch?: string;
+    clientIp?: string;
+    clientRegion?: string;
+  },
 ): Promise<void> {
   const ts = nowIso();
   await db
     .prepare(
-      `INSERT INTO devices (id, public_key, name, status, created_at, updated_at)
-       VALUES (?, ?, ?, 'pending', ?, ?)`,
+      `INSERT INTO devices
+        (id, public_key, name, status, os, arch, client_ip, client_region, created_at, updated_at)
+       VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)`,
     )
-    .bind(device.id, device.publicKey, device.name, ts, ts)
+    .bind(
+      device.id,
+      device.publicKey,
+      device.name,
+      device.os ?? "",
+      device.arch ?? "",
+      device.clientIp ?? "",
+      device.clientRegion ?? "",
+      ts,
+      ts,
+    )
+    .run();
+}
+
+export async function touchDeviceMeta(
+  db: D1Database,
+  id: string,
+  meta: { name: string; os: string; arch: string; clientIp: string; clientRegion: string },
+): Promise<void> {
+  await db
+    .prepare(
+      `UPDATE devices
+       SET name = ?, os = ?, arch = ?, client_ip = ?, client_region = ?, updated_at = ?
+       WHERE id = ?`,
+    )
+    .bind(meta.name, meta.os, meta.arch, meta.clientIp, meta.clientRegion, nowIso(), id)
+    .run();
+}
+
+export async function pairFailureCount(
+  db: D1Database,
+  bucket: string,
+  windowSeconds: number,
+): Promise<number> {
+  const since = new Date(Date.now() - windowSeconds * 1000).toISOString();
+  const row = await db
+    .prepare("SELECT COUNT(*) AS n FROM pair_attempts WHERE bucket = ? AND created_at > ?")
+    .bind(bucket, since)
+    .first<{ n: number }>();
+  return Number(row?.n ?? 0);
+}
+
+export async function notePairFailure(db: D1Database, bucket: string): Promise<void> {
+  await db
+    .prepare("INSERT INTO pair_attempts (bucket, created_at) VALUES (?, ?)")
+    .bind(bucket, nowIso())
     .run();
 }
 
@@ -291,26 +357,50 @@ export async function touchDevice(db: D1Database, id: string): Promise<void> {
     .run();
 }
 
-export async function consumePairingCode(
-  db: D1Database,
-  code: string,
-): Promise<{ device_id: string } | null> {
+export type CodeLookup =
+  | { status: "ok"; device_id: string; expires_at: string }
+  | { status: "expired" }
+  | { status: "invalid" };
+
+async function findPairingCode(db: D1Database, code: string): Promise<CodeLookup> {
   const normalized = normalizePairingCode(code);
   if (!normalized) {
-    return null;
+    return { status: "invalid" };
   }
   const row = await db
     .prepare(`SELECT device_id, consumed_at, expires_at FROM pairing_codes WHERE code_hash = ?`)
     .bind(await sha256Hex(normalized))
     .first<{ device_id: string; consumed_at: string | null; expires_at: string }>();
-  if (!row || row.consumed_at || row.expires_at <= nowIso()) {
-    return null;
+  if (!row || row.consumed_at) {
+    return { status: "invalid" };
   }
-  await db
+  if (row.expires_at <= nowIso()) {
+    return { status: "expired" };
+  }
+  return { status: "ok", device_id: row.device_id, expires_at: row.expires_at };
+}
+
+export async function lookupPairingCode(db: D1Database, code: string): Promise<CodeLookup> {
+  return findPairingCode(db, code);
+}
+
+export async function consumePairingCode(db: D1Database, code: string): Promise<CodeLookup> {
+  const found = await findPairingCode(db, code);
+  if (found.status !== "ok") {
+    return found;
+  }
+  const normalized = normalizePairingCode(code);
+  if (!normalized) {
+    return { status: "invalid" };
+  }
+  const result = await db
     .prepare("UPDATE pairing_codes SET consumed_at = ? WHERE code_hash = ? AND consumed_at IS NULL")
     .bind(nowIso(), await sha256Hex(normalized))
     .run();
-  return { device_id: row.device_id };
+  if ((result.meta.changes ?? 0) < 1) {
+    return { status: "invalid" };
+  }
+  return found;
 }
 
 export async function listFolders(db: D1Database, deviceId: string): Promise<FolderRow[]> {

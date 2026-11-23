@@ -1,6 +1,6 @@
 import { isRecord, parsePairBeginPayload, parsePairStatusPayload } from "@mcp-bridge/shared";
 import { exchangeGoogleCode, googleAuthURL, googleConfigured } from "./auth/google.ts";
-import { randomToken, verifySignature } from "./crypto.ts";
+import { fingerprint, maskAddress, randomToken, verifySignature } from "./crypto.ts";
 import {
   consumePairingCode,
   createMcpSession,
@@ -9,13 +9,16 @@ import {
   deleteSession,
   deviceByPublicKey,
   ensureDevUser,
+  ensureLocalUser,
   getDevice,
   insertDevice,
   issueAccessToken,
   listDevicesForUser,
   listFoldersForUser,
+  lookupPairingCode,
   mcpSessionValid,
-  nowIso,
+  notePairFailure,
+  pairFailureCount,
   pairingCode,
   rememberNonce,
   saveLoginState,
@@ -23,6 +26,7 @@ import {
   setDeviceStatus,
   setFolderApproval,
   takeLoginState,
+  touchDeviceMeta,
   upsertGoogleUser,
   userForAccessToken,
   userForSession,
@@ -103,6 +107,9 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
   }
   if (url.pathname === "/api/pair/begin" && request.method === "POST") {
     return pairBegin(request, env);
+  }
+  if (url.pathname === "/api/pair/preview" && request.method === "GET") {
+    return pairPreview(request, env);
   }
   if (url.pathname === "/api/pair/status" && request.method === "POST") {
     return pairStatus(request, env);
@@ -218,6 +225,10 @@ async function pairBegin(request: Request, env: Env): Promise<Response> {
   if (!(await rememberNonce(env.DB, payload.nonce))) {
     return error(401, "unauthorized", "The pairing request was already used.");
   }
+  if (await overLimit(env, `begin:${payload.publicKey}`, 15)) {
+    return error(429, "rate_limited", "Too many pairing attempts. Wait a few minutes.");
+  }
+  const meta = deviceMeta(request, body.payload);
   const byId = await getDevice(env.DB, payload.deviceId);
   const byKey = await deviceByPublicKey(env.DB, payload.publicKey);
   if ((byId && byId.public_key !== payload.publicKey) || (byKey && byKey.id !== payload.deviceId)) {
@@ -232,11 +243,13 @@ async function pairBegin(request: Request, env: Env): Promise<Response> {
       id: payload.deviceId,
       publicKey: payload.publicKey,
       name: payload.name,
+      os: meta.os,
+      arch: meta.arch,
+      clientIp: meta.clientIp,
+      clientRegion: meta.clientRegion,
     });
   } else {
-    await env.DB.prepare("UPDATE devices SET name = ?, updated_at = ? WHERE id = ?")
-      .bind(payload.name, nowIso(), device.id)
-      .run();
+    await touchDeviceMeta(env.DB, device.id, { name: payload.name, ...meta });
   }
   const code = pairingCode();
   const expiresAt = await savePairingCode(env.DB, payload.deviceId, code);
@@ -286,8 +299,16 @@ async function completeCode(request: Request, env: Env, userId: string): Promise
   if (body instanceof Response || !isRecord(body) || typeof body.code !== "string") {
     return error(400, "bad_request", "A pairing code is required.");
   }
+  if ((await pairFailureCount(env.DB, `complete:${userId}`, 600)) >= 8) {
+    return error(429, "rate_limited", "Too many pairing attempts. Wait a few minutes.");
+  }
   const consumed = await consumePairingCode(env.DB, body.code);
-  if (!consumed) {
+  if (consumed.status === "expired") {
+    await notePairFailure(env.DB, `complete:${userId}`);
+    return error(400, "expired", "That pairing code has expired.");
+  }
+  if (consumed.status !== "ok") {
+    await notePairFailure(env.DB, `complete:${userId}`);
     return error(400, "invalid_code", "That pairing code is not valid.");
   }
   const device = await getDevice(env.DB, consumed.device_id);
@@ -305,7 +326,34 @@ async function devSession(request: Request, env: Env): Promise<Response> {
   if (!localDevEnabled(request, env)) {
     return error(404, "not_found", "Not found.");
   }
-  const user = await ensureDevUser(env.DB);
+  const text = await request.text();
+  let email = "dev@localhost";
+  let name = "Local dev";
+  let issueToken = false;
+  if (text.length > 0) {
+    let body: unknown;
+    try {
+      body = JSON.parse(text) as unknown;
+    } catch {
+      return error(400, "bad_request", "The body is not valid JSON.");
+    }
+    if (isRecord(body)) {
+      if (typeof body.email === "string") {
+        if (!/^[\w.+-]{1,40}@localhost$/.test(body.email)) {
+          return error(400, "bad_request", "Use a localhost address for local sign-in.");
+        }
+        email = body.email;
+      }
+      if (typeof body.name === "string" && body.name.length > 0 && body.name.length <= 60) {
+        name = body.name;
+      }
+      issueToken = body.issueToken === true;
+    }
+  }
+  const user =
+    email === "dev@localhost"
+      ? await ensureDevUser(env.DB)
+      : await ensureLocalUser(env.DB, email, name);
   if (user.status !== "active") {
     return error(403, "suspended", "This account is suspended.");
   }
@@ -316,7 +364,19 @@ async function devSession(request: Request, env: Env): Promise<Response> {
     "set-cookie",
     sessionCookie(token, publicBaseUrl(env).startsWith("https://"), 14 * 24 * 3600),
   );
-  return json({ user: { id: user.id, email: user.email, name: user.name } }, 200, headers);
+  if (!issueToken) {
+    return json({ user: { id: user.id, email: user.email, name: user.name } }, 200, headers);
+  }
+  try {
+    const issued = await issueAccessToken(env.DB, user.id, tokenTtlSeconds(env));
+    return json(
+      { user: { id: user.id, email: user.email, name: user.name }, ...issued },
+      200,
+      headers,
+    );
+  } catch {
+    return error(429, "too_many_tokens", "Too many agent tokens are still valid.");
+  }
 }
 
 async function devPair(request: Request, env: Env): Promise<Response> {
@@ -419,6 +479,10 @@ async function devices(request: Request, env: Env): Promise<Response> {
       status: device.status,
       lastSeenAt: device.last_seen_at,
       online: device.last_seen_at ? Date.parse(device.last_seen_at) > cutoff : false,
+      os: device.os ?? "",
+      arch: device.arch ?? "",
+      fingerprint: fingerprint(device.public_key),
+      network: networkLabel(device.client_ip ?? "", device.client_region ?? ""),
     })),
   });
 }
@@ -539,6 +603,71 @@ async function authenticate(
     user: { id: user.id, status: user.status, email: user.email, name: user.name },
     via: "session",
   };
+}
+
+async function pairPreview(request: Request, env: Env): Promise<Response> {
+  const auth = await authenticate(request, env, "either");
+  if (!auth.ok) {
+    return auth.response;
+  }
+  const code = new URL(request.url).searchParams.get("code") ?? "";
+  const found = await lookupPairingCode(env.DB, code);
+  if (found.status === "expired") {
+    return error(400, "expired", "That pairing code has expired.");
+  }
+  if (found.status !== "ok") {
+    return error(400, "invalid_code", "That pairing code is not valid.");
+  }
+  const device = await getDevice(env.DB, found.device_id);
+  if (!device) {
+    return error(400, "invalid_code", "That pairing code is not valid.");
+  }
+  return json({
+    name: device.name,
+    status: device.status,
+    os: device.os || "unknown",
+    arch: device.arch || "unknown",
+    fingerprint: fingerprint(device.public_key),
+    network: networkLabel(device.client_ip ?? "", device.client_region ?? ""),
+    expiresAt: found.expires_at,
+    folders: "none yet — you choose after pairing",
+  });
+}
+
+async function overLimit(env: Env, bucket: string, limit: number): Promise<boolean> {
+  const count = await pairFailureCount(env.DB, bucket, 600);
+  if (count >= limit) {
+    return true;
+  }
+  await notePairFailure(env.DB, bucket);
+  return false;
+}
+
+function deviceMeta(
+  request: Request,
+  payload: Record<string, unknown>,
+): {
+  os: string;
+  arch: string;
+  clientIp: string;
+  clientRegion: string;
+} {
+  const os = typeof payload.os === "string" ? payload.os.slice(0, 32) : "";
+  const arch = typeof payload.arch === "string" ? payload.arch.slice(0, 32) : "";
+  const headerIp =
+    request.headers.get("cf-connecting-ip") ??
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    "";
+  const region = request.headers.get("cf-ipcountry") ?? "";
+  return { os, arch, clientIp: headerIp.slice(0, 64), clientRegion: region.slice(0, 8) };
+}
+
+function networkLabel(ip: string, region: string): string {
+  const masked = maskAddress(ip);
+  if (region && region !== "XX") {
+    return `${masked} · ${region}`;
+  }
+  return masked;
 }
 
 async function readBody(request: Request): Promise<unknown | Response> {

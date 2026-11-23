@@ -29,6 +29,29 @@ export function base64UrlToBytes(value: string): Uint8Array {
   return out;
 }
 
+export function fingerprint(publicKey: string): string {
+  const bytes = base64UrlToBytes(publicKey);
+  const hex = [...bytes]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("")
+    .toUpperCase();
+  if (hex.length < 8) {
+    return "ed25519:unknown";
+  }
+  return `ed25519:${hex.slice(0, 4)}…${hex.slice(-4)}`;
+}
+
+export function maskAddress(ip: string): string {
+  if (ip === "" || ip === "127.0.0.1" || ip === "::1" || ip === "localhost") {
+    return "local";
+  }
+  const parts = ip.split(".");
+  if (parts.length === 4 && parts.every((part) => /^\d{1,3}$/.test(part))) {
+    return `${parts[0]}.${parts[1]}.x.x`;
+  }
+  return "unknown";
+}
+
 export function freshTimestamp(ts: number, now = Date.now()): boolean {
   return Math.abs(now - ts * 1000) <= 5 * 60 * 1000;
 }
