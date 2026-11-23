@@ -379,6 +379,87 @@ h1.display span {
   color: var(--faint);
 }
 
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 20px;
+  margin: 0 auto;
+  max-width: 1080px;
+  padding: 8px 24px 40px;
+  color: var(--sub);
+  font-size: 13px;
+}
+.site-footer a:hover {
+  color: var(--fg);
+}
+.legal {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.legal .top {
+  border-bottom: 1px solid var(--line);
+}
+.legal-main {
+  max-width: 680px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 48px 24px 24px;
+  overflow-wrap: break-word;
+}
+.legal-main h1 {
+  margin: 0;
+  font-size: clamp(32px, 5vw, 40px);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  font-weight: 600;
+}
+.legal-date {
+  margin: 12px 0 0;
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.legal-main h2 {
+  margin: 32px 0 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.legal-main p,
+.legal-main li {
+  color: var(--sub);
+  font-size: 15px;
+  line-height: 1.7;
+}
+.legal-main p {
+  margin: 12px 0 0;
+}
+.legal-main ul {
+  margin: 12px 0 0;
+  padding-left: 18px;
+}
+.legal-main li + li {
+  margin-top: 8px;
+}
+.legal-main a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.legal .site-footer {
+  border-top: 1px solid var(--line);
+  margin-top: auto;
+  padding-top: 20px;
+}
+.dash-body .site-footer,
+.pair-page .site-footer {
+  max-width: none;
+  padding-right: 0;
+  padding-left: 0;
+}
+
 .pair-page {
   min-height: 100vh;
   position: relative;
@@ -1007,6 +1088,16 @@ code.mono {
   }
   .dash-body {
     padding: 20px 16px 48px;
+  }
+  .legal-main,
+  .site-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .dash-body .site-footer,
+  .pair-page .site-footer {
+    padding-left: 0;
+    padding-right: 0;
   }
   .dash-top,
   .top-inner,

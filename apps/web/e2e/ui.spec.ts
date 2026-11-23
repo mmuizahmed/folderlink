@@ -136,6 +136,56 @@ test.describe("visual and glitch checks", () => {
     expect(errors).toEqual([]);
   });
 
+  for (const width of [1440, 390] as const) {
+    test(`privacy ${width}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      const errors = await quiet(page);
+      await page.goto("/privacy");
+      await page.evaluate(() => document.fonts.ready);
+      await expect(page.getByRole("heading", { name: "Privacy" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Google sign-in" })).toBeVisible();
+      await expect(page.getByText("security@muiz.pk")).toBeVisible();
+      await expect(page.getByText(/does not write them into the database/)).toBeVisible();
+      await expect(
+        page.getByRole("contentinfo").getByRole("link", { name: "GitHub" }),
+      ).toBeVisible();
+      await noOverflow(page);
+      expect(errors).toEqual([]);
+      await expect(page).toHaveScreenshot(`privacy-${width}.png`, { fullPage: true });
+    });
+
+    test(`terms ${width}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      const errors = await quiet(page);
+      await page.goto("/terms");
+      await page.evaluate(() => document.fonts.ready);
+      await expect(page.getByRole("heading", { name: "Terms" })).toBeVisible();
+      await expect(page.getByText(/no warranty/)).toBeVisible();
+      await expect(page.getByRole("link", { name: "Privacy", exact: true })).toHaveCount(2);
+      await expect(
+        page.getByRole("contentinfo").getByRole("link", { name: "Privacy", exact: true }),
+      ).toBeVisible();
+      await noOverflow(page);
+      expect(errors).toEqual([]);
+      await expect(page).toHaveScreenshot(`terms-${width}.png`, { fullPage: true });
+    });
+  }
+
+  test("footer links are on the main screens", async ({ page }) => {
+    const errors = await quiet(page);
+    for (const path of ["/", "/pair?fixture=1", "/dashboard?fixture=1"]) {
+      await page.goto(path);
+      const footer = page.getByRole("contentinfo");
+      await expect(footer.getByRole("link", { name: "Privacy" })).toBeVisible();
+      await expect(footer.getByRole("link", { name: "Terms" })).toBeVisible();
+      await expect(footer.getByRole("link", { name: "GitHub" })).toHaveAttribute(
+        "href",
+        "https://github.com/mmuizahmed/mcp-bridge",
+      );
+    }
+    expect(errors).toEqual([]);
+  });
+
   test("keyboard reaches the primary actions", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");

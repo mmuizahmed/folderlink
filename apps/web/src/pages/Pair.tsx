@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { normalizePairingCode } from "@mcp-bridge/shared";
+import { SiteFooter } from "../components/SiteFooter.tsx";
 import { IconLaptop, LogoMark, Mark } from "../components/Icons.tsx";
 import { api, ApiError } from "../api.ts";
 import { fixturePreview, fixtureUser } from "../data/fixture.ts";
@@ -304,6 +305,7 @@ export function Pair() {
           </button>
         </div>
       </div>
+      <SiteFooter />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { api, ApiError, type Device, type Folder } from "../api.ts";
+import { SiteFooter } from "../components/SiteFooter.tsx";
 import {
   IconActivity,
   IconApps,
@@ -252,6 +253,7 @@ export function Dashboard() {
               )}
             </section>
           ) : null}
+          <SiteFooter />
         </div>
       </div>
     </div>
