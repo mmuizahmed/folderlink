@@ -143,7 +143,9 @@ async function record(
       deviceId,
       client: "mcp",
       op: call.name,
-      folder: folderLabel ?? (call.name === "list_folders" ? null : "folder" in call ? call.folder : null),
+      folder:
+        folderLabel ??
+        (call.name === "list_folders" ? null : "folder" in call ? call.folder : null),
       path: "path" in call ? call.path : null,
       ok: result.ok,
       errorCode: result.ok ? null : result.error.code,

@@ -609,7 +609,11 @@ export async function logActivity(
 // listActivity returns the newest audit rows for a user and prunes rows older
 // than 30 days on the same trip, so no scheduled job is needed to enforce
 // retention.
-export async function listActivity(db: D1Database, userId: string, limit = 100): Promise<ActivityRow[]> {
+export async function listActivity(
+  db: D1Database,
+  userId: string,
+  limit = 100,
+): Promise<ActivityRow[]> {
   const cutoff = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
   await db.prepare("DELETE FROM activity WHERE created_at < ?").bind(cutoff).run();
   const result = await db

@@ -157,7 +157,7 @@ func installDarwin() error {
 </dict>
 </plist>
 `
-	if err := os.WriteFile(plist, []byte(body), 0o644); err != nil {
+	if err := os.WriteFile(plist, []byte(body), 0o600); err != nil {
 		return err
 	}
 	return run("launchctl", "load", plist)
@@ -195,7 +195,7 @@ RestartSec=5
 [Install]
 WantedBy=default.target
 `
-	if err := os.WriteFile(unit, []byte(body), 0o644); err != nil {
+	if err := os.WriteFile(unit, []byte(body), 0o600); err != nil {
 		return err
 	}
 	if err := run("systemctl", "--user", "daemon-reload"); err != nil {
