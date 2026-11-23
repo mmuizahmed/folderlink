@@ -515,7 +515,7 @@ function AppList({ apps }: { apps: AppView[] }) {
         {apps.length === 0 ? (
           <Empty
             title="No connected apps"
-            body="Agents use a bearer token from Settings until connector sign-in is available."
+            body="Connect ChatGPT or Claude to https://folderlink.muiz.pk/mcp. An app shows up here after you allow it."
           />
         ) : (
           apps.map((app) => (
@@ -550,7 +550,7 @@ function ActivityList({ rows, live = false }: { rows: ActivityView[]; live?: boo
       </div>
       <div className="list edge">
         {rows.length === 0 ? (
-          <Empty title="No activity yet" body="Reads and refusals will show up here." />
+          <Empty title="No activity yet" body="FolderLink does not keep a read log yet." />
         ) : null}
         {rows.map((row) => (
           <div className={row.denied ? "log-row deny" : "log-row"} key={row.id}>

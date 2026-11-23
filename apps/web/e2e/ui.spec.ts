@@ -110,7 +110,7 @@ test.describe("visual and glitch checks", () => {
     await expect(page.getByText("No device yet")).toBeVisible();
     await expect(page.getByText("No folders")).toBeVisible();
     await expect(page.getByText("No connected apps")).toBeVisible();
-    await expect(page.getByText("No activity yet")).toBeVisible();
+    await expect(page.getByText("FolderLink does not keep a read log yet.")).toBeVisible();
     await dashboardFrame(page, 1440);
     await noOverflow(page);
 
