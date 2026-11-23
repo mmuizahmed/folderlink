@@ -108,7 +108,7 @@ func pickFolder(ctx context.Context, store *config.Store) any {
 	path, err := pick.Open(ctx)
 	if err != nil {
 		if errors.Is(err, pick.ErrCanceled) {
-			return fail("cancelled", "No folder was selected.")
+			return fail("canceled", "No folder was selected.")
 		}
 		return fail("unavailable", "The folder picker could not be opened.")
 	}

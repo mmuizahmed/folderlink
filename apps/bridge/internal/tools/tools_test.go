@@ -85,9 +85,9 @@ func TestPickFolderUsesTheInjectedDialog(t *testing.T) {
 		t.Fatal(body)
 	}
 	canceled := pick.ErrCanceled
-	pick.Open = func(context.Context) (string, error) { return "", cancelled }
+	pick.Open = func(context.Context) (string, error) { return "", canceled }
 	denied := call(t, context.Background(), store, map[string]any{"op": "pick_folder"})
-	if !strings.Contains(denied, "cancelled") {
+	if !strings.Contains(denied, "canceled") {
 		t.Fatal(denied)
 	}
 }
