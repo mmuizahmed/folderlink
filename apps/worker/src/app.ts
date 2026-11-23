@@ -30,6 +30,7 @@ import {
   ensureLocalUser,
   getDevice,
   insertDevice,
+  listActivity,
   listDevicesForUser,
   listFoldersForUser,
   lookupPairingCode,
@@ -198,6 +199,9 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
   }
   if (url.pathname === "/api/apps" && request.method === "GET") {
     return listApps(request, env);
+  }
+  if (url.pathname === "/api/activity" && request.method === "GET") {
+    return activity(request, env);
   }
   const revokeApp = url.pathname.match(/^\/api\/apps\/([^/]+)\/revoke$/);
   if (revokeApp && request.method === "POST") {
@@ -572,6 +576,24 @@ async function devices(request: Request, env: Env): Promise<Response> {
       version: device.client_version ?? "",
       fingerprint: fingerprint(device.public_key),
       network: networkLabel(device.client_ip ?? "", device.client_region ?? ""),
+    })),
+  });
+}
+
+async function activity(request: Request, env: Env): Promise<Response> {
+  const auth = await authenticate(request, env, "either");
+  if (!auth.ok) {
+    return auth.response;
+  }
+  const rows = await listActivity(env.DB, auth.user.id);
+  return json({
+    activity: rows.map((row) => ({
+      id: row.id,
+      time: row.created_at,
+      action: row.op,
+      target: [row.folder, row.path].filter(Boolean).join("/"),
+      detail: row.ok ? `${row.client} · ok` : `${row.client} · ${row.error_code ?? "failed"}`,
+      denied: row.ok === 0,
     })),
   });
 }

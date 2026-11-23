@@ -16,6 +16,7 @@ import (
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/config"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/identity"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/pair"
+	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/service"
 )
 
 var version = "0.1.0"
@@ -114,6 +115,32 @@ func run(args []string) error {
 		fmt.Printf("server\t%s\n", cfg.Server)
 		fmt.Printf("web\t%s\n", cfg.Web)
 		fmt.Printf("folders\t%d\n", len(cfg.Folders))
+		installed, err := service.Installed()
+		if err != nil {
+			fmt.Printf("background\tunknown (%s)\n", err)
+		} else if installed {
+			fmt.Println("background\tinstalled")
+		} else {
+			fmt.Println("background\tnot installed")
+		}
+		return nil
+	case "install":
+		if len(rest) != 0 {
+			return errors.New("install does not take arguments")
+		}
+		if err := service.Install(); err != nil {
+			return err
+		}
+		fmt.Println("FolderLink will start automatically when you log in.")
+		return nil
+	case "uninstall":
+		if len(rest) != 0 {
+			return errors.New("uninstall does not take arguments")
+		}
+		if err := service.Uninstall(); err != nil {
+			return err
+		}
+		fmt.Println("FolderLink will no longer start automatically.")
 		return nil
 	default:
 		return fmt.Errorf("unknown command %q", cmd)
@@ -141,6 +168,7 @@ func runBridge(id *identity.Identity, store *config.Store, cfg config.File) erro
 func splitCommand(args []string) (string, []string) {
 	known := map[string]bool{
 		"run": true, "allow": true, "unallow": true, "folders": true, "status": true, "version": true,
+		"install": true, "uninstall": true,
 	}
 	for i := 0; i < len(args); i++ {
 		arg := args[i]

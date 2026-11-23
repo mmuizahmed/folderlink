@@ -13,7 +13,7 @@ import {
   Mark,
 } from "../components/Icons.tsx";
 import { initials, screenMode } from "../data/mode.ts";
-import type { AppView, DashboardData, FolderView, ViewState } from "../data/types.ts";
+import type { ActivityView, AppView, DashboardData, FolderView, ViewState } from "../data/types.ts";
 
 type Section = "overview" | "devices" | "folders" | "apps" | "activity" | "settings";
 
@@ -80,10 +80,11 @@ export function Dashboard() {
     async function load() {
       try {
         const me = await api.me();
-        const [devices, folders, apps] = await Promise.all([
+        const [devices, folders, apps, activity] = await Promise.all([
           api.devices(),
           api.folders(),
           api.apps().catch(() => ({ apps: [] as Array<{ id: string; name: string }> })),
+          api.activity().catch(() => ({ activity: [] as DashboardData["activity"] })),
         ]);
         if (gone) return;
         const data: DashboardData = {
@@ -97,7 +98,7 @@ export function Dashboard() {
             tone: "gpt" as const,
             detail: "Read-only",
           })),
-          activity: [],
+          activity: activity.activity,
         };
         setState({ status: "ready", data });
       } catch (err) {
@@ -364,7 +365,7 @@ export function Dashboard() {
             />
           ) : null}
           {ready && section === "apps" ? <AppList apps={ready.apps} onRevoke={revokeApp} /> : null}
-          {ready && section === "activity" ? <ActivityList /> : null}
+          {ready && section === "activity" ? <ActivityList items={ready.activity} /> : null}
           {ready && section === "settings" ? (
             <section>
               <h2>Settings</h2>
@@ -433,7 +434,7 @@ function Overview({
           />
           <AppList apps={data.apps} onRevoke={onRevoke} />
         </div>
-        <ActivityList />
+        <ActivityList items={data.activity} />
       </div>
     </>
   );
@@ -750,17 +751,34 @@ function AppList({ apps, onRevoke }: { apps: AppView[]; onRevoke: (id: string) =
   );
 }
 
-function ActivityList() {
+function ActivityList({ items }: { items: ActivityView[] }) {
   return (
     <section>
       <div className="section-head">
         <h2>Activity</h2>
       </div>
       <div className="list edge">
-        <Empty
-          title="No read log"
-          body="FolderLink does not store what an app reads. A refusal happens on your computer, and the file stays there."
-        />
+        {items.length === 0 ? (
+          <Empty
+            title="No read log yet"
+            body="Reads are logged here for 30 days: which app, which folder, and whether it worked. File contents are never stored."
+          />
+        ) : (
+          items.map((item) => (
+            <div className="app-row" key={item.id}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div>
+                  {item.action}
+                  {item.target ? <span className="path"> {item.target}</span> : null}
+                </div>
+                <div className="minor">
+                  {when(item.time)} · {item.detail}
+                </div>
+              </div>
+              {item.denied ? <span className="badge">refused</span> : null}
+            </div>
+          ))
+        )}
       </div>
     </section>
   );

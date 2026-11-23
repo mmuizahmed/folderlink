@@ -123,6 +123,8 @@ export class DeviceAgent extends DurableObject<Env> {
     if (input.maxBytes !== undefined) payload.maxBytes = input.maxBytes;
     if (input.label !== undefined) payload.label = input.label;
     if (input.name !== undefined) payload.name = input.name;
+    if (input.query !== undefined) payload.query = input.query;
+    if (input.maxMatches !== undefined) payload.maxMatches = input.maxMatches;
     try {
       ws.send(JSON.stringify({ v: 1, type: "request", id, payload }));
     } catch {

@@ -79,7 +79,38 @@ export interface ReadFileParams {
   maxBytes?: number;
 }
 
-export type ToolParams = ListFilesParams | ReadFileParams;
+export interface SearchFilesParams {
+  op: "search_files";
+  folderId: string;
+  path: string;
+  query: string;
+  maxMatches?: number;
+}
+
+export interface ReadMediaParams {
+  op: "read_media";
+  folderId: string;
+  path: string;
+  maxBytes?: number;
+}
+
+export interface FileInfoParams {
+  op: "file_info";
+  folderId: string;
+  path: string;
+}
+
+export interface ListFoldersParams {
+  op: "list_folders";
+}
+
+export type ToolParams =
+  | ListFilesParams
+  | ReadFileParams
+  | SearchFilesParams
+  | ReadMediaParams
+  | FileInfoParams
+  | ListFoldersParams;
 
 export interface FileEntry {
   name: string;
@@ -104,9 +135,46 @@ export interface ReadFileResult {
   nextByteOffset: number | null;
 }
 
+export interface SearchMatch {
+  path: string;
+  line: number;
+  text: string;
+}
+
+export interface SearchFilesResult {
+  matches: SearchMatch[];
+  filesScanned: number;
+  truncated: boolean;
+}
+
+export interface ReadMediaResult {
+  mimeType: string;
+  size: number;
+  base64: string;
+  truncated: boolean;
+}
+
+export interface FileInfoResult {
+  name: string;
+  kind: "file" | "dir" | "symlink" | "other";
+  size: number;
+  modTime: string;
+  ignored: boolean;
+}
+
+export interface ListFoldersResult {
+  folders: Array<{ id: string; label: string }>;
+}
+
 export interface ToolSuccess {
   ok: true;
-  result: ListFilesResult | ReadFileResult;
+  result:
+    | ListFilesResult
+    | ReadFileResult
+    | SearchFilesResult
+    | ReadMediaResult
+    | FileInfoResult
+    | ListFoldersResult;
 }
 
 export interface ToolFailure {

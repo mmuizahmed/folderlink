@@ -115,5 +115,16 @@ export const api = {
     request<{ apps: Array<{ id: string; name: string; scope: string; createdAt: string }> }>(
       "/api/apps",
     ),
+  activity: () =>
+    request<{
+      activity: Array<{
+        id: string;
+        time: string;
+        action: string;
+        target: string;
+        detail: string;
+        denied: boolean;
+      }>;
+    }>("/api/activity"),
   revokeApp: (id: string) => request<{ ok: boolean }>(`/api/apps/${id}/revoke`, { method: "POST" }),
 };

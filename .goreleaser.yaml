@@ -3,6 +3,8 @@ version: 2
 project_name: folderlink
 
 builds:
+  # Console binary for macOS and Linux, and for Windows when the user runs
+  # commands by hand: its output has to be visible.
   - id: bridge
     dir: apps/bridge
     main: ./cmd/bridge
@@ -16,6 +18,42 @@ builds:
     goos:
       - linux
       - darwin
+    goarch:
+      - amd64
+      - arm64
+
+  # Windows console binary, same code as above.
+  - id: bridge-windows
+    dir: apps/bridge
+    main: ./cmd/bridge
+    binary: folderlink
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    goos:
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+  # Windows background binary, same code, built with the windowsgui
+  # subsystem so it has no console window. The scheduled task created by
+  # `folderlink install` runs this one; `folderlink run` must never be
+  # started from it, because its output goes nowhere.
+  - id: bridge-bg
+    dir: apps/bridge
+    main: ./cmd/bridge
+    binary: folderlink-bg
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -H=windowsgui -X main.version={{ .Version }}
+    goos:
       - windows
     goarch:
       - amd64
