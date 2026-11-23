@@ -128,7 +128,7 @@ export class DeviceAgent extends DurableObject<Env> {
     } catch {
       return { ok: false, error: { code: "unavailable", message: "The device is not connected." } };
     }
-    const timeout = input.op === "pick_folder" ? 10 * 60 * 1000 : 15_000;
+    const timeout = input.op === "pick_folder" ? pickerOperationTimeout(input) : 15_000;
     return await new Promise<ToolResult>((resolve) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
