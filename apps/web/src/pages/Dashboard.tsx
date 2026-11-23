@@ -760,8 +760,8 @@ function ActivityList({ items }: { items: ActivityView[] }) {
       <div className="list edge">
         {items.length === 0 ? (
           <Empty
-            title="No read log yet"
-            body="Reads are logged here for 30 days: which app, which folder, and whether it worked. File contents are never stored."
+            title="No read log"
+            body="FolderLink does not store what an app reads. A refusal happens on your computer, and the file stays there."
           />
         ) : (
           items.map((item) => (
