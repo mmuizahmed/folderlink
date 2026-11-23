@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { normalizePairingCode } from "@mcp-bridge/shared";
-import { IconLaptop, Mark } from "../components/Icons.tsx";
+import { IconLaptop, LogoMark, Mark } from "../components/Icons.tsx";
 import { api, ApiError } from "../api.ts";
 import { fixturePreview, fixtureUser } from "../data/fixture.ts";
 import { initials, screenMode } from "../data/mode.ts";
@@ -181,7 +181,7 @@ export function Pair() {
       </header>
       <div className="pair-card">
         <div className="prompt-box" aria-hidden="true">
-          &gt;_
+          <LogoMark width="28" height="28" />
         </div>
         <h1>Connect a device</h1>
         <p className="sub">Enter the code from the FolderLink bridge.</p>

@@ -74,11 +74,11 @@ export function LogoMark(props: SVGProps<SVGSVGElement>) {
     <svg viewBox="0 0 64 64" width="22" height="22" aria-hidden="true" {...props}>
       <path
         fill="#F2F4F7"
-        d="M8 3h32a6 6 0 0 1 6 6v5a6 6 0 0 1-6 6H17v9h10a4 4 0 0 1 4 4v12a6 6 0 0 1-6 6H8a5 5 0 0 1-5-5V8a5 5 0 0 1 5-5z"
+        d="M6 2h32a5 5 0 0 1 5 5v3a5 5 0 0 1-5 5H16v11h8a4 4 0 0 1 4 4v8a8 8 0 0 1-8 8H6a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4z"
       />
       <path
         fill="#22C55E"
-        d="M44 20h10a5 5 0 0 1 5 5v29a5 5 0 0 1-5 5H36a5 5 0 0 1-5-5V36l8-12h0a5 5 0 0 1 5-4z"
+        d="M36 22h18a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H26a4 4 0 0 1-4-4l10-24a5 5 0 0 1 4-5z"
       />
     </svg>
   );

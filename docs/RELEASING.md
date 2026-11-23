@@ -1,4 +1,4 @@
-# Releasing the bridge
+# Releasing FolderLink
 
 `.goreleaser.yaml` builds `folderlink` for linux, darwin, and windows on amd64 and arm64. `CGO_ENABLED=0`, `-trimpath`, and `-s -w`. A local stripped linux/amd64 build of phase 1 was 5,771,416 bytes, under the 6 MB target.
 

@@ -1,173 +1,102 @@
-# FolderLink
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/logo-lockup.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/brand/logo-lockup-light.svg">
+    <img alt="FolderLink" src="docs/brand/logo-lockup.svg" height="64">
+  </picture>
+  <h1>FolderLink</h1>
+  <p><strong>Your folders. Your AI.</strong></p>
+  <p>Let ChatGPT, Claude and other AI apps read the project folders you choose, straight from your laptop. Read-only, logged, and revocable in one click.</p>
+  <p>
+    <a href="https://github.com/mmuizahmed/mcp-bridge/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/mmuizahmed/mcp-bridge/actions/workflows/ci.yml/badge.svg"></a>
+    <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-22c55e"></a>
+    <a href="https://github.com/mmuizahmed/mcp-bridge/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/mmuizahmed/mcp-bridge?label=release"></a>
+    <a href="https://go.dev/"><img alt="Go 1.22" src="https://img.shields.io/badge/go-1.22-00ADD8"></a>
+  </p>
+  <p>
+    <a href="https://mcp.muiz.pk">Website</a>
+    ·
+    <a href="docs/ARCHITECTURE.md">Docs</a>
+    ·
+    <a href="docs/SELF-HOSTING.md">Self-host</a>
+    ·
+    <a href="SECURITY.md">Security</a>
+  </p>
+</div>
 
-![FolderLink](docs/brand/logo-lockup.png)
+<img alt="FolderLink dashboard" src="docs/images/dashboard-hero.png" width="880">
 
-Your folders. Your AI.
+## Why FolderLink
 
-A small program on a laptop keeps an outbound connection so an agent can read folders a student chose, without pasting the project into a chat.
+- You stop pasting whole projects into a chat.
+- A file leaves your laptop only when an AI app asks for it.
+- Secrets such as `.env`, keys, and certificates are always blocked.
+- It works with the free ChatGPT plan. No extra subscription.
 
-The FolderLink bridge is a single Go binary. It opens a WebSocket to a Cloudflare Worker, proves it holds the device key, and answers two read-only tools: `list_files` and `read_file`. The allowlist is enforced on the laptop. The server stores folder labels, not paths, and it cannot add a directory the bridge does not already have.
+## How it works
 
-This repository is the phase 1 slice: the bridge, the Worker and its Durable Object, a minimal control panel, and the protocol they share. It is MIT licensed and meant to be self-hosted. The source lives at [mmuizahmed/mcp-bridge](https://github.com/mmuizahmed/mcp-bridge).
-
-## Control panel
-
-The panel is a dark terminal layout. These are the landing, pair, and dashboard screens:
-
-![Landing](docs/images/landing.png)
-
-![Pair](docs/images/pair.png)
-
-![Dashboard](docs/images/dashboard.png)
-
-`scripts/e2e-full.mjs` runs the live path (pairing, sockets, and tool calls) against a local worker. The matrix is [docs/TEST-MATRIX.md](docs/TEST-MATRIX.md).
-
-## Architecture
+1. Run FolderLink on your laptop and choose the folders it may read.
+2. Pair the laptop at [mcp.muiz.pk/pair](https://mcp.muiz.pk/pair) with the code it prints.
+3. Add the connector in ChatGPT or Claude. The address is `https://mcp.muiz.pk/mcp`.
 
 ```mermaid
 flowchart LR
-  agent[AI agent]
-  worker[Worker at /mcp]
-  d1[(D1)]
-  device[Device Durable Object]
-  bridge[Bridge on the laptop]
-  disk[Allowed folders]
-
-  agent -->|"Streamable HTTP, bearer token"| worker
-  worker --> d1
-  worker -->|"user from the token"| device
-  bridge -->|"outbound WebSocket"| device
-  device -->|"tool request"| bridge
-  bridge --> disk
+  laptop[FolderLink on your laptop]
+  cloud[mcp.muiz.pk]
+  agent[ChatGPT or Claude]
+  folders[Folders you allowed]
+  laptop -->|stays connected| cloud
+  agent -->|asks to read a file| cloud
+  cloud -->|passes the request along| laptop
+  laptop --> folders
 ```
 
-The laptop dials out. Nothing on the laptop accepts inbound connections. The agent never sends a device id that the server trusts: the bearer token is resolved to a user, and the worker picks that user's connected device.
+Your laptop calls out. Nothing on it accepts incoming connections. The AI app never picks a device. Your sign-in decides which laptop answers.
 
-More detail is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/PROTOCOL.md](docs/PROTOCOL.md), and [docs/SECURITY-MODEL.md](docs/SECURITY-MODEL.md).
+| Landing                             | Pair                                   |
+| ----------------------------------- | -------------------------------------- |
+| ![Landing](docs/images/landing.png) | ![Pair a device](docs/images/pair.png) |
 
-## Repository
+## Quick start
 
-| Path              | What it is                                                   |
-| ----------------- | ------------------------------------------------------------ |
-| `apps/bridge`     | Go binary. Pairing, reconnect, and the filesystem boundary.  |
-| `apps/worker`     | Cloudflare Worker, one SQLite Durable Object per device, D1. |
-| `apps/web`        | Control panel scaffold: landing, pair, dashboard.            |
-| `packages/shared` | Protocol types, canonical JSON, pairing-code rules.          |
-| `docs`            | Design, threat model, decisions, roadmap.                    |
-
-## Local test
-
-You need Node.js 22, pnpm 10, and Go 1.22. These steps were run against `wrangler dev` on this machine: a paired bridge answered `read_file` for an allowed text file and refused `.env` and a symlink that left the folder.
+Download the archive for your system from [GitHub Releases](https://github.com/mmuizahmed/mcp-bridge/releases). Each file is named `folderlink_<version>_<os>_<arch>`.
 
 ```bash
-pnpm install
-cp apps/worker/.dev.vars.example apps/worker/.dev.vars
-pnpm --filter @mcp-bridge/worker exec wrangler d1 migrations apply folderlink --local
+# macOS Apple silicon
+curl -L -o folderlink.tar.gz https://github.com/mmuizahmed/mcp-bridge/releases/latest/download/folderlink_darwin_arm64.tar.gz
+tar -xzf folderlink.tar.gz
+
+# macOS Intel
+curl -L -o folderlink.tar.gz https://github.com/mmuizahmed/mcp-bridge/releases/latest/download/folderlink_darwin_amd64.tar.gz
+
+# Linux
+curl -L -o folderlink.tar.gz https://github.com/mmuizahmed/mcp-bridge/releases/latest/download/folderlink_linux_amd64.tar.gz
+
+# Windows: download folderlink_windows_amd64.zip from the same page
 ```
 
-Terminal 1, the worker:
+Then:
 
 ```bash
-pnpm dev:worker
+folderlink allow ~/projects/my-app --label my-app
+folderlink
 ```
 
-Wait until it prints `Ready on http://127.0.0.1:8787`.
+Open [mcp.muiz.pk/pair](https://mcp.muiz.pk/pair), enter the code, and turn the folder on. In ChatGPT or Claude, add a connector at `https://mcp.muiz.pk/mcp`.
 
-Terminal 2, the control panel (optional, for the browser):
+## Security
 
-```bash
-pnpm dev:web
-```
+- Reads only. FolderLink cannot write files or run commands.
+- The folder list is enforced on your laptop. The server cannot add a path.
+- `.env`, keys, and certificates are refused by default.
+- The laptop holds an Ed25519 device key. The server checks it on every connection.
+- Access tokens are short-lived. You can revoke a device from the website.
 
-Open http://localhost:5173. Google sign-in stays off until client credentials exist. On localhost, use **Use a local development session**, then enter the pairing code.
-
-Terminal 3, the bridge. Pick an empty config directory so you do not touch a real one:
-
-```bash
-export FOLDERLINK_HOME=/tmp/folderlink-home
-mkdir -p /tmp/demo-notes
-printf 'hello from the bridge\n' > /tmp/demo-notes/hello.txt
-printf 'SUPERSECRETVALUE\n' > /tmp/demo-notes/.env
-
-cd apps/bridge
-go run ./cmd/bridge --server http://127.0.0.1:8787 allow /tmp/demo-notes --label notes
-go run ./cmd/bridge --server http://127.0.0.1:8787
-```
-
-The process prints a code such as `AB3D-EF2H`. Pair it. With the worker in development mode the shortest path is:
-
-```bash
-curl -sS -X POST http://127.0.0.1:8787/api/dev/pair \
-  -H 'content-type: application/json' \
-  -d '{"code":"AB3D-EF2H"}'
-```
-
-That returns a bearer token for the local development user and marks the device active. The bridge then prints `Connected.`
-
-Approve the folder. The response above is the only time the token is shown by that call; save it as `TOKEN`.
-
-```bash
-curl -sS http://127.0.0.1:8787/api/folders -H "authorization: Bearer $TOKEN"
-curl -sS -X POST "http://127.0.0.1:8787/api/folders/FOLDER_ID/approval" \
-  -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' \
-  -d '{"approval":"approved"}'
-```
-
-Call the MCP endpoint the way an inspector would. Streamable HTTP here answers a single JSON body.
-
-```bash
-curl -sS -D - http://127.0.0.1:8787/mcp \
-  -H "authorization: Bearer $TOKEN" \
-  -H 'content-type: application/json' \
-  -H 'accept: application/json, text/event-stream' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"curl","version":"0"}}}'
-```
-
-Copy `mcp-session-id` from the response headers, then:
-
-```bash
-curl -sS http://127.0.0.1:8787/mcp \
-  -H "authorization: Bearer $TOKEN" \
-  -H 'content-type: application/json' \
-  -H 'accept: application/json, text/event-stream' \
-  -H 'mcp-protocol-version: 2025-03-26' \
-  -H "mcp-session-id: SESSION_ID" \
-  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"read_file","arguments":{"folder":"notes","path":"hello.txt"}}}'
-```
-
-`hello.txt` returns `hello from the bridge`. The same call with `path` set to `.env`, or to a symlink that points outside the folder, returns an error and does not return file contents. `list_files` omits denylisted names.
-
-`scripts/e2e-local.sh` runs that sequence against a worker that is already up. It is not part of CI.
-
-MCP Inspector can use the same URL, `http://127.0.0.1:8787/mcp`, with header `Authorization: Bearer TOKEN`. Access tokens last 45 minutes. Create another from the dashboard or from `POST /api/tokens`.
-
-Development sign-in exists only when `DEV_AUTH=true` and the request host is localhost. Do not set `DEV_AUTH` on a public deployment.
+Report a vulnerability through [SECURITY.md](SECURITY.md). The longer threat model is [docs/SECURITY-MODEL.md](docs/SECURITY-MODEL.md).
 
 ## Self-hosting
 
-The hosted shape is a free Cloudflare account: one Worker, SQLite-backed Durable Objects, and one D1 database. Tokens live in D1. KV is intentionally unused because the free plan allows very few writes per day.
-
-1. Create a D1 database named `folderlink` and put its id in `apps/worker/wrangler.toml`.
-2. Set `WEB_ORIGIN` and `PUBLIC_BASE_URL` to the public origins. Leave `DEV_AUTH` unset.
-3. To turn on Google sign-in, set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The redirect URI is `{PUBLIC_BASE_URL}/api/auth/google/callback`.
-4. Apply migrations and deploy with the manual workflow in `.github/workflows/deploy.yml`, or locally:
-
-```bash
-pnpm --filter @mcp-bridge/worker exec wrangler d1 migrations apply folderlink --remote
-pnpm --filter @mcp-bridge/worker exec wrangler deploy
-```
-
-5. Build the control panel with `pnpm --filter @mcp-bridge/web build` and host `apps/web/dist` on any static host whose origin matches `WEB_ORIGIN`. The Worker does not serve the panel in this phase.
-
-`users.status` is ordinary account state: `active` or `suspended`. The worker refuses suspended accounts. There is no endpoint that changes it.
-
-Point the bridge at the deployment:
-
-```bash
-folderlink --server https://mcp.muiz.pk
-```
-
-Agents use `https://mcp.muiz.pk/mcp`.
+FolderLink runs on a free Cloudflare account: one Worker, one database, and the website as static files. The steps are in [docs/SELF-HOSTING.md](docs/SELF-HOSTING.md). Point your laptop at your own server with `folderlink --server https://your-host`.
 
 ## Development
 
@@ -178,23 +107,21 @@ pnpm typecheck
 pnpm test
 ```
 
-`pnpm test` runs the TypeScript tests and `go test ./...` in `apps/bridge`. CI also runs `golangci-lint`. Go is formatted with `gofmt`.
+Local worker, pairing, and MCP Inspector steps are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). Contribution rules are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Bridge commands:
+## Project structure
 
-```text
-folderlink allow <directory> --label notes
-folderlink unallow notes
-folderlink folders
-folderlink status
-folderlink version
-```
+| Path              | What it is                                                       |
+| ----------------- | ---------------------------------------------------------------- |
+| `apps/bridge`     | The FolderLink app. Pairing, reconnect, and the folder boundary. |
+| `apps/worker`     | Cloudflare Worker. One record per laptop, plus the database.     |
+| `apps/web`        | Website: landing, pair, and dashboard.                           |
+| `packages/shared` | Message format shared by the website and the worker.             |
+| `docs`            | Architecture, security, self-hosting, and the roadmap.           |
 
-Config and the device key live in `$FOLDERLINK_HOME`, or in the user config directory under `folderlink` when that variable is unset. The key file is mode `0600`.
+## Roadmap
 
-## Security
-
-Report vulnerabilities privately. See [SECURITY.md](SECURITY.md). The threat model, including stolen tokens, prompt injection, and cross-tenant routing, is [docs/SECURITY-MODEL.md](docs/SECURITY-MODEL.md).
+Later: writing files, running commands, and asking before each action. The list is [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## License
 

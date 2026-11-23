@@ -10,7 +10,7 @@ Done:
 - Filesystem boundary: symlink-resolved containment, Windows path rules, secret denylist, `.gitignore`, binary refusal, ranged reads, paginated listings.
 - Worker, hibernating Durable Object, D1 schema, pairing, and Streamable HTTP `list_files` / `read_file`.
 - Device choice comes from the authenticated user. Client-supplied device ids are ignored.
-- Control panel scaffold: landing, pair, dashboard.
+- Control panel: landing, pair, and dashboard.
 - Google sign-in code path, enabled only when credentials are configured.
 - Local development sign-in, limited to loopback.
 

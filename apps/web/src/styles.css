@@ -326,8 +326,9 @@ h1.display span {
 .steps {
   position: relative;
   max-width: 1080px;
+  width: calc(100% - 48px);
   margin: 64px auto 0;
-  padding: 0 24px;
+  padding: 0;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1px;
@@ -985,6 +986,9 @@ code.mono {
   .steps,
   .audit {
     grid-template-columns: 1fr;
+  }
+  .steps {
+    width: calc(100% - 32px);
   }
   .sidebar {
     display: none;
