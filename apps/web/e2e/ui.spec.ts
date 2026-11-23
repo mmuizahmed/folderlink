@@ -71,7 +71,7 @@ test.describe("visual and glitch checks", () => {
       const errors = await quiet(page);
       await page.goto("/pair?fixture=1");
       await page.evaluate(() => document.fonts.ready);
-      await expect(page.getByRole("heading", { name: "Connect a device" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Allow this device" })).toBeVisible();
       await expect(page.getByText("Muiz’s ThinkPad")).toBeVisible();
       await noOverflow(page);
       expect(errors).toEqual([]);
@@ -173,7 +173,7 @@ test.describe("visual and glitch checks", () => {
 
   test("footer links are on the main screens", async ({ page }) => {
     const errors = await quiet(page);
-    for (const path of ["/", "/pair?fixture=1", "/dashboard?fixture=1"]) {
+    for (const path of ["/", "/privacy"]) {
       await page.goto(path);
       const footer = page.getByRole("contentinfo");
       await expect(footer.getByRole("link", { name: "Privacy" })).toBeVisible();

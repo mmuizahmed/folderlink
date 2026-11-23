@@ -105,17 +105,17 @@ export class DeviceAgent extends DurableObject<Env> {
       return { ok: false, error: { code: "unavailable", message: "The device is not connected." } };
     }
     const id = crypto.randomUUID();
-    const payload: Record<string, unknown> = {
-      op: input.op,
-      folderId: input.folderId,
-      path: input.path,
-    };
+    const payload: Record<string, unknown> = { op: input.op };
+    if (input.folderId !== undefined) payload.folderId = input.folderId;
+    if (input.path !== undefined) payload.path = input.path;
     if (input.limit !== undefined) payload.limit = input.limit;
     if (input.cursor !== undefined) payload.cursor = input.cursor;
     if (input.startLine !== undefined) payload.startLine = input.startLine;
     if (input.endLine !== undefined) payload.endLine = input.endLine;
     if (input.byteOffset !== undefined) payload.byteOffset = input.byteOffset;
     if (input.maxBytes !== undefined) payload.maxBytes = input.maxBytes;
+    if (input.label !== undefined) payload.label = input.label;
+    if (input.name !== undefined) payload.name = input.name;
     try {
       ws.send(JSON.stringify({ v: 1, type: "request", id, payload }));
     } catch {

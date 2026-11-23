@@ -124,8 +124,7 @@ func runBridge(id *identity.Identity, store *config.Store, cfg config.File) erro
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})))
-	fmt.Printf("folderlink %s\n", version)
-	fmt.Printf("server: %s\n", cfg.Server)
+	fmt.Println("FolderLink is running. Leave this window open.")
 	return client.Run(ctx, client.Config{
 		Server:   cfg.Server,
 		Web:      cfg.Web,

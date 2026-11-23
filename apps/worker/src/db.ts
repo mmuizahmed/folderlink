@@ -151,13 +151,21 @@ export async function issueAccessToken(
   db: D1Database,
   userId: string,
   ttlSeconds: number,
+  grantId?: string,
 ): Promise<{ id: string; token: string; expiresAt: string }> {
+  const now = nowIso();
+  if (grantId) {
+    await db
+      .prepare(`UPDATE access_tokens SET revoked_at = ? WHERE grant_id = ? AND revoked_at IS NULL`)
+      .bind(now, grantId)
+      .run();
+  }
   const active = await db
     .prepare(
       `SELECT COUNT(*) AS n FROM access_tokens
        WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?`,
     )
-    .bind(userId, nowIso())
+    .bind(userId, now)
     .first<{ n: number }>();
   if ((active?.n ?? 0) >= 20) {
     throw new Error("too_many_tokens");
@@ -167,9 +175,10 @@ export async function issueAccessToken(
   const expiresAt = addSeconds(ttlSeconds);
   await db
     .prepare(
-      `INSERT INTO access_tokens (id, user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO access_tokens (id, user_id, token_hash, expires_at, created_at, grant_id)
+       VALUES (?, ?, ?, ?, ?, ?)`,
     )
-    .bind(id, userId, await sha256Hex(token), expiresAt, nowIso())
+    .bind(id, userId, await sha256Hex(token), expiresAt, now, grantId ?? null)
     .run();
   return { id, token, expiresAt };
 }
@@ -428,6 +437,58 @@ export async function listFoldersForUser(
     .bind(userId)
     .all<FolderRow & { device_name: string }>();
   return result.results;
+}
+
+export async function rememberPickedFolder(
+  db: D1Database,
+  deviceId: string,
+  id: string,
+  label: string,
+): Promise<void> {
+  const ts = nowIso();
+  await db
+    .prepare(
+      `INSERT INTO folders (id, device_id, label, approval, listed, created_at, updated_at)
+       VALUES (?, ?, ?, 'approved', 1, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         label = excluded.label,
+         listed = 1,
+         approval = 'approved',
+         updated_at = excluded.updated_at`,
+    )
+    .bind(id, deviceId, label, ts, ts)
+    .run();
+}
+
+export async function renameUserFolder(
+  db: D1Database,
+  userId: string,
+  folderId: string,
+  label: string,
+): Promise<boolean> {
+  const result = await db
+    .prepare(
+      `UPDATE folders SET label = ?, updated_at = ?
+       WHERE id = ? AND device_id IN (SELECT id FROM devices WHERE user_id = ?)`,
+    )
+    .bind(label, nowIso(), folderId, userId)
+    .run();
+  return (result.meta.changes ?? 0) > 0;
+}
+
+export async function unlistUserFolder(
+  db: D1Database,
+  userId: string,
+  folderId: string,
+): Promise<boolean> {
+  const result = await db
+    .prepare(
+      `UPDATE folders SET listed = 0, updated_at = ?
+       WHERE id = ? AND device_id IN (SELECT id FROM devices WHERE user_id = ?)`,
+    )
+    .bind(nowIso(), folderId, userId)
+    .run();
+  return (result.meta.changes ?? 0) > 0;
 }
 
 export async function setFolderApproval(

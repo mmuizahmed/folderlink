@@ -94,7 +94,7 @@ curl -sS http://127.0.0.1:8787/mcp \
 
 `scripts/e2e-local.sh` runs that sequence against a worker that is already up. It is not part of CI. `scripts/e2e-full.mjs` starts the worker and a real binary. That script runs in CI. The matrix is [TEST-MATRIX.md](TEST-MATRIX.md).
 
-MCP Inspector can use `http://127.0.0.1:8787/mcp` with header `Authorization: Bearer TOKEN`. Access tokens last 45 minutes. Create another from the dashboard or from `POST /api/tokens`.
+MCP clients discover `/.well-known/oauth-protected-resource` and sign in with OAuth. Local tests can still ask `POST /api/dev/session` for a bearer token when `DEV_AUTH=true`.
 
 Development sign-in exists only when `DEV_AUTH=true` and the request host is localhost. Do not set `DEV_AUTH` on a public deployment.
 

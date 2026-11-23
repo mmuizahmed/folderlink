@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { api, ApiError, type Device, type Folder } from "../api.ts";
-import { SiteFooter } from "../components/SiteFooter.tsx";
+import { downloadForThisComputer } from "../downloads.ts";
 import {
   IconActivity,
   IconApps,
@@ -47,7 +47,7 @@ export function Dashboard() {
   const [section, setSection] = useState<Section>("overview");
   const [menu, setMenu] = useState(false);
   const [state, setState] = useState<ViewState<DashboardData>>({ status: "loading" });
-  const [token, setToken] = useState("");
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     if (mode === "loading") {
@@ -74,11 +74,22 @@ export function Dashboard() {
     async function load() {
       try {
         const me = await api.me();
-        const [devices, folders] = await Promise.all([api.devices(), api.folders()]);
+        const [devices, folders, apps] = await Promise.all([
+          api.devices(),
+          api.folders(),
+          api.apps().catch(() => ({ apps: [] as Array<{ id: string; name: string }> })),
+        ]);
         if (gone) return;
         const data = emptyDashboard(me.user);
         data.devices = devices.devices.map(toDevice);
         data.folders = folders.folders.map(toFolder);
+        data.apps = apps.apps.map((app) => ({
+          id: app.id,
+          name: app.name,
+          mark: app.name.slice(0, 1).toUpperCase() || "A",
+          tone: "gpt" as const,
+          detail: "Read-only",
+        }));
         data.relay = data.devices.some((device) => device.online) ? "relay ok" : "relay idle";
         setState({ status: "ready", data });
       } catch (err) {
@@ -139,13 +150,39 @@ export function Dashboard() {
     navigate("/");
   }
 
-  async function mint() {
-    if (mode !== "live") {
-      setToken("mb_example_token");
+  async function addFolder() {
+    if (state.status !== "ready") return;
+    const device = state.data.devices.find((item) => item.online && item.status === "active");
+    if (!device) {
+      setNotice("Open FolderLink on your computer, then add a folder.");
       return;
     }
-    const issued = await api.createToken();
-    setToken(issued.token);
+    if (mode !== "live") {
+      setNotice("The folder picker runs on your computer.");
+      return;
+    }
+    setNotice("");
+    try {
+      const picked = await api.pickFolder(device.id);
+      setState({
+        status: "ready",
+        data: {
+          ...state.data,
+          folders: [
+            ...state.data.folders,
+            {
+              id: picked.id,
+              label: picked.label,
+              approval: "approved",
+              deviceName: device.name,
+              detail: "read-only",
+            },
+          ],
+        },
+      });
+    } catch (err) {
+      setNotice(err instanceof ApiError ? err.message : "The folder could not be added.");
+    }
   }
 
   const ready = state.status === "ready" ? state.data : null;
@@ -162,7 +199,7 @@ export function Dashboard() {
       ) : null}
       <aside className={menu ? "sidebar open" : "sidebar"}>
         <div className="side-brand">
-          <Mark suffix={<span className="kbd-dark">⌘K</span>} />
+          <Mark />
         </div>
         <nav className="side-nav" aria-label="Dashboard">
           {NAV.map((item) => (
@@ -185,13 +222,6 @@ export function Dashboard() {
           ))}
         </nav>
         <div className="side-foot">
-          <div className="relay edge">
-            <div className="line">
-              <span className="dot" />
-              {ready?.relay ?? "relay …"}
-            </div>
-            <div className="ver">v0.1.0</div>
-          </div>
           {ready ? (
             <div className="account">
               <span className="avatar lg">{initials(ready.user.name, ready.user.email)}</span>
@@ -228,7 +258,7 @@ export function Dashboard() {
             <DeviceList data={ready} onRemove={removeDevice} />
           ) : null}
           {ready && section === "folders" ? (
-            <FolderList data={ready} onToggle={toggleFolder} />
+            <FolderList data={ready} onToggle={toggleFolder} onAdd={addFolder} notice={notice} />
           ) : null}
           {ready && section === "apps" ? <AppList apps={ready.apps} /> : null}
           {ready && section === "activity" ? <ActivityList rows={ready.activity} /> : null}
@@ -237,23 +267,15 @@ export function Dashboard() {
               <h2>Settings</h2>
               <p className="minor">Signed in as {ready.user.email}</p>
               <div className="cta" style={{ justifyContent: "flex-start" }}>
-                <button type="button" className="btn small" onClick={() => void mint()}>
-                  Create token
-                </button>
                 <button type="button" className="btn quiet small" onClick={() => void logout()}>
                   Sign out
                 </button>
               </div>
-              {token ? (
-                <pre className="terminal" style={{ marginTop: 16, padding: 16 }}>
-                  {token}
-                </pre>
-              ) : (
-                <p className="minor">Tokens are shown once and expire in 45 minutes.</p>
-              )}
+              <p className="minor">
+                ChatGPT and Claude connect from their own apps. You do not create a token here.
+              </p>
             </section>
           ) : null}
-          <SiteFooter />
         </div>
       </div>
     </div>
@@ -275,11 +297,19 @@ function Overview({
       {device ? (
         <DeviceCard device={device} onRemove={onRemove} />
       ) : (
-        <Empty title="No device yet" body="Pair a laptop to see it here." />
+        <div className="state">
+          <strong>No device yet</strong>
+          Download FolderLink, open it, and approve the connection in your browser.
+          <div style={{ marginTop: 12 }}>
+            <a className="btn small" href={downloadForThisComputer().href}>
+              {downloadForThisComputer().label}
+            </a>
+          </div>
+        </div>
       )}
       <div className="split">
         <div>
-          <FolderList data={data} onToggle={onToggle} />
+          <FolderList data={data} onToggle={onToggle} onAdd={async () => undefined} notice="" />
           <AppList apps={data.apps} />
         </div>
         <ActivityList rows={data.activity} live={Boolean(device?.online)} />
@@ -383,21 +413,30 @@ function DeviceList({
 function FolderList({
   data,
   onToggle,
+  onAdd,
+  notice,
 }: {
   data: DashboardData;
   onToggle: (folder: FolderView) => Promise<void>;
+  onAdd: () => Promise<void>;
+  notice: string;
 }) {
   return (
     <section>
       <div className="section-head">
         <h2>Folders</h2>
-        <span className="hint">
-          add with <code>folderlink allow ./path --label name</code>
-        </span>
+        <button type="button" className="btn small" onClick={() => void onAdd()}>
+          Add folder
+        </button>
       </div>
       <div className="list edge">
+        {notice ? (
+          <p className="alert" role="alert">
+            {notice}
+          </p>
+        ) : null}
         {data.folders.length === 0 ? (
-          <Empty title="No folders" body="Add one on the laptop, then approve it here." />
+          <Empty title="No folders" body="Add a folder from this computer. The path stays on it." />
         ) : null}
         {data.folders.map((folder) => {
           const on = folder.approval === "approved";
@@ -420,7 +459,9 @@ function FolderList({
             </div>
           );
         })}
-        <div className="blocked-note">always blocked: .env *.pem id_* .git/ node_modules/</div>
+        <div className="blocked-note">
+          Secrets such as .env files, keys, and certificates are never sent.
+        </div>
       </div>
     </section>
   );

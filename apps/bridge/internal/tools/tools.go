@@ -4,15 +4,20 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"path/filepath"
 
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/config"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/guard"
+	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/pick"
 )
 
 type request struct {
 	Op         string `json:"op"`
 	FolderID   string `json:"folderId"`
 	Path       string `json:"path"`
+	Label      string `json:"label"`
+	Name       string `json:"name"`
 	Limit      int    `json:"limit"`
 	Cursor     string `json:"cursor"`
 	StartLine  int    `json:"startLine"`
@@ -37,7 +42,29 @@ type success struct {
 // Dispatch executes one tool request against the folders stored on this computer.
 func Dispatch(ctx context.Context, store *config.Store, raw json.RawMessage) any {
 	var req request
-	if len(raw) == 0 || json.Unmarshal(raw, &req) != nil || req.Op == "" || req.FolderID == "" {
+	if len(raw) == 0 || json.Unmarshal(raw, &req) != nil || req.Op == "" {
+		return fail("bad_request", "The request is not valid.")
+	}
+	switch req.Op {
+	case "pick_folder":
+		return pickFolder(ctx, store)
+	case "rename_folder":
+		if err := store.Rename(req.FolderID, req.Label); err != nil {
+			return fail("bad_request", err.Error())
+		}
+		return success{OK: true, Result: map[string]string{"id": req.FolderID, "label": req.Label}}
+	case "remove_folder":
+		if err := store.Remove(req.FolderID); err != nil {
+			return fail("bad_request", err.Error())
+		}
+		return success{OK: true, Result: map[string]string{"id": req.FolderID}}
+	case "rename_device":
+		if err := store.SetName(req.Name); err != nil {
+			return fail("bad_request", err.Error())
+		}
+		return success{OK: true, Result: map[string]string{"name": req.Name}}
+	}
+	if req.FolderID == "" {
 		return fail("bad_request", "The request is not valid.")
 	}
 	cfg, err := store.Load()
@@ -75,6 +102,24 @@ func Dispatch(ctx context.Context, store *config.Store, raw json.RawMessage) any
 	default:
 		return fail("bad_request", "The operation is not supported.")
 	}
+}
+
+func pickFolder(ctx context.Context, store *config.Store) any {
+	path, err := pick.Open(ctx)
+	if err != nil {
+		if errors.Is(err, pick.ErrCancelled) {
+			return fail("cancelled", "No folder was selected.")
+		}
+		return fail("unavailable", "The folder picker could not be opened.")
+	}
+	folder, err := store.Allow(path, "")
+	if err != nil {
+		return fail("bad_request", err.Error())
+	}
+	if folder.Label == "" {
+		folder.Label = filepath.Base(folder.Path)
+	}
+	return success{OK: true, Result: map[string]string{"id": folder.ID, "label": folder.Label}}
 }
 
 func fromErr(err error) failure {

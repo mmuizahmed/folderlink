@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/config"
+	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/pick"
 )
 
 func TestDispatchReadsOnlyTheAllowlist(t *testing.T) {
@@ -66,6 +67,28 @@ func TestDispatchReadsOnlyTheAllowlist(t *testing.T) {
 	unsupported := call(t, ctx, store, map[string]any{"op": "exec", "folderId": folder.ID, "path": "hello.txt"})
 	if !strings.Contains(unsupported, "not supported") {
 		t.Fatal(unsupported)
+	}
+}
+
+func TestPickFolderUsesTheInjectedDialog(t *testing.T) {
+	home := t.TempDir()
+	chosen := t.TempDir()
+	store, err := config.Open(home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	previous := pick.Open
+	pick.Open = func(context.Context) (string, error) { return chosen, nil }
+	t.Cleanup(func() { pick.Open = previous })
+	body := call(t, context.Background(), store, map[string]any{"op": "pick_folder"})
+	if !strings.Contains(body, `"ok":true`) || !strings.Contains(body, filepath.Base(chosen)) {
+		t.Fatal(body)
+	}
+	cancelled := pick.ErrCancelled
+	pick.Open = func(context.Context) (string, error) { return "", cancelled }
+	denied := call(t, context.Background(), store, map[string]any{"op": "pick_folder"})
+	if !strings.Contains(denied, "cancelled") {
+		t.Fatal(denied)
 	}
 }
 

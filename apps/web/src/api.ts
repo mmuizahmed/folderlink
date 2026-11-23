@@ -20,6 +20,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  avatarUrl?: string;
 }
 
 export interface Device {
@@ -92,6 +93,13 @@ export const api = {
     }),
   revokeDevice: (id: string) =>
     request<{ ok: boolean }>(`/api/devices/${id}/revoke`, { method: "POST" }),
-  createToken: () =>
-    request<{ id: string; token: string; expiresAt: string }>("/api/tokens", { method: "POST" }),
+  pickFolder: (deviceId: string) =>
+    request<{ id: string; label: string }>(`/api/devices/${deviceId}/folders/pick`, {
+      method: "POST",
+    }),
+  apps: () =>
+    request<{ apps: Array<{ id: string; name: string; scope: string; createdAt: string }> }>(
+      "/api/apps",
+    ),
+  revokeApp: (id: string) => request<{ ok: boolean }>(`/api/apps/${id}/revoke`, { method: "POST" }),
 };

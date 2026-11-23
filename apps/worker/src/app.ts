@@ -1,5 +1,23 @@
-import { isRecord, parsePairBeginPayload, parsePairStatusPayload } from "@mcp-bridge/shared";
+import {
+  isFolderLabel,
+  isRecord,
+  parsePairBeginPayload,
+  parsePairStatusPayload,
+} from "@mcp-bridge/shared";
 import { exchangeGoogleCode, googleAuthURL, googleConfigured } from "./auth/google.ts";
+import { nextFromLoginState, packLoginState, safeNext } from "./auth/return.ts";
+import {
+  authorizationServerMetadata,
+  authorizeGet,
+  authorizePost,
+  createD1OAuthStore,
+  issuer,
+  mcpAuthenticateHeader,
+  metadataResponse,
+  protectedResourceMetadata,
+  registerClient,
+  token,
+} from "./auth/oauth.ts";
 import { fingerprint, maskAddress, randomToken, verifySignature } from "./crypto.ts";
 import {
   consumePairingCode,
@@ -21,12 +39,15 @@ import {
   pairFailureCount,
   pairingCode,
   rememberNonce,
+  rememberPickedFolder,
+  renameUserFolder,
   saveLoginState,
   savePairingCode,
   setDeviceStatus,
   setFolderApproval,
   takeLoginState,
   touchDeviceMeta,
+  unlistUserFolder,
   upsertGoogleUser,
   userForAccessToken,
   userForSession,
@@ -50,7 +71,7 @@ import { freshTimestamp } from "./crypto.ts";
 
 type AuthOk = {
   ok: true;
-  user: { id: string; status: string; email: string; name: string };
+  user: { id: string; status: string; email: string; name: string; avatarUrl: string };
   via: "bearer" | "session";
 };
 type AuthNo = { ok: false; response: Response };
@@ -88,6 +109,37 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
     }
     const stub = env.DEVICE.get(env.DEVICE.idFromName(deviceId));
     return stub.fetch(request);
+  }
+  if (
+    url.pathname === "/.well-known/oauth-protected-resource" ||
+    url.pathname === "/.well-known/oauth-protected-resource/mcp"
+  ) {
+    return metadataResponse(protectedResourceMetadata(issuer(env)));
+  }
+  if (url.pathname === "/.well-known/oauth-authorization-server") {
+    return metadataResponse(authorizationServerMetadata(issuer(env)));
+  }
+  if (url.pathname === "/oauth/register" && request.method === "POST") {
+    return registerClient(request, createD1OAuthStore(env.DB));
+  }
+  if (url.pathname === "/oauth/authorize" && request.method === "GET") {
+    return authorizeGet(
+      request,
+      createD1OAuthStore(env.DB),
+      await sessionUser(request, env),
+      issuer(env),
+    );
+  }
+  if (url.pathname === "/oauth/authorize" && request.method === "POST") {
+    return authorizePost(
+      request,
+      createD1OAuthStore(env.DB),
+      await sessionUser(request, env),
+      issuer(env),
+    );
+  }
+  if (url.pathname === "/oauth/token" && request.method === "POST") {
+    return token(request, createD1OAuthStore(env.DB), env);
   }
   if (url.pathname === "/health") {
     return json({ ok: true, version: "0.1.0" });
@@ -145,8 +197,28 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
   if (approval && request.method === "POST") {
     return approveFolder(request, env, approval[1] ?? "");
   }
-  if (url.pathname === "/api/tokens" && request.method === "POST") {
-    return createToken(request, env);
+  if (url.pathname === "/api/apps" && request.method === "GET") {
+    return listApps(request, env);
+  }
+  const revokeApp = url.pathname.match(/^\/api\/apps\/([^/]+)\/revoke$/);
+  if (revokeApp && request.method === "POST") {
+    return revokeAppGrant(request, env, revokeApp[1] ?? "");
+  }
+  const pick = url.pathname.match(/^\/api\/devices\/([^/]+)\/folders\/pick$/);
+  if (pick && request.method === "POST") {
+    return pickFolder(request, env, pick[1] ?? "");
+  }
+  const renameDevice = url.pathname.match(/^\/api\/devices\/([^/]+)\/rename$/);
+  if (renameDevice && request.method === "POST") {
+    return renameDeviceName(request, env, renameDevice[1] ?? "");
+  }
+  const renameFolder = url.pathname.match(/^\/api\/folders\/([^/]+)\/rename$/);
+  if (renameFolder && request.method === "POST") {
+    return renameFolderLabel(request, env, renameFolder[1] ?? "");
+  }
+  const removeFolder = url.pathname.match(/^\/api\/folders\/([^/]+)\/remove$/);
+  if (removeFolder && request.method === "POST") {
+    return removeFolderRow(request, env, removeFolder[1] ?? "");
   }
   if (env.ASSETS && !workerRoute(url.pathname)) {
     return env.ASSETS.fetch(request);
@@ -160,13 +232,20 @@ function workerRoute(pathname: string): boolean {
     pathname === "/mcp" ||
     pathname.startsWith("/mcp/") ||
     pathname.startsWith("/api/") ||
-    pathname.startsWith("/device/")
+    pathname.startsWith("/device/") ||
+    pathname.startsWith("/.well-known/") ||
+    pathname.startsWith("/oauth/")
   );
 }
 
 async function mcp(request: Request, env: Env): Promise<Response> {
   const auth = await authenticate(request, env, "bearer");
   if (!auth.ok) {
+    if (auth.response.status === 401) {
+      const headers = new Headers(auth.response.headers);
+      headers.set("WWW-Authenticate", mcpAuthenticateHeader(issuer(env)));
+      return new Response(auth.response.body, { status: 401, headers });
+    }
     return auth.response;
   }
   if (request.method === "DELETE") {
@@ -386,7 +465,18 @@ async function devSession(request: Request, env: Env): Promise<Response> {
     sessionCookie(token, publicBaseUrl(env).startsWith("https://"), 14 * 24 * 3600),
   );
   if (!issueToken) {
-    return json({ user: { id: user.id, email: user.email, name: user.name } }, 200, headers);
+    return json(
+      {
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          avatarUrl: user.avatar_url,
+        },
+      },
+      200,
+      headers,
+    );
   }
   try {
     const issued = await issueAccessToken(env.DB, user.id, tokenTtlSeconds(env));
@@ -421,11 +511,12 @@ async function devPair(request: Request, env: Env): Promise<Response> {
   }
 }
 
-async function startGoogle(_request: Request, env: Env): Promise<Response> {
+async function startGoogle(request: Request, env: Env): Promise<Response> {
   if (!googleConfigured(env)) {
     return error(404, "signin_unconfigured", "Google sign-in is not configured.");
   }
-  const state = randomToken("st_");
+  const next = safeNext(new URL(request.url).searchParams.get("next"));
+  const state = packLoginState(randomToken("st_"), next);
   await saveLoginState(env.DB, state);
   return Response.redirect(googleAuthURL(env, state), 302);
 }
@@ -457,7 +548,7 @@ async function finishGoogle(request: Request, env: Env): Promise<Response> {
     "set-cookie",
     sessionCookie(token, publicBaseUrl(env).startsWith("https://"), 14 * 24 * 3600),
   );
-  headers.set("location", `${webOrigin(env)}/dashboard`);
+  headers.set("location", new URL(nextFromLoginState(state), webOrigin(env)).toString());
   return new Response(null, { status: 302, headers });
 }
 
@@ -568,20 +659,157 @@ async function approveFolder(request: Request, env: Env, folderId: string): Prom
   return json({ ok: true });
 }
 
-async function createToken(request: Request, env: Env): Promise<Response> {
+async function ownedDevice(env: Env, userId: string, deviceId: string) {
+  const device = await getDevice(env.DB, deviceId);
+  if (!device || device.user_id !== userId || device.status !== "active") {
+    return null;
+  }
+  return device;
+}
+
+async function pickFolder(request: Request, env: Env, deviceId: string): Promise<Response> {
   const auth = await authenticate(request, env, "either");
-  if (!auth.ok) {
-    return auth.response;
+  if (!auth.ok) return auth.response;
+  if (!csrfOk(request, auth.via)) return error(403, "forbidden", "The request was rejected.");
+  const device = await ownedDevice(env, auth.user.id, deviceId);
+  if (!device) return error(404, "not_found", "That device was not found.");
+  const stub = env.DEVICE.get(env.DEVICE.idFromName(device.id));
+  if (!(await stub.presence()).connected) {
+    return error(409, "offline", "Open FolderLink on that computer, then try again.");
   }
-  if (!csrfOk(request, auth.via)) {
-    return error(403, "forbidden", "The request was rejected.");
+  const result = await stub.invoke({ op: "pick_folder" });
+  if (!result.ok) {
+    return error(400, result.error.code, result.error.message);
   }
-  try {
-    const issued = await issueAccessToken(env.DB, auth.user.id, tokenTtlSeconds(env));
-    return json(issued);
-  } catch {
-    return error(429, "too_many_tokens", "Too many agent tokens are still valid.");
+  const picked = result.result as { id?: unknown; label?: unknown };
+  if (
+    typeof picked.id !== "string" ||
+    typeof picked.label !== "string" ||
+    !isFolderLabel(picked.label)
+  ) {
+    return error(400, "bad_request", "The folder picker did not return a folder.");
   }
+  await rememberPickedFolder(env.DB, device.id, picked.id, picked.label);
+  return json({ id: picked.id, label: picked.label });
+}
+
+async function renameDeviceName(request: Request, env: Env, deviceId: string): Promise<Response> {
+  const auth = await authenticate(request, env, "either");
+  if (!auth.ok) return auth.response;
+  if (!csrfOk(request, auth.via)) return error(403, "forbidden", "The request was rejected.");
+  const body = await readBody(request);
+  if (body instanceof Response || !isRecord(body) || typeof body.name !== "string") {
+    return error(400, "bad_request", "A device name is required.");
+  }
+  const name = body.name.trim();
+  if (name.length < 1 || name.length > 60) {
+    return error(400, "bad_request", "Use a name of 1 to 60 characters.");
+  }
+  const device = await ownedDevice(env, auth.user.id, deviceId);
+  if (!device) return error(404, "not_found", "That device was not found.");
+  await env.DB.prepare(`UPDATE devices SET name = ?, updated_at = ? WHERE id = ?`)
+    .bind(name, new Date().toISOString(), device.id)
+    .run();
+  const stub = env.DEVICE.get(env.DEVICE.idFromName(device.id));
+  if ((await stub.presence()).connected) {
+    await stub.invoke({ op: "rename_device", name });
+  }
+  return json({ ok: true, name });
+}
+
+async function renameFolderLabel(request: Request, env: Env, folderId: string): Promise<Response> {
+  const auth = await authenticate(request, env, "either");
+  if (!auth.ok) return auth.response;
+  if (!csrfOk(request, auth.via)) return error(403, "forbidden", "The request was rejected.");
+  const body = await readBody(request);
+  if (
+    body instanceof Response ||
+    !isRecord(body) ||
+    typeof body.label !== "string" ||
+    !isFolderLabel(body.label)
+  ) {
+    return error(
+      400,
+      "bad_request",
+      "Use a short folder name: letters, numbers, dots, or hyphens.",
+    );
+  }
+  const folder = await env.DB.prepare(
+    `SELECT folders.id, folders.device_id FROM folders
+     JOIN devices ON devices.id = folders.device_id
+     WHERE folders.id = ? AND devices.user_id = ?`,
+  )
+    .bind(folderId, auth.user.id)
+    .first<{ id: string; device_id: string }>();
+  if (!folder) return error(404, "not_found", "That folder was not found.");
+  const stub = env.DEVICE.get(env.DEVICE.idFromName(folder.device_id));
+  if (!(await stub.presence()).connected) {
+    return error(409, "offline", "Open FolderLink on that computer, then try again.");
+  }
+  const result = await stub.invoke({ op: "rename_folder", folderId, label: body.label });
+  if (!result.ok) return error(400, result.error.code, result.error.message);
+  await renameUserFolder(env.DB, auth.user.id, folderId, body.label);
+  return json({ ok: true });
+}
+
+async function removeFolderRow(request: Request, env: Env, folderId: string): Promise<Response> {
+  const auth = await authenticate(request, env, "either");
+  if (!auth.ok) return auth.response;
+  if (!csrfOk(request, auth.via)) return error(403, "forbidden", "The request was rejected.");
+  const folder = await env.DB.prepare(
+    `SELECT folders.id, folders.device_id FROM folders
+     JOIN devices ON devices.id = folders.device_id
+     WHERE folders.id = ? AND devices.user_id = ?`,
+  )
+    .bind(folderId, auth.user.id)
+    .first<{ id: string; device_id: string }>();
+  if (!folder) return error(404, "not_found", "That folder was not found.");
+  const stub = env.DEVICE.get(env.DEVICE.idFromName(folder.device_id));
+  if (!(await stub.presence()).connected) {
+    return error(409, "offline", "Open FolderLink on that computer, then try again.");
+  }
+  const result = await stub.invoke({ op: "remove_folder", folderId });
+  if (!result.ok) return error(400, result.error.code, result.error.message);
+  await unlistUserFolder(env.DB, auth.user.id, folderId);
+  return json({ ok: true });
+}
+
+async function sessionUser(
+  request: Request,
+  env: Env,
+): Promise<{ id: string; email: string; name: string } | null> {
+  const auth = await authenticate(request, env, "either");
+  if (!auth.ok || auth.via !== "session") {
+    return null;
+  }
+  return auth.user;
+}
+
+async function listApps(request: Request, env: Env): Promise<Response> {
+  const auth = await authenticate(request, env, "either");
+  if (!auth.ok) return auth.response;
+  const grants = await createD1OAuthStore(env.DB).grantsForUser(auth.user.id);
+  return json({
+    apps: grants.map((grant) => ({
+      id: grant.id,
+      name: grant.name,
+      scope: grant.scope,
+      createdAt: grant.createdAt,
+    })),
+  });
+}
+
+async function revokeAppGrant(request: Request, env: Env, grantId: string): Promise<Response> {
+  const auth = await authenticate(request, env, "either");
+  if (!auth.ok) return auth.response;
+  if (!csrfOk(request, auth.via)) return error(403, "forbidden", "The request was rejected.");
+  const revoked = await createD1OAuthStore(env.DB).revokeGrant(
+    grantId,
+    auth.user.id,
+    new Date().toISOString(),
+  );
+  if (!revoked) return error(404, "not_found", "That app was not found.");
+  return json({ ok: true });
 }
 
 async function authenticate(
@@ -601,7 +829,13 @@ async function authenticate(
     }
     return {
       ok: true,
-      user: { id: user.id, status: user.status, email: user.email, name: user.name },
+      user: {
+        id: user.id,
+        status: user.status,
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.avatar_url,
+      },
       via: "bearer",
     };
   }
@@ -621,7 +855,13 @@ async function authenticate(
   }
   return {
     ok: true,
-    user: { id: user.id, status: user.status, email: user.email, name: user.name },
+    user: {
+      id: user.id,
+      status: user.status,
+      email: user.email,
+      name: user.name,
+      avatarUrl: user.avatar_url,
+    },
     via: "session",
   };
 }
