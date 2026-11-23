@@ -5,6 +5,13 @@ import { setDeviceVersion, syncFolders, touchDevice, type DeviceRecord } from ".
 import type { Env } from "../env.ts";
 import type { InvokeRequest } from "./control.ts";
 
+const pickerOperationTimeout = (input: InvokeRequest): number => {
+  // Folder selection is an interactive operation and may take much longer
+  // than ordinary file reads.
+  void input;
+  return 10 * 60 * 1000;
+};
+
 interface Attachment {
   deviceId: string;
   authenticated: boolean;
@@ -121,6 +128,7 @@ export class DeviceAgent extends DurableObject<Env> {
     } catch {
       return { ok: false, error: { code: "unavailable", message: "The device is not connected." } };
     }
+    const timeout = input.op === "pick_folder" ? pickerOperationTimeout(input) : 15_000;
     return await new Promise<ToolResult>((resolve) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
@@ -128,7 +136,7 @@ export class DeviceAgent extends DurableObject<Env> {
           ok: false,
           error: { code: "timeout", message: "The device did not respond in time." },
         });
-      }, 15_000);
+      }, timeout);
       this.pending.set(id, (response) => {
         clearTimeout(timer);
         this.pending.delete(id);
