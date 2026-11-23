@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	DefaultServer = "https://mcp.muiz.pk"
+	DefaultServer = "https://folderlink.muiz.pk"
 	DefaultName   = "laptop"
 )
 

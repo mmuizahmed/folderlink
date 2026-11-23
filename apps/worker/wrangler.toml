@@ -29,18 +29,22 @@ migrations_dir = "migrations"
 [env.production]
 name = "folderlink"
 workers_dev = false
-routes = [{ pattern = "mcp.muiz.pk", custom_domain = true }]
+routes = [
+  { pattern = "folderlink.muiz.pk", custom_domain = true },
+  { pattern = "mcp.muiz.pk", custom_domain = true },
+]
 
 [env.production.vars]
-WEB_ORIGIN = "https://mcp.muiz.pk"
-PUBLIC_BASE_URL = "https://mcp.muiz.pk"
+WEB_ORIGIN = "https://folderlink.muiz.pk"
+PUBLIC_BASE_URL = "https://folderlink.muiz.pk"
 TOKEN_TTL_SECONDS = "2700"
 
 [env.production.assets]
 directory = "../web/dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*", "/mcp", "/mcp/*", "/device/*", "/health"]
+# Every request hits the worker so mcp.muiz.pk can redirect before assets.
+run_worker_first = true
 
 [[env.production.durable_objects.bindings]]
 name = "DEVICE"

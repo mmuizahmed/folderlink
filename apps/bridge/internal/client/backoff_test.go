@@ -23,13 +23,13 @@ func TestValidateServer(t *testing.T) {
 	if err := ValidateServer("http://127.0.0.1:8787"); err != nil {
 		t.Fatal(err)
 	}
-	if err := ValidateServer("https://mcp.muiz.pk"); err != nil {
+	if err := ValidateServer("https://folderlink.muiz.pk"); err != nil {
 		t.Fatal(err)
 	}
-	if err := ValidateServer("http://mcp.muiz.pk"); err == nil {
+	if err := ValidateServer("http://folderlink.muiz.pk"); err == nil {
 		t.Fatal("cleartext public server was accepted")
 	}
-	if err := ValidateServer("https://user:pass@mcp.muiz.pk"); err == nil {
+	if err := ValidateServer("https://user:pass@folderlink.muiz.pk"); err == nil {
 		t.Fatal("credentials were accepted")
 	}
 }

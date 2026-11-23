@@ -3,6 +3,7 @@ import type { DeviceAgent } from "./device/agent.ts";
 export interface Env {
   DB: D1Database;
   DEVICE: DurableObjectNamespace<DeviceAgent>;
+  ASSETS?: Fetcher;
   DEV_AUTH?: string;
   WEB_ORIGIN?: string;
   GOOGLE_CLIENT_ID?: string;

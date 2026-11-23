@@ -32,9 +32,9 @@ export function Privacy() {
   return (
     <LegalLayout title="Privacy">
       <p>
-        FolderLink at mcp.muiz.pk lets an AI app read folders you choose on your laptop. This page
-        describes that hosted service. The program is open source. A copy you run yourself keeps its
-        own database, and this page does not cover that copy.
+        FolderLink at folderlink.muiz.pk lets an AI app read folders you choose on your laptop. This
+        page describes that hosted service. The program is open source. A copy you run yourself
+        keeps its own database, and this page does not cover that copy.
       </p>
 
       <h2>Google sign-in</h2>
@@ -101,7 +101,7 @@ export function Privacy() {
       <h2>Self-hosting</h2>
       <p>
         The code is MIT licensed on <a href={SOURCE}>GitHub</a>. Setup for your own server is in the{" "}
-        <a href={SELF_HOST}>self-hosting notes</a>. This policy describes mcp.muiz.pk only.
+        <a href={SELF_HOST}>self-hosting notes</a>. This policy describes folderlink.muiz.pk only.
       </p>
     </LegalLayout>
   );
@@ -111,8 +111,8 @@ export function Terms() {
   return (
     <LegalLayout title="Terms">
       <p>
-        The FolderLink program is MIT licensed. The hosted service at mcp.muiz.pk is offered as it
-        is, with no warranty. You use it at your own risk. We may stop or change the service.
+        The FolderLink program is MIT licensed. The hosted service at folderlink.muiz.pk is offered
+        as it is, with no warranty. You use it at your own risk. We may stop or change the service.
       </p>
       <p>
         Connect only folders you have the right to read. Do not use the service to reach someone

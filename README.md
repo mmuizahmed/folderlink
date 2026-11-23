@@ -13,7 +13,7 @@
     <a href="https://go.dev/"><img alt="Go 1.22" src="https://img.shields.io/badge/go-1.22-00ADD8"></a>
   </p>
   <p>
-    <a href="https://mcp.muiz.pk">Website</a>
+    <a href="https://folderlink.muiz.pk">Website</a>
     ·
     <a href="docs/ARCHITECTURE.md">Docs</a>
     ·
@@ -35,13 +35,13 @@
 ## How it works
 
 1. Run FolderLink on your laptop and choose the folders it may read.
-2. Pair the laptop at [mcp.muiz.pk/pair](https://mcp.muiz.pk/pair) with the code it prints.
-3. Add the connector in ChatGPT or Claude. The address is `https://mcp.muiz.pk/mcp`.
+2. Pair the laptop at [folderlink.muiz.pk/pair](https://folderlink.muiz.pk/pair) with the code it prints.
+3. Add the connector in ChatGPT or Claude. The address is `https://folderlink.muiz.pk/mcp`.
 
 ```mermaid
 flowchart LR
   laptop[FolderLink on your laptop]
-  cloud[mcp.muiz.pk]
+  cloud[folderlink.muiz.pk]
   agent[ChatGPT or Claude]
   folders[Folders you allowed]
   laptop -->|stays connected| cloud
@@ -84,7 +84,7 @@ folderlink allow ~/projects/my-app --label my-app
 folderlink
 ```
 
-Open [mcp.muiz.pk/pair](https://mcp.muiz.pk/pair), enter the code, and turn the folder on. In ChatGPT or Claude, add a connector at `https://mcp.muiz.pk/mcp`.
+Open [folderlink.muiz.pk/pair](https://folderlink.muiz.pk/pair), enter the code, and turn the folder on. In ChatGPT or Claude, add a connector at `https://folderlink.muiz.pk/mcp`.
 
 ## Security
 

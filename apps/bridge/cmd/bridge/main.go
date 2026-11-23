@@ -213,7 +213,7 @@ func defaultWeb(server string) string {
 	if strings.Contains(lower, "localhost") || strings.Contains(lower, "127.0.0.1") || strings.Contains(lower, "[::1]") {
 		return "http://localhost:5173"
 	}
-	return "https://mcp.muiz.pk"
+	return "https://folderlink.muiz.pk"
 }
 
 func deviceName(configured string) string {

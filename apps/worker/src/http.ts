@@ -12,6 +12,29 @@ export function error(status: number, code: string, message: string): Response {
   return json({ error: { code, message } }, status);
 }
 
+const LEGACY_HOST = "mcp.muiz.pk";
+const CANONICAL_ORIGIN = "https://folderlink.muiz.pk";
+
+export function redirectLegacyHost(request: Request): Response | null {
+  const url = new URL(request.url);
+  if (url.hostname.toLowerCase() !== LEGACY_HOST) {
+    return null;
+  }
+  const target = new URL(CANONICAL_ORIGIN);
+  target.pathname = url.pathname;
+  target.search = url.search;
+  if (target.protocol !== "https:" || target.hostname !== "folderlink.muiz.pk") {
+    return null;
+  }
+  return new Response(null, {
+    status: 301,
+    headers: {
+      location: target.toString(),
+      "cache-control": "no-store",
+    },
+  });
+}
+
 export function localDevEnabled(request: Request, env: Env): boolean {
   if (env.DEV_AUTH !== "true") {
     return false;
