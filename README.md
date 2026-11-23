@@ -1,16 +1,15 @@
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/logo-mark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="docs/brand/logo-mark-light.svg">
-    <img alt="FolderLink" src="docs/brand/logo-mark.svg" height="64">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/logo-lockup.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/brand/logo-lockup-light.svg">
+    <img alt="FolderLink" src="docs/brand/logo-lockup.svg" height="64">
   </picture>
-  <h1>FolderLink</h1>
   <p><strong>Your folders. Your AI.</strong></p>
   <p>Let ChatGPT, Claude and other AI apps read the project folders you choose, straight from your laptop. Read-only, logged, and revocable in one click.</p>
+  <p><a href="https://mcp.muiz.pk"><strong>mcp.muiz.pk</strong></a></p>
   <p>
     <a href="https://github.com/mmuizahmed/mcp-bridge/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/mmuizahmed/mcp-bridge/actions/workflows/ci.yml/badge.svg"></a>
     <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-22c55e"></a>
-    <a href="https://github.com/mmuizahmed/mcp-bridge/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/mmuizahmed/mcp-bridge?label=release"></a>
     <a href="https://go.dev/"><img alt="Go 1.22" src="https://img.shields.io/badge/go-1.22-00ADD8"></a>
   </p>
   <p>
