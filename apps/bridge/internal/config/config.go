@@ -265,6 +265,21 @@ func (s *Store) SetWriteApprovalMode(mode string) error {
 	return s.save(cfg)
 }
 
+// SetNotifySuccess caches the notify-on-success setting from the tray.
+// It re-reads the file first, like SetWriteApprovalMode: the tray holds a
+// copy of the config from startup, and saving that copy would silently
+// drop every folder added since the bridge started.
+func (s *Store) SetNotifySuccess(on bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	cfg, err := s.load()
+	if err != nil {
+		return err
+	}
+	cfg.NotifySuccess = on
+	return s.save(cfg)
+}
+
 // Unallow removes a folder by label.
 func (s *Store) Unallow(label string) error {
 	s.mu.Lock()

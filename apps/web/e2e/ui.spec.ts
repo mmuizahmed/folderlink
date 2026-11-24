@@ -88,7 +88,6 @@ test.describe("visual and glitch checks", () => {
       await page.goto("/dashboard?fixture=1");
       await page.evaluate(() => document.fonts.ready);
       await expect(page.getByRole("heading", { name: "Folders" })).toBeVisible();
-      await expect(page.getByText("FolderLink does not store what an app reads.")).toBeVisible();
       await dashboardFrame(page, width);
       if (width > 800) {
         await page.evaluate(() => window.scrollTo(0, 480));
@@ -137,6 +136,52 @@ test.describe("visual and glitch checks", () => {
         ),
       );
     expect(clipped).toBe(true);
+    expect(errors).toEqual([]);
+  });
+
+  test("settings, folder details, and activity more", async ({ page }) => {
+    const errors = await quiet(page);
+    await page.setViewportSize({ width: 1440, height: 1100 });
+    await page.goto("/dashboard?fixture=1");
+    await page.evaluate(() => document.fonts.ready);
+
+    // The header no longer carries the Pair device action: it lives in
+    // the Devices section.
+    await expect(
+      page.locator("header.dash-top").getByRole("link", { name: "+ Pair device" }),
+    ).toHaveCount(0);
+
+    // The overview shows the compact folders card, not the full list.
+    await expect(page.getByRole("button", { name: "Manage" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Open details for raffle" })).toHaveCount(0);
+
+    // Activity shows the first 8 rows and a More button that opens the
+    // full Activity section.
+    await expect(page.getByRole("button", { name: "More" })).toBeVisible();
+    await page.getByRole("button", { name: "More" }).click();
+    await expect(page.getByRole("button", { name: "More" })).toHaveCount(0);
+    await expect(page.getByText("search_files").first()).toBeVisible();
+
+    // Devices carries the Pair device action.
+    await page.getByRole("link", { name: "Devices" }).click();
+    await expect(page.getByRole("link", { name: "+ Pair device" })).toBeVisible();
+
+    // Folders: Manage opens the list; a folder row opens its details.
+    await page.getByRole("link", { name: "Folders" }).click();
+    await expect(page.getByRole("button", { name: "Add folder" })).toBeVisible();
+    await page.getByRole("button", { name: "Open details for raffle" }).click();
+    await expect(page.getByRole("heading", { name: "AI apps" })).toBeVisible();
+    await expect(page.getByText("Visible to all connected apps")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Rename" })).toBeVisible();
+    await page.getByRole("button", { name: "← Folders" }).click();
+    await expect(page.getByRole("button", { name: "Open details for raffle" })).toBeVisible();
+
+    // Settings: the profile card and the checked approval mode.
+    await page.getByRole("link", { name: "Settings" }).click();
+    await expect(page.locator(".profile-card")).toContainText("Muiz Ahmed");
+    await expect(page.locator(".profile-card")).toContainText("muiz@example.com");
+    await expect(page.getByRole("radio", { name: /AI approval/ })).toBeChecked();
+    await noOverflow(page);
     expect(errors).toEqual([]);
   });
 

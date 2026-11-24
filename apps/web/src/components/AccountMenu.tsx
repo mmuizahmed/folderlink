@@ -68,9 +68,11 @@ export function AccountMenu({ user }: { user: SessionUser }) {
   );
 }
 
-export function Avatar({ user }: { user: SessionUser }) {
-  if (user.avatarUrl) {
-    return <img className="avatar" src={user.avatarUrl} alt="" />;
+export function Avatar({ user, className }: { user: SessionUser; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  const cls = className ? `avatar ${className}` : "avatar";
+  if (user.avatarUrl && !failed) {
+    return <img className={cls} src={user.avatarUrl} alt="" onError={() => setFailed(true)} />;
   }
-  return <span className="avatar">{initials(user.name, user.email)}</span>;
+  return <span className={cls}>{initials(user.name, user.email)}</span>;
 }

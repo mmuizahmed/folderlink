@@ -716,6 +716,7 @@ a.pill {
 }
 .badge {
   margin-left: auto;
+  flex: none;
   font-family: var(--mono);
   font-size: 11px;
   padding: 2px 8px;
@@ -726,6 +727,11 @@ a.pill {
 .badge.go {
   background: rgba(34, 197, 94, 0.12);
   color: var(--go);
+}
+.row-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .meta {
   padding: 12px 20px;
@@ -1143,6 +1149,27 @@ code.mono {
   color: var(--faint);
   border-color: var(--line);
 }
+.folder-icon.xl {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+}
+.folder-icon.xl svg {
+  width: 28px;
+  height: 28px;
+}
+.folder-open {
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.folder-open:hover .path {
+  text-decoration: underline;
+}
 .folder-main {
   flex: 1;
   min-width: 0;
@@ -1401,10 +1428,11 @@ code.mono {
   font-weight: 600;
 }
 .mode-block {
-  border: 1px solid var(--line-2);
-  border-radius: 10px;
-  padding: 16px;
-  margin: 16px 0;
+  background: var(--panel);
+  border: 0;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 0;
 }
 .mode-block h3 {
   margin: 0 0 4px;
@@ -1414,7 +1442,10 @@ code.mono {
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  padding: 10px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 10px;
   cursor: pointer;
 }
 .mode-option input {
@@ -1428,6 +1459,65 @@ code.mono {
 .mode-option .minor {
   display: block;
   margin-top: 2px;
+}
+img.avatar {
+  display: block;
+  object-fit: cover;
+  flex: none;
+}
+.avatar.xl {
+  width: 56px;
+  height: 56px;
+  font-size: 18px;
+}
+.settings-stack {
+  display: grid;
+  gap: 16px;
+}
+.settings-stack .section-head {
+  margin: 0 0 2px;
+}
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 12px;
+  background: var(--panel);
+}
+.profile-name {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.mode-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mode-option.selected {
+  border-color: var(--go);
+  background: rgba(34, 197, 94, 0.06);
+}
+.session-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: var(--panel);
+}
+.session-card h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+.session-card p {
+  margin: 0;
+}
+.more-btn {
+  margin: 12px 16px 16px;
 }
 .approval {
   padding: 14px 16px;
@@ -1453,6 +1543,59 @@ code.mono {
   margin: 0;
   max-height: 240px;
   overflow: auto;
+}
+.diff-table {
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  overflow: auto;
+  max-height: 240px;
+}
+.diff-hunk {
+  padding: 4px 12px;
+  color: var(--faint);
+  background: var(--raise);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.diff-row {
+  display: grid;
+  grid-template-columns: 40px 40px 18px 1fr;
+  min-width: max-content;
+}
+.diff-no {
+  text-align: right;
+  padding-right: 8px;
+  color: var(--faint);
+  user-select: none;
+}
+.diff-sign {
+  text-align: center;
+  user-select: none;
+}
+.diff-text {
+  white-space: pre;
+  padding-right: 12px;
+}
+.diff-add {
+  background: rgba(34, 197, 94, 0.12);
+}
+.diff-add .diff-sign {
+  color: var(--go);
+}
+.diff-del {
+  background: rgba(248, 113, 113, 0.12);
+}
+.diff-del .diff-sign {
+  color: var(--bad);
+}
+.diff-note {
+  color: var(--faint);
 }
 .live {
   display: inline-flex;

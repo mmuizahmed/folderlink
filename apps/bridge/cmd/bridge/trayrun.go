@@ -132,10 +132,9 @@ func runTrayBridge(id *identity.Identity, store *config.Store, cfg config.File) 
 		},
 		NotifySuccess: cfg.NotifySuccess,
 		OnToggleNotifySuccess: func(on bool) {
-			cfg.NotifySuccess = on
 			notifier.SetNotifySuccess(on)
 			tray.SetNotifySuccess(on)
-			if err := store.Save(cfg); err != nil {
+			if err := store.SetNotifySuccess(on); err != nil {
 				slog.Warn("could not save notification setting", "err", err.Error())
 			}
 		},

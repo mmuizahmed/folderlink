@@ -37,3 +37,31 @@ func TestAutoUpdateEnabled(t *testing.T) {
 	}
 	_ = os.Getenv("FOLDERLINK_AUTO_UPDATE")
 }
+
+func TestSetNotifySuccessKeepsFolders(t *testing.T) {
+	dir := t.TempDir()
+	folderDir := t.TempDir()
+	store, err := Open(dir)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	// A folder added after the bridge started, by the separate allow
+	// process. Toggling the tray setting must not drop it: the toggle
+	// used to save the config the tray loaded at startup.
+	if _, err := store.Allow(folderDir, "folderlink"); err != nil {
+		t.Fatalf("Allow: %v", err)
+	}
+	if err := store.SetNotifySuccess(true); err != nil {
+		t.Fatalf("SetNotifySuccess: %v", err)
+	}
+	cfg, err := store.Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if !cfg.NotifySuccess {
+		t.Errorf("NotifySuccess = false, want true")
+	}
+	if len(cfg.Folders) != 1 || cfg.Folders[0].Label != "folderlink" {
+		t.Errorf("Folders = %v, want one folderlink entry", cfg.Folders)
+	}
+}

@@ -12,7 +12,8 @@ import {
   IconSettings,
   Mark,
 } from "../components/Icons.tsx";
-import { initials, screenMode } from "../data/mode.ts";
+import { Avatar } from "../components/AccountMenu.tsx";
+import { screenMode } from "../data/mode.ts";
 import type {
   ActivityView,
   AppIdentity,
@@ -20,6 +21,7 @@ import type {
   AppView,
   DashboardData,
   FolderView,
+  SessionUser,
   ViewState,
   WriteApprovalMode,
 } from "../data/types.ts";
@@ -74,6 +76,7 @@ export function Dashboard() {
   const navigate = useNavigate();
   const mode = screenMode();
   const [section, setSection] = useState<Section>("overview");
+  const [openFolderId, setOpenFolderId] = useState<string | null>(null);
   const [menu, setMenu] = useState(false);
   const [state, setState] = useState<ViewState<DashboardData>>({ status: "loading" });
   const [notice, setNotice] = useState("");
@@ -436,6 +439,7 @@ export function Dashboard() {
   }, [mode, state.status]);
 
   const ready = state.status === "ready" ? state.data : null;
+  const openFolder = ready?.folders.find((folder) => folder.id === openFolderId) ?? null;
 
   return (
     <div className="shell">
@@ -460,6 +464,7 @@ export function Dashboard() {
               onClick={(event) => {
                 event.preventDefault();
                 setSection(item.id);
+                setOpenFolderId(null);
                 setMenu(false);
               }}
             >
@@ -474,7 +479,7 @@ export function Dashboard() {
         <div className="side-foot">
           {ready ? (
             <div className="account">
-              <span className="avatar lg">{initials(ready.user.name, ready.user.email)}</span>
+              <Avatar user={ready.user} className="lg" />
               <div>
                 <div className="who-name">{ready.user.name || ready.user.email}</div>
                 <div className="who-mail path">{ready.user.email}</div>
@@ -489,9 +494,6 @@ export function Dashboard() {
             Menu
           </button>
           <div className="dash-title">{NAV.find((item) => item.id === section)?.label}</div>
-          <NavLink className="btn small" to={mode === "live" ? "/pair" : "/pair?fixture=1"}>
-            + Pair device
-          </NavLink>
         </header>
         <div className="dash-body">
           {state.status === "loading" ? <p className="state">Loading.</p> : null}
@@ -504,23 +506,36 @@ export function Dashboard() {
           {ready && section === "overview" ? (
             <Overview
               data={ready}
-              notice={notice}
-              onToggle={toggleFolder}
               onRemove={removeDevice}
               onRename={renameDevice}
               onAdd={addFolder}
               adding={adding}
-              onRenameFolder={renameFolder}
-              onRemoveFolder={removeFolder}
               onRevoke={revokeApp}
               onShowApprovals={() => setSection("activity")}
+              onShowFolders={() => setSection("folders")}
+              onShowActivity={() => setSection("activity")}
             />
           ) : null}
           {ready && section === "devices" ? (
-            <DeviceList data={ready} onRemove={removeDevice} onRename={renameDevice} />
+            <DeviceList
+              data={ready}
+              pairHref={mode === "live" ? "/pair" : "/pair?fixture=1"}
+              onRemove={removeDevice}
+              onRename={renameDevice}
+            />
           ) : null}
           {ready && section === "folders" ? (
-            <>
+            openFolder ? (
+              <FolderDetails
+                folder={openFolder}
+                apps={ready.apps}
+                onBack={() => setOpenFolderId(null)}
+                onSetApps={setFolderApps}
+                onToggle={toggleFolder}
+                onRename={renameFolder}
+                onRemove={removeFolder}
+              />
+            ) : (
               <FolderList
                 data={ready}
                 onToggle={toggleFolder}
@@ -528,10 +543,10 @@ export function Dashboard() {
                 adding={adding}
                 onRename={renameFolder}
                 onRemove={removeFolder}
+                onOpen={(folder) => setOpenFolderId(folder.id)}
                 notice={notice}
               />
-              <FolderAccess data={ready} onSetApps={setFolderApps} />
-            </>
+            )
           ) : null}
           {ready && section === "apps" ? <AppList apps={ready.apps} onRevoke={revokeApp} /> : null}
           {ready && section === "activity" ? (
@@ -543,57 +558,13 @@ export function Dashboard() {
             </>
           ) : null}
           {ready && section === "settings" ? (
-            <section>
-              <h2>Settings</h2>
-              <p className="minor">Signed in as {ready.user.email}</p>
-              <div className="mode-block">
-                <h3>Write approval</h3>
-                <p className="minor">
-                  Who approves a write or a command before it runs. This is the top rule: it beats
-                  per-tool defaults and remember-rules.
-                </p>
-                <label className="mode-option">
-                  <input
-                    type="radio"
-                    name="write-approval"
-                    checked={ready.writeApprovalMode === "ai"}
-                    onChange={() => void setWriteApprovalMode("ai")}
-                  />
-                  <span>
-                    <strong>AI approval</strong>
-                    <span className="minor">
-                      The connected app&apos;s own confirmation card is the gate for normal writes.
-                      Dashboard approval is only needed for deletes, commands, scripts, and binary
-                      files.
-                    </span>
-                  </span>
-                </label>
-                <label className="mode-option">
-                  <input
-                    type="radio"
-                    name="write-approval"
-                    checked={ready.writeApprovalMode === "manual"}
-                    onChange={() => void setWriteApprovalMode("manual")}
-                  />
-                  <span>
-                    <strong>Manual approval</strong>
-                    <span className="minor">
-                      Every write and command needs your approval here in the dashboard. The tray
-                      shows a notification when one is waiting.
-                    </span>
-                  </span>
-                </label>
-                {modeNote ? <p className="minor">{modeNote}</p> : null}
-              </div>
-              <div className="cta" style={{ justifyContent: "flex-start" }}>
-                <button type="button" className="btn quiet small" onClick={() => void logout()}>
-                  Sign out
-                </button>
-              </div>
-              <p className="minor">
-                ChatGPT and Claude connect from their own apps. You do not create a token here.
-              </p>
-            </section>
+            <SettingsSection
+              user={ready.user}
+              writeApprovalMode={ready.writeApprovalMode}
+              modeNote={modeNote}
+              onSetMode={(modeValue) => void setWriteApprovalMode(modeValue)}
+              onLogout={() => void logout()}
+            />
           ) : null}
         </div>
       </div>
@@ -601,30 +572,110 @@ export function Dashboard() {
   );
 }
 
+export function SettingsSection({
+  user,
+  writeApprovalMode,
+  modeNote,
+  onSetMode,
+  onLogout,
+}: {
+  user: SessionUser;
+  writeApprovalMode: WriteApprovalMode;
+  modeNote: string;
+  onSetMode: (mode: WriteApprovalMode) => void;
+  onLogout: () => void;
+}) {
+  return (
+    <section className="settings-stack">
+      <div className="section-head">
+        <h2>Settings</h2>
+      </div>
+      <div className="profile-card edge">
+        <Avatar user={user} className="xl" />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="profile-name">{user.name || user.email}</div>
+          <div className="minor path">{user.email}</div>
+        </div>
+      </div>
+      <div className="mode-block edge">
+        <div className="mode-head">
+          <h3>Write approval</h3>
+          {modeNote ? (
+            <span className="minor" role="status">
+              {modeNote}
+            </span>
+          ) : null}
+        </div>
+        <p className="minor">
+          Who approves a write or a command before it runs. This is the top rule: it beats per-tool
+          defaults and remember-rules.
+        </p>
+        <label className={writeApprovalMode === "ai" ? "mode-option selected" : "mode-option"}>
+          <input
+            type="radio"
+            name="write-approval"
+            checked={writeApprovalMode === "ai"}
+            onChange={() => onSetMode("ai")}
+          />
+          <span>
+            <strong>AI approval</strong>
+            <span className="minor">
+              The connected app&apos;s own confirmation card is the gate for normal writes.
+              Dashboard approval is only needed for deletes, commands, scripts, and binary files.
+            </span>
+          </span>
+        </label>
+        <label className={writeApprovalMode === "manual" ? "mode-option selected" : "mode-option"}>
+          <input
+            type="radio"
+            name="write-approval"
+            checked={writeApprovalMode === "manual"}
+            onChange={() => onSetMode("manual")}
+          />
+          <span>
+            <strong>Manual approval</strong>
+            <span className="minor">
+              Every write and command needs your approval here in the dashboard. The tray shows a
+              notification when one is waiting.
+            </span>
+          </span>
+        </label>
+      </div>
+      <div className="session-card edge">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3>Session</h3>
+          <p className="minor">
+            ChatGPT and Claude connect from their own apps. You do not create a token here.
+          </p>
+        </div>
+        <button type="button" className="btn quiet small" onClick={onLogout}>
+          Sign out
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function Overview({
   data,
-  notice,
-  onToggle,
   onRemove,
   onRename,
   onAdd,
   adding,
-  onRenameFolder,
-  onRemoveFolder,
   onRevoke,
   onShowApprovals,
+  onShowFolders,
+  onShowActivity,
 }: {
   data: DashboardData;
-  notice: string;
-  onToggle: (folder: FolderView) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
   onRename: (id: string, name: string) => Promise<void>;
   onAdd: () => Promise<void>;
   adding: boolean;
-  onRenameFolder: (id: string, label: string) => Promise<void>;
-  onRemoveFolder: (id: string) => Promise<void>;
   onRevoke: (id: string) => Promise<void>;
   onShowApprovals: () => void;
+  onShowFolders: () => void;
+  onShowActivity: () => void;
 }) {
   const device = data.devices[0];
   const pending = data.approvals.filter((item) => item.status === "pending");
@@ -658,18 +709,10 @@ function Overview({
       )}
       <div className="split">
         <div>
-          <FolderList
-            data={data}
-            onToggle={onToggle}
-            onAdd={onAdd}
-            adding={adding}
-            onRename={onRenameFolder}
-            onRemove={onRemoveFolder}
-            notice={notice}
-          />
+          <FolderSummary data={data} onShowFolders={onShowFolders} />
           <AppList apps={data.apps} onRevoke={onRevoke} />
         </div>
-        <ActivityList items={data.activity} />
+        <ActivityList items={data.activity} limit={8} onShowAll={onShowActivity} />
       </div>
     </>
   );
@@ -842,27 +885,35 @@ function when(value: string | null): string {
 
 function DeviceList({
   data,
+  pairHref,
   onRemove,
   onRename,
 }: {
   data: DashboardData;
+  pairHref: string;
   onRemove: (id: string) => Promise<void>;
   onRename: (id: string, name: string) => Promise<void>;
 }) {
-  if (data.devices.length === 0)
-    return (
-      <Empty
-        title="No devices"
-        body="Download FolderLink and open it. It connects automatically."
-      />
-    );
   return (
     <div>
-      {data.devices.map((device) => (
-        <div key={device.id} style={{ marginBottom: 16 }}>
-          <DeviceCard device={device} onRemove={onRemove} onRename={onRename} />
-        </div>
-      ))}
+      <div className="section-head">
+        <h2>Devices</h2>
+        <NavLink className="btn small" to={pairHref}>
+          + Pair device
+        </NavLink>
+      </div>
+      {data.devices.length === 0 ? (
+        <Empty
+          title="No devices"
+          body="Download FolderLink and open it. It connects automatically."
+        />
+      ) : (
+        data.devices.map((device) => (
+          <div key={device.id} style={{ marginBottom: 16 }}>
+            <DeviceCard device={device} onRemove={onRemove} onRename={onRename} />
+          </div>
+        ))
+      )}
     </div>
   );
 }
@@ -874,6 +925,7 @@ function FolderList({
   adding,
   onRename,
   onRemove,
+  onOpen,
   notice,
 }: {
   data: DashboardData;
@@ -882,6 +934,7 @@ function FolderList({
   adding: boolean;
   onRename: (id: string, label: string) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
+  onOpen: (folder: FolderView) => void;
   notice: string;
 }) {
   return (
@@ -917,14 +970,19 @@ function FolderList({
               <span className="folder-icon" aria-hidden="true">
                 <IconFolder />
               </span>
-              <div className="folder-main">
+              <button
+                type="button"
+                className="folder-main folder-open"
+                onClick={() => onOpen(folder)}
+                aria-label={`Open details for ${folder.label}`}
+              >
                 <div className={on ? "path" : "path paused"} title={folder.label}>
                   {folder.label}
                 </div>
                 <div className="minor">
                   {folder.deviceName ? `${folder.detail} · ${folder.deviceName}` : folder.detail}
                 </div>
-              </div>
+              </button>
               <span className={on ? "tag" : "tag dim"}>read-only</span>
               <button
                 type="button"
@@ -964,77 +1022,158 @@ function FolderList({
   );
 }
 
-// FolderAccess manages per-app folder scoping. It lives in the Folders
-// section only — FolderList is shared with the overview, which is
-// screenshotted, so the scoping UI does not touch it. A folder with no
-// restriction (apps null) is visible to every connected app; tapping an
-// app's chip restricts it to the selected ones; deselecting all hides it
-// from every app. Selecting every app again clears the restriction.
-function FolderAccess({
+// FolderSummary is the overview's compact folders card. The full list
+// lives in the Folders section — the overview only shows the count, the
+// active share, and the folder names, so it never grows with the list.
+export function FolderSummary({
   data,
-  onSetApps,
+  onShowFolders,
 }: {
   data: DashboardData;
-  onSetApps: (id: string, apps: string[] | null) => Promise<void>;
+  onShowFolders: () => void;
 }) {
-  if (data.folders.length === 0) {
-    return null;
-  }
+  const active = data.folders.filter((folder) => folder.approval === "approved").length;
   return (
     <section>
       <div className="section-head">
-        <h2>Folder access</h2>
+        <h2>Folders</h2>
+        <button type="button" className="btn quiet small" onClick={onShowFolders}>
+          Manage
+        </button>
       </div>
       <div className="list edge">
-        <p className="blocked-note">
-          Choose which AI apps can see each folder. A folder with no restriction is visible to every
-          connected app.
-        </p>
-        {data.apps.length === 0 ? (
-          <p className="blocked-note">
+        {data.folders.length === 0 ? (
+          <Empty title="No folders" body="Add a folder from this computer. The path stays on it." />
+        ) : (
+          <div className="app-row">
+            <span className="folder-icon" aria-hidden="true">
+              <IconFolder />
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div>
+                {data.folders.length} folder{data.folders.length === 1 ? "" : "s"} · {active} active
+              </div>
+              <div className="minor path">
+                {data.folders.map((folder) => folder.label).join(" · ")}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// FolderDetails is a folder's own page inside the Folders section: its
+// status, device, and per-app access, plus the actions that used to sit on
+// the row. The per-app chips moved here from the old Folder access table.
+export function FolderDetails({
+  folder,
+  apps,
+  onBack,
+  onSetApps,
+  onToggle,
+  onRename,
+  onRemove,
+}: {
+  folder: FolderView;
+  apps: AppView[];
+  onBack: () => void;
+  onSetApps: (id: string, apps: string[] | null) => Promise<void>;
+  onToggle: (folder: FolderView) => Promise<void>;
+  onRename: (id: string, label: string) => Promise<void>;
+  onRemove: (id: string) => Promise<void>;
+}) {
+  const on = folder.approval === "approved";
+  return (
+    <section className="settings-stack">
+      <div className="section-head">
+        <button type="button" className="btn quiet small" onClick={onBack}>
+          ← Folders
+        </button>
+      </div>
+      <div className="profile-card edge">
+        <span className="folder-icon xl" aria-hidden="true">
+          <IconFolder />
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="profile-name">{folder.label}</div>
+          <div className="minor">
+            {folder.deviceName ? `${folder.detail} · ${folder.deviceName}` : folder.detail}
+          </div>
+        </div>
+        <span className={on ? "tag" : "tag dim"}>{on ? "active" : "paused"}</span>
+      </div>
+      <div className="mode-block edge">
+        <div className="mode-head">
+          <h3>AI apps</h3>
+        </div>
+        <p className="minor">{accessSummary(folder, apps)}</p>
+        {apps.length === 0 ? (
+          <p className="minor">
             No apps connected yet. Connect one first — until then every folder stays visible to
             every app.
           </p>
         ) : (
-          data.folders.map((folder) => (
-            <div className="folder-row" key={folder.id}>
-              <span className="folder-icon" aria-hidden="true">
-                <IconFolder />
-              </span>
-              <div className="folder-main">
-                <div className="path" title={folder.label}>
-                  {folder.label}
-                </div>
-                <div className="minor">{accessSummary(folder, data.apps)}</div>
-                <div className="access-chips">
-                  {data.apps.map((app) => {
-                    const allowed = folder.apps === null || folder.apps.includes(app.id);
-                    return (
-                      <button
-                        key={app.id}
-                        type="button"
-                        className={allowed ? "access-chip on" : "access-chip"}
-                        aria-pressed={allowed}
-                        aria-label={`${allowed ? "Hide" : "Show"} ${folder.label} ${allowed ? "from" : "to"} ${app.name}`}
-                        onClick={() =>
-                          void onSetApps(folder.id, nextApps(folder, app.id, data.apps))
-                        }
-                      >
-                        <AppMark identity={app.identity} small />
-                        {app.name}
-                        {allowed ? (
-                          <span className="check" aria-hidden="true">
-                            ✓
-                          </span>
-                        ) : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          ))
+          <div className="access-chips">
+            {apps.map((app) => {
+              const allowed = folder.apps === null || folder.apps.includes(app.id);
+              return (
+                <button
+                  key={app.id}
+                  type="button"
+                  className={allowed ? "access-chip on" : "access-chip"}
+                  aria-pressed={allowed}
+                  aria-label={`${allowed ? "Hide" : "Show"} ${folder.label} ${allowed ? "from" : "to"} ${app.name}`}
+                  onClick={() => void onSetApps(folder.id, nextApps(folder, app.id, apps))}
+                >
+                  <AppMark identity={app.identity} small />
+                  {app.name}
+                  {allowed ? (
+                    <span className="check" aria-hidden="true">
+                      ✓
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
         )}
+      </div>
+      <div className="session-card edge">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3>Actions</h3>
+          <p className="minor">
+            Pausing hides this folder from every AI app. Removing it stops sharing it entirely.
+          </p>
+        </div>
+        <span className="row-actions">
+          <button
+            type="button"
+            className={on ? "toggle on" : "toggle"}
+            aria-pressed={on}
+            aria-label={`${on ? "Pause" : "Allow"} ${folder.label}`}
+            title={on ? "Pause this folder (hide it from AI)" : "Allow this folder again"}
+            onClick={() => void onToggle(folder)}
+          />
+          <button
+            type="button"
+            className="btn quiet small"
+            onClick={() => {
+              const label = window.prompt("Rename this folder", folder.label);
+              if (label?.trim()) void onRename(folder.id, label.trim());
+            }}
+          >
+            Rename
+          </button>
+          <button
+            type="button"
+            className="btn danger small"
+            onClick={() => void onRemove(folder.id)}
+          >
+            Remove
+          </button>
+        </span>
       </div>
     </section>
   );
@@ -1150,6 +1289,84 @@ function approvalTitle(item: ApprovalView): string {
   return "Write file";
 }
 
+// parseDiff turns a unified diff into hunks of numbered rows. The file
+// headers (--- / +++) are dropped: GitHub shows the file name above the
+// diff, not inside it. A hunk header (@@) becomes a plain separator row
+// carrying only its trailing section text.
+export type DiffLine = {
+  kind: "add" | "del" | "ctx" | "note";
+  oldNo: number | null;
+  newNo: number | null;
+  text: string;
+};
+
+export type DiffHunk = {
+  head: string;
+  lines: DiffLine[];
+};
+
+export function parseDiff(text: string): DiffHunk[] {
+  const hunks: DiffHunk[] = [];
+  let oldNo = 0;
+  let newNo = 0;
+  let current: DiffHunk | null = null;
+  for (const raw of text.split("\n")) {
+    if (raw.startsWith("--- ") || raw.startsWith("+++ ")) continue;
+    const hunk = raw.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(.*)$/);
+    if (hunk) {
+      const [, oldStart = "0", newStart = "0", head = ""] = hunk;
+      oldNo = Number.parseInt(oldStart, 10);
+      newNo = Number.parseInt(newStart, 10);
+      current = { head: head.trim(), lines: [] };
+      hunks.push(current);
+      continue;
+    }
+    if (raw === "") continue;
+    if (!current) {
+      current = { head: "", lines: [] };
+      hunks.push(current);
+    }
+    if (raw.startsWith("+")) {
+      current.lines.push({ kind: "add", oldNo: null, newNo: newNo++, text: raw.slice(1) });
+    } else if (raw.startsWith("-")) {
+      current.lines.push({ kind: "del", oldNo: oldNo++, newNo: null, text: raw.slice(1) });
+    } else if (raw.startsWith("\\")) {
+      current.lines.push({ kind: "note", oldNo: null, newNo: null, text: raw });
+    } else if (raw.startsWith(" ")) {
+      current.lines.push({ kind: "ctx", oldNo: oldNo++, newNo: newNo++, text: raw.slice(1) });
+    } else {
+      current.lines.push({ kind: "ctx", oldNo: oldNo++, newNo: newNo++, text: raw });
+    }
+  }
+  return hunks;
+}
+
+// DiffView renders a unified diff the way GitHub does: old and new line
+// numbers, green added rows, red removed rows, and no raw --- / +++ / @@
+// markers. Long lines scroll sideways instead of wrapping.
+export function DiffView({ diff }: { diff: string }) {
+  const hunks = parseDiff(diff);
+  return (
+    <div className="diff-table">
+      {hunks.map((hunk, hi) => (
+        <div key={hi}>
+          <div className="diff-hunk">{hunk.head || "···"}</div>
+          {hunk.lines.map((line, li) => (
+            <div key={li} className={`diff-row diff-${line.kind}`}>
+              <span className="diff-no">{line.oldNo ?? ""}</span>
+              <span className="diff-no">{line.newNo ?? ""}</span>
+              <span className="diff-sign">
+                {line.kind === "add" ? "+" : line.kind === "del" ? "-" : ""}
+              </span>
+              <span className="diff-text">{line.text || " "}</span>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ApprovalCard({
   item,
   busy,
@@ -1177,7 +1394,7 @@ function ApprovalCard({
       {item.tool === "run_command" ? (
         <div className="minor">Command: {item.argv.join(" ")}</div>
       ) : null}
-      {item.diff ? <pre className="diff">{item.diff}</pre> : null}
+      {item.diff ? <DiffView diff={item.diff} /> : null}
       {item.preview ? <pre className="diff">{item.preview}</pre> : null}
       <div className="cta" style={{ justifyContent: "flex-start" }}>
         <button
@@ -1205,7 +1422,16 @@ function ApprovalCard({
   );
 }
 
-function ActivityList({ items }: { items: ActivityView[] }) {
+export function ActivityList({
+  items,
+  limit,
+  onShowAll,
+}: {
+  items: ActivityView[];
+  limit?: number;
+  onShowAll?: () => void;
+}) {
+  const shown = limit === undefined ? items : items.slice(0, limit);
   return (
     <section>
       <div className="section-head">
@@ -1218,21 +1444,28 @@ function ActivityList({ items }: { items: ActivityView[] }) {
             body="FolderLink does not store what an app reads. A refusal happens on your computer, and the file stays there."
           />
         ) : (
-          items.map((item) => (
-            <div className="app-row" key={item.id}>
-              <AppMark identity={item.client} small />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div>
-                  {item.action}
-                  {item.target ? <span className="path"> {item.target}</span> : null}
+          <>
+            {shown.map((item) => (
+              <div className="app-row" key={item.id}>
+                <AppMark identity={item.client} small />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="row-line">
+                    {item.action}
+                    {item.target ? <span className="path"> {item.target}</span> : null}
+                  </div>
+                  <div className="minor">
+                    {when(item.time)} · {item.detail}
+                  </div>
                 </div>
-                <div className="minor">
-                  {when(item.time)} · {item.detail}
-                </div>
+                {item.denied ? <span className="badge">refused</span> : null}
               </div>
-              {item.denied ? <span className="badge">refused</span> : null}
-            </div>
-          ))
+            ))}
+            {onShowAll && items.length > shown.length ? (
+              <button type="button" className="btn quiet small more-btn" onClick={onShowAll}>
+                More
+              </button>
+            ) : null}
+          </>
         )}
       </div>
     </section>
