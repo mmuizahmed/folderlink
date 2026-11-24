@@ -19,6 +19,17 @@ foreach ($Name in @($Asset, $BgAsset)) {
   if ($actual -ne $expected) { throw "checksum mismatch for $Name" }
 }
 
+# Stop the running bridge before overwriting it. Windows locks a running
+# .exe, so on an upgrade Expand-Archive cannot replace folderlink-bg.exe
+# while the tray/background process is still alive. The install step at
+# the end starts the new build again.
+foreach ($Name in @("folderlink-bg", "folderlink")) {
+  Get-Process -Name $Name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+  for ($i = 0; $i -lt 20 -and (Get-Process -Name $Name -ErrorAction SilentlyContinue); $i++) {
+    Start-Sleep -Milliseconds 500
+  }
+}
+
 Expand-Archive -Path (Join-Path $Tmp $Asset) -DestinationPath $Root -Force
 Expand-Archive -Path (Join-Path $Tmp $BgAsset) -DestinationPath $Root -Force
 $Exe = Join-Path $Root "folderlink.exe"

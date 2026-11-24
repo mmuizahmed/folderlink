@@ -83,7 +83,7 @@ func TestBatteryFixScript(t *testing.T) {
 		"Get-ScheduledTask -TaskName 'FolderLink'",
 		"DisallowStartIfOnBatteries = $false",
 		"StopIfGoingOnBatteries = $false",
-		"Set-ScheduledTask -InputObject $t",
+		"Set-ScheduledTask -TaskName 'FolderLink' -Settings $t.Settings",
 	} {
 		if !strings.Contains(batteryFixScript, want) {
 			t.Errorf("batteryFixScript is missing %q:\n%s", want, batteryFixScript)

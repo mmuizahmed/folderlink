@@ -18,9 +18,17 @@ import (
 // pick/native_windows.go already uses).
 
 // batteryFixScript clears both power conditions on the FolderLink logon
-// task. Only the two settings change: piping the modified task back
-// preserves everything else (trigger, principal, command).
-const batteryFixScript = `$t = Get-ScheduledTask -TaskName 'FolderLink'; $t.Settings.DisallowStartIfOnBatteries = $false; $t.Settings.StopIfGoingOnBatteries = $false; Set-ScheduledTask -InputObject $t`
+// task. Only the settings change: passing -Settings updates just the
+// settings block and leaves the task's trigger, principal, and command
+// alone.
+//
+// It must NOT use Set-ScheduledTask -InputObject $t: that round-trips
+// the whole task definition, and the Task Scheduler service rejects it
+// for a task created by schtasks /create with
+// "The parameter is incorrect. (20,8):UserId:" (0x80070057) — the
+// principal's UserId does not survive the round-trip. Updating only the
+// settings avoids re-registering the principal entirely.
+const batteryFixScript = `$t = Get-ScheduledTask -TaskName 'FolderLink'; $t.Settings.DisallowStartIfOnBatteries = $false; $t.Settings.StopIfGoingOnBatteries = $false; Set-ScheduledTask -TaskName 'FolderLink' -Settings $t.Settings`
 
 // batteryConditionsBlocked reports whether the task XML says the logon
 // task will not start on battery power (DisallowStartIfOnBatteries) or
