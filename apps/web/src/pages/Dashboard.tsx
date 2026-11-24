@@ -404,20 +404,27 @@ export function Dashboard() {
     }
   }
 
-  // Approvals are polled every 30s while the dashboard is open, so a
-  // request the AI just made shows up without a reload. Best effort: a
-  // failed poll stays quiet and the next one retries.
+  // Approvals and folders are polled every 30s while the dashboard is
+  // open, so a request the AI just made — or a folder just shared from
+  // Explorer — shows up without a reload. The bridge re-hellos on its
+  // own when a folder is added, so the folder is in the next poll at
+  // most ~30s after the right-click. Best effort: a failed poll stays
+  // quiet and the next one retries.
   useEffect(() => {
     if (mode !== "live" || state.status !== "ready") return;
     const timer = setInterval(() => {
       void (async () => {
         try {
-          const res = await api.approvals();
+          const [res, foldersRes] = await Promise.all([api.approvals(), api.folders()]);
           setState((prev) => {
             if (prev.status !== "ready") return prev;
             return {
               status: "ready",
-              data: { ...prev.data, approvals: res.approvals.map(toApproval) },
+              data: {
+                ...prev.data,
+                approvals: res.approvals.map(toApproval),
+                folders: foldersRes.folders.map(toFolder),
+              },
             };
           });
         } catch {
@@ -690,7 +697,7 @@ function Checklist({
     {
       done: connected,
       title: "This computer is connected",
-      body: "Leave the FolderLink window open.",
+      body: "It runs in the system tray — click the icon for status.",
     },
     { done: hasFolder, title: "Add a folder", body: "The path stays on this computer." },
     {
@@ -699,6 +706,13 @@ function Checklist({
       body: "Add this address as a custom connector.",
     },
   ];
+  // Once setup is done the card goes away: it is only guidance for getting
+  // started. It comes back on its own if setup regresses (a device is
+  // revoked, the last folder is removed, the last app is revoked), because
+  // completion is recomputed from the live data on every render.
+  if (steps.every((step) => step.done)) {
+    return null;
+  }
   return (
     <section className="checklist edge" aria-label="Getting started">
       <h2>Getting started</h2>
@@ -899,21 +913,27 @@ function FolderList({
         {data.folders.map((folder) => {
           const on = folder.approval === "approved";
           return (
-            <div className="folder-row" key={folder.id}>
+            <div className={on ? "folder-row" : "folder-row paused"} key={folder.id}>
+              <span className="folder-icon" aria-hidden="true">
+                <IconFolder />
+              </span>
+              <div className="folder-main">
+                <div className={on ? "path" : "path paused"} title={folder.label}>
+                  {folder.label}
+                </div>
+                <div className="minor">
+                  {folder.deviceName ? `${folder.detail} · ${folder.deviceName}` : folder.detail}
+                </div>
+              </div>
+              <span className={on ? "tag" : "tag dim"}>read-only</span>
               <button
                 type="button"
                 className={on ? "toggle on" : "toggle"}
                 aria-pressed={on}
                 aria-label={`${on ? "Pause" : "Allow"} ${folder.label}`}
+                title={on ? "Pause this folder (hide it from AI)" : "Allow this folder again"}
                 onClick={() => void onToggle(folder)}
               />
-              <div className="folder-main">
-                <div className={on ? "path" : "path paused"} title={folder.label}>
-                  {folder.label}
-                </div>
-                <div className="minor">{folder.detail}</div>
-              </div>
-              <span className={on ? "tag" : "tag dim"}>read-only</span>
               <span className="row-actions">
                 <button
                   type="button"
@@ -947,9 +967,9 @@ function FolderList({
 // FolderAccess manages per-app folder scoping. It lives in the Folders
 // section only — FolderList is shared with the overview, which is
 // screenshotted, so the scoping UI does not touch it. A folder with no
-// restriction (apps null) is visible to every connected app; unchecking
-// apps restricts it to the checked ones; unchecking all hides it from
-// every app. Checking every app again clears the restriction.
+// restriction (apps null) is visible to every connected app; tapping an
+// app's chip restricts it to the selected ones; deselecting all hides it
+// from every app. Selecting every app again clears the restriction.
 function FolderAccess({
   data,
   onSetApps,
@@ -978,25 +998,36 @@ function FolderAccess({
         ) : (
           data.folders.map((folder) => (
             <div className="folder-row" key={folder.id}>
+              <span className="folder-icon" aria-hidden="true">
+                <IconFolder />
+              </span>
               <div className="folder-main">
                 <div className="path" title={folder.label}>
                   {folder.label}
                 </div>
                 <div className="minor">{accessSummary(folder, data.apps)}</div>
-                <div className="access-checks">
+                <div className="access-chips">
                   {data.apps.map((app) => {
                     const allowed = folder.apps === null || folder.apps.includes(app.id);
                     return (
-                      <label key={app.id} className="access-check">
-                        <input
-                          type="checkbox"
-                          checked={allowed}
-                          onChange={() =>
-                            void onSetApps(folder.id, nextApps(folder, app.id, data.apps))
-                          }
-                        />
+                      <button
+                        key={app.id}
+                        type="button"
+                        className={allowed ? "access-chip on" : "access-chip"}
+                        aria-pressed={allowed}
+                        aria-label={`${allowed ? "Hide" : "Show"} ${folder.label} ${allowed ? "from" : "to"} ${app.name}`}
+                        onClick={() =>
+                          void onSetApps(folder.id, nextApps(folder, app.id, data.apps))
+                        }
+                      >
+                        <AppMark identity={app.identity} small />
                         {app.name}
-                      </label>
+                        {allowed ? (
+                          <span className="check" aria-hidden="true">
+                            ✓
+                          </span>
+                        ) : null}
+                      </button>
                     );
                   })}
                 </div>

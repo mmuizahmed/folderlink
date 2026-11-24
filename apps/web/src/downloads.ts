@@ -1,5 +1,19 @@
 const RELEASE = "https://github.com/mmuizahmed/mcp-bridge/releases/latest/download";
 
+// installCommandForThisComputer is the one-line install for this computer:
+// PowerShell on Windows, the shell installer everywhere else. It is the
+// exact command install.ps1 / install.sh expect — no arguments, piped
+// straight into the shell. It mirrors downloadForThisComputer's OS
+// detection, including the Linux default when the platform is unknown.
+export function installCommandForThisComputer(): string {
+  const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
+  const platform = typeof navigator === "undefined" ? "" : navigator.platform;
+  if (/Win/.test(platform) || /Windows/.test(ua)) {
+    return "irm https://folderlink.muiz.pk/install.ps1 | iex";
+  }
+  return "curl -fsSL https://folderlink.muiz.pk/install.sh | sh";
+}
+
 export function downloadForThisComputer(): { label: string; href: string } {
   const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
   const platform = typeof navigator === "undefined" ? "" : navigator.platform;

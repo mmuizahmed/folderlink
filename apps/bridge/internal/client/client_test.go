@@ -183,6 +183,104 @@ func TestRunAnswersReadAndRejectsEscape(t *testing.T) {
 	}
 }
 
+func TestFolderSnapshot(t *testing.T) {
+	home := t.TempDir()
+	store, err := config.Open(home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := Config{Store: store}
+	// No folders yet: an empty snapshot, readable.
+	snap, ok := folderSnapshot(cfg)
+	if !ok || len(snap) != 0 {
+		t.Fatalf("folderSnapshot empty store = %v, %v; want [], true", snap, ok)
+	}
+	// Adding a folder changes the snapshot.
+	one := t.TempDir()
+	folder, err := store.Allow(one, "one")
+	if err != nil {
+		t.Fatal(err)
+	}
+	snap, ok = folderSnapshot(cfg)
+	if !ok || len(snap) != 1 {
+		t.Fatalf("folderSnapshot after allow = %v, %v; want 1 entry, true", snap, ok)
+	}
+	// A rename changes the snapshot; a mode-cache write does not.
+	if err := store.Rename(folder.ID, "uno"); err != nil {
+		t.Fatal(err)
+	}
+	renamed, ok := folderSnapshot(cfg)
+	if !ok || len(renamed) != 1 || string(renamed[0]) == string(snap[0]) {
+		t.Fatalf("folderSnapshot after rename = %v, %v; want 1 changed entry", renamed, ok)
+	}
+	if err := store.SetWriteApprovalMode("manual"); err != nil {
+		t.Fatal(err)
+	}
+	same, ok := folderSnapshot(cfg)
+	if !ok || len(same) != 1 || string(same[0]) != string(renamed[0]) {
+		t.Fatalf("folderSnapshot after mode write = %v, %v; want the renamed snapshot unchanged", same, ok)
+	}
+	// Removing the folder empties the snapshot again.
+	if err := store.Remove(folder.ID); err != nil {
+		t.Fatal(err)
+	}
+	snap, ok = folderSnapshot(cfg)
+	if !ok || len(snap) != 0 {
+		t.Fatalf("folderSnapshot after remove = %v, %v; want [], true", snap, ok)
+	}
+	// No store is unreadable, not empty.
+	if _, ok := folderSnapshot(Config{}); ok {
+		t.Fatal("folderSnapshot with no store must be unreadable")
+	}
+}
+
+func TestWatchFolders(t *testing.T) {
+	home := t.TempDir()
+	store, err := config.Open(home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := Config{Store: store, PollInterval: 5 * time.Millisecond}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		watchFolders(ctx, cancel, cfg)
+	}()
+	// No change yet: the session must stay alive.
+	select {
+	case <-ctx.Done():
+		t.Fatal("watchFolders cancelled with no folder change")
+	case <-time.After(50 * time.Millisecond):
+	}
+	// A mode-cache write is not a folder change: still alive.
+	if err := store.SetWriteApprovalMode("manual"); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-ctx.Done():
+		t.Fatal("watchFolders cancelled on a mode-only config write")
+	case <-time.After(50 * time.Millisecond):
+	}
+	// A folder added while connected ends the session, so Run reconnects
+	// and re-hellos with the new claims.
+	one := t.TempDir()
+	if _, err := store.Allow(one, "one"); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-ctx.Done():
+	case <-time.After(2 * time.Second):
+		t.Fatal("watchFolders did not cancel after a folder was added")
+	}
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("watchFolders did not return after cancelling")
+	}
+}
+
 type signedRequest struct {
 	payload   json.RawMessage
 	sig       string

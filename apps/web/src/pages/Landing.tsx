@@ -1,17 +1,41 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { AccountMenu } from "../components/AccountMenu.tsx";
 import { SiteFooter } from "../components/SiteFooter.tsx";
 import { Mark } from "../components/Icons.tsx";
-import { downloadForThisComputer } from "../downloads.ts";
+import { installCommandForThisComputer } from "../downloads.ts";
 import { usePageTitle, useSession } from "../session.ts";
 
 const RELEASES = "https://github.com/mmuizahmed/mcp-bridge/releases";
 const SOURCE = "https://github.com/mmuizahmed/mcp-bridge";
 const LATEST = "https://github.com/mmuizahmed/mcp-bridge/releases/latest/download";
 
+// InstallCommand is the primary install path: the one-line installer for
+// this computer, as a copyable code block. The ZIP download is only a
+// manual fallback further down the page.
+function InstallCommand({ command }: { command: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="install-command">
+      <pre>{command}</pre>
+      <button
+        type="button"
+        className="btn quiet small"
+        onClick={() => {
+          void navigator.clipboard.writeText(command).then(() => {
+            setCopied(true);
+          });
+        }}
+      >
+        {copied ? "Copied" : "Copy"}
+      </button>
+    </div>
+  );
+}
+
 export function Landing() {
   const session = useSession();
-  const download = downloadForThisComputer();
+  const installCommand = installCommandForThisComputer();
   usePageTitle("FolderLink");
   return (
     <div className="hero">
@@ -36,8 +60,8 @@ export function Landing() {
                 Sign in
               </Link>
             )}
-            <a className="btn small" href={download.href}>
-              {download.label}
+            <a className="btn small" href="#download">
+              Install
             </a>
           </div>
         </div>
@@ -56,9 +80,7 @@ export function Landing() {
           copy-paste. Writes need approval, and every change is logged.
         </p>
         <div className="cta">
-          <a className="btn" href={download.href}>
-            {download.label}
-          </a>
+          <InstallCommand command={installCommand} />
           <Link className="chip" to="/docs/getting-started">
             Getting started
           </Link>
@@ -148,20 +170,14 @@ export function Landing() {
         </div>
       </section>
       <section className="band" id="download">
-        <h2>Download</h2>
+        <h2>Install</h2>
         <p className="sub">
-          The installer checks checksums.txt, then installs it in the background.
+          One command installs it in the background. The installer checks checksums.txt first, so a
+          bad download fails instead of installing.
         </p>
-        <p>
-          <a className="btn small" href={download.href}>
-            {download.label}
-          </a>
-        </p>
-        <div className="install-lines">
-          <pre>irm https://folderlink.muiz.pk/install.ps1 | iex</pre>
-          <pre>curl -fsSL https://folderlink.muiz.pk/install.sh | sh</pre>
-        </div>
+        <InstallCommand command={installCommand} />
         <p className="platforms">
+          <span>Manual download:</span>
           <a href={`${LATEST}/folderlink_windows_amd64.zip`}>Windows</a>
           <a href={`${LATEST}/folderlink_darwin_arm64.tar.gz`}>Mac</a>
           <a href={`${LATEST}/folderlink_linux_amd64.tar.gz`}>Linux</a>

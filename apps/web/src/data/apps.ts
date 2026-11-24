@@ -1,6 +1,7 @@
 import type { AppIdentity, AppView } from "./types.ts";
 import chatgptLogo from "../assets/brands/chatgpt.svg";
 import claudeLogo from "../assets/brands/claude.svg";
+import museLogo from "../assets/brands/muse.svg";
 
 // identityFromServer normalizes the identity string the worker sends
 // (chatgpt / claude / muse / unknown). Anything unrecognised is unknown:
@@ -29,8 +30,7 @@ export function toneForIdentity(identity: AppIdentity): AppView["tone"] {
 
 // markForIdentity is the neutral fallback mark: the app's initial letter.
 // It is what the dashboard shows when no real brand SVG is bundled for
-// that identity (muse has no clean public SVG source yet; unknown has no
-// brand). The mark must never be fabricated.
+// that identity (unknown has no brand). The mark must never be fabricated.
 export function markForIdentity(identity: AppIdentity): string {
   switch (identity) {
     case "chatgpt":
@@ -48,7 +48,10 @@ export function markForIdentity(identity: AppIdentity): string {
 // null when none is available. Sources: chatgpt.svg is the ChatGPT logo
 // from Wikimedia Commons; claude.svg is the Claude mark from simple-icons
 // (single-colour path, so it is rendered inverted to white on the coral
-// chip). A null result means the caller falls back to markForIdentity.
+// chip); muse.svg is the Muse icon from Wikimedia Commons (sourced from
+// muse.ai, Meta Platforms; blue gradient mark on transparent, so it is
+// rendered as-is on a white chip). A null result means the caller falls
+// back to markForIdentity.
 export function logoForIdentity(identity: AppIdentity): {
   src: string;
   invert: boolean;
@@ -58,6 +61,8 @@ export function logoForIdentity(identity: AppIdentity): {
       return { src: chatgptLogo, invert: false };
     case "claude":
       return { src: claudeLogo, invert: true };
+    case "muse":
+      return { src: museLogo, invert: false };
     default:
       return null;
   }

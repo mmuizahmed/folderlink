@@ -140,6 +140,22 @@ test.describe("visual and glitch checks", () => {
     expect(errors).toEqual([]);
   });
 
+  test("getting started hides once setup is complete", async ({ page }) => {
+    const errors = await quiet(page);
+    await page.setViewportSize({ width: 1440, height: 1100 });
+    // The standard fixture has a connected device, an approved folder and
+    // connected apps: all four steps are done, so the card is gone.
+    await page.goto("/dashboard?fixture=1");
+    await expect(page.getByRole("heading", { name: "Folders" })).toBeVisible();
+    await expect(page.locator("section.checklist")).toHaveCount(0);
+    // The empty fixture has none of those, so the card is still there —
+    // with the tray copy, not the old "leave the window open" line.
+    await page.goto("/dashboard?fixture=empty");
+    await expect(page.getByRole("heading", { name: "Getting started" })).toBeVisible();
+    await expect(page.getByText("It runs in the system tray")).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
   for (const width of [1440, 390] as const) {
     test(`privacy ${width}`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
