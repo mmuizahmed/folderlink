@@ -53,7 +53,7 @@ export function Landing() {
         </h1>
         <p className="lede">
           Let ChatGPT, Claude and other AI apps read the project folders you choose. No uploads, no
-          copy-paste. Read-only, logged, and revocable in one click.
+          copy-paste. Writes need approval, and every change is logged.
         </p>
         <div className="cta">
           <a className="btn" href={download.href}>
@@ -91,8 +91,8 @@ export function Landing() {
       <div className="steps" id="how">
         <article>
           <div className="kicker">01 run</div>
-          <h3>Open FolderLink</h3>
-          <p>One command installs it. Opening it connects this computer in your browser.</p>
+          <h3>Install FolderLink</h3>
+          <p>One command installs it. It runs in the background, with no terminal window.</p>
         </article>
         <article>
           <div className="kicker">02 pair</div>
@@ -113,8 +113,8 @@ export function Landing() {
           <p>Every line is public. Self-host the whole stack if you would rather not trust ours.</p>
         </div>
         <div>
-          <div className="kicker">read-only</div>
-          <p>Writes and commands do not exist in v0.1.</p>
+          <div className="kicker">approval-gated</div>
+          <p>Writes and commands need your approval.</p>
         </div>
         <div>
           <div className="kicker">local allowlist</div>
@@ -149,7 +149,9 @@ export function Landing() {
       </section>
       <section className="band" id="download">
         <h2>Download</h2>
-        <p className="sub">The installer checks checksums.txt, then opens FolderLink.</p>
+        <p className="sub">
+          The installer checks checksums.txt, then installs it in the background.
+        </p>
         <p>
           <a className="btn small" href={download.href}>
             {download.label}
@@ -180,9 +182,7 @@ export function Landing() {
           </article>
           <article>
             <h3>Can it change my files?</h3>
-            <p>
-              No. This version only reads, and it refuses secrets such as .env and private keys.
-            </p>
+            <p>Yes, once you approve it. Writes, deletes, and commands need dashboard approval.</p>
           </article>
           <article>
             <h3>What do I install?</h3>

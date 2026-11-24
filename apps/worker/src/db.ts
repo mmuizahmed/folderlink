@@ -199,6 +199,41 @@ export async function userForAccessToken(
     .first<UserRow>();
 }
 
+// GrantRef is the OAuth grant behind a bearer token: the grant id (the
+// unit folder scoping is enforced on) and the OAuth client's registered
+// name (the unit app attribution is derived from).
+export interface GrantRef {
+  id: string;
+  clientId: string;
+  name: string;
+}
+
+// grantForAccessToken resolves a bearer token to its OAuth grant. Returns
+// null when the token has no grant (defensive: issueAccessToken always
+// sets one today).
+export async function grantForAccessToken(
+  db: D1Database,
+  rawToken: string,
+): Promise<GrantRef | null> {
+  const row = await db
+    .prepare(
+      `SELECT g.id, g.client_id, c.name
+       FROM access_tokens a
+       JOIN oauth_grants g ON g.id = a.grant_id
+       JOIN oauth_clients c ON c.id = g.client_id
+       WHERE a.token_hash = ?
+         AND a.revoked_at IS NULL
+         AND a.expires_at > ?
+         AND a.grant_id IS NOT NULL`,
+    )
+    .bind(await sha256Hex(rawToken), nowIso())
+    .first<{ id: string; client_id: string; name: string }>();
+  if (!row) {
+    return null;
+  }
+  return { id: row.id, clientId: row.client_id, name: row.name };
+}
+
 export async function rememberNonce(db: D1Database, nonce: string): Promise<boolean> {
   const ts = nowIso();
   await db.prepare("DELETE FROM auth_nonces WHERE expires_at < ?").bind(ts).run();
@@ -419,13 +454,43 @@ export async function consumePairingCode(db: D1Database, code: string): Promise<
   return found;
 }
 
-export async function listFolders(db: D1Database, deviceId: string): Promise<FolderRow[]> {
+// folderScopeClause restricts a folder query to what one grant may see.
+// A folder with no folder_apps rows is unrestricted; a folder with rows
+// is visible only to a listed grant. The grant id is bound as a
+// parameter, never interpolated.
+function folderScopeClause(grantId: string | null): { clause: string; binds: string[] } {
+  if (grantId === null) {
+    // Unknown app: it cannot prove membership in any restricted set, so
+    // it sees unrestricted folders only.
+    return {
+      clause: "AND NOT EXISTS (SELECT 1 FROM folder_apps WHERE folder_apps.folder_id = folders.id)",
+      binds: [],
+    };
+  }
+  return {
+    clause:
+      "AND (NOT EXISTS (SELECT 1 FROM folder_apps WHERE folder_apps.folder_id = folders.id) " +
+      "OR EXISTS (SELECT 1 FROM folder_apps WHERE folder_apps.folder_id = folders.id AND folder_apps.grant_id = ?))",
+    binds: [grantId],
+  };
+}
+
+export async function listFolders(
+  db: D1Database,
+  deviceId: string,
+  // grantId scopes the result to what one app may see. Undefined means
+  // the caller is not an MCP app (the dashboard manages scoping itself
+  // and sees everything); null means the app is unknown, so only
+  // unrestricted folders are returned.
+  grantId?: string | null,
+): Promise<FolderRow[]> {
+  const scope = grantId === undefined ? { clause: "", binds: [] } : folderScopeClause(grantId);
   const result = await db
     .prepare(
       `SELECT id, device_id, label, approval, listed FROM folders
-       WHERE device_id = ? AND listed = 1 ORDER BY label`,
+       WHERE device_id = ? AND listed = 1 ${scope.clause} ORDER BY label`,
     )
-    .bind(deviceId)
+    .bind(deviceId, ...scope.binds)
     .all<FolderRow>();
   return result.results;
 }
@@ -433,17 +498,91 @@ export async function listFolders(db: D1Database, deviceId: string): Promise<Fol
 export async function listFoldersForUser(
   db: D1Database,
   userId: string,
+  // See listFolders: undefined is the dashboard (unfiltered), null is an
+  // unknown app (unrestricted folders only), a grant id is that app.
+  grantId?: string | null,
 ): Promise<Array<FolderRow & { device_name: string }>> {
+  const scope = grantId === undefined ? { clause: "", binds: [] } : folderScopeClause(grantId);
   const result = await db
     .prepare(
       `SELECT folders.id, folders.device_id, folders.label, folders.approval, folders.listed, devices.name AS device_name
        FROM folders JOIN devices ON devices.id = folders.device_id
-       WHERE devices.user_id = ? AND folders.listed = 1
+       WHERE devices.user_id = ? AND folders.listed = 1 ${scope.clause}
        ORDER BY devices.name, folders.label`,
     )
-    .bind(userId)
+    .bind(userId, ...scope.binds)
     .all<FolderRow & { device_name: string }>();
   return result.results;
+}
+
+// folderApps returns, for each folder id given, the grant ids allowed to
+// see it. A folder absent from the map is unrestricted.
+export async function folderApps(
+  db: D1Database,
+  folderIds: string[],
+): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>();
+  if (folderIds.length === 0) {
+    return map;
+  }
+  const placeholders = folderIds.map(() => "?").join(", ");
+  const result = await db
+    .prepare(
+      `SELECT folder_id, grant_id FROM folder_apps WHERE folder_id IN (${placeholders}) ORDER BY folder_id, grant_id`,
+    )
+    .bind(...folderIds)
+    .all<{ folder_id: string; grant_id: string }>();
+  for (const row of result.results) {
+    const list = map.get(row.folder_id) ?? [];
+    list.push(row.grant_id);
+    map.set(row.folder_id, list);
+  }
+  return map;
+}
+
+export type SetFolderAppsResult = { ok: true } | { ok: false; reason: "not_found" | "unknown_app" };
+
+// setFolderApps replaces the allowed-apps list for one folder. grantIds
+// null means unrestricted (no rows). An empty array means no app may see
+// the folder. Every grant id must belong to the user and not be revoked;
+// a foreign grant id fails the whole update and nothing is written.
+export async function setFolderApps(
+  db: D1Database,
+  userId: string,
+  folderId: string,
+  grantIds: string[] | null,
+): Promise<SetFolderAppsResult> {
+  const folder = await db
+    .prepare(
+      `SELECT folders.id FROM folders
+       JOIN devices ON devices.id = folders.device_id
+       WHERE folders.id = ? AND devices.user_id = ?`,
+    )
+    .bind(folderId, userId)
+    .first();
+  if (!folder) {
+    return { ok: false, reason: "not_found" };
+  }
+  const grants = grantIds ?? [];
+  for (const grantId of grants) {
+    const grant = await db
+      .prepare(`SELECT id FROM oauth_grants WHERE id = ? AND user_id = ? AND revoked_at IS NULL`)
+      .bind(grantId, userId)
+      .first();
+    if (!grant) {
+      return { ok: false, reason: "unknown_app" };
+    }
+  }
+  const statements = [db.prepare("DELETE FROM folder_apps WHERE folder_id = ?").bind(folderId)];
+  for (const grantId of grants) {
+    statements.push(
+      db
+        .prepare("INSERT INTO folder_apps (folder_id, grant_id, created_at) VALUES (?, ?, ?)")
+        .bind(folderId, grantId, nowIso()),
+    );
+  }
+  await db.batch(statements);
+  return { ok: true };
 }
 
 export async function rememberPickedFolder(
@@ -495,7 +634,13 @@ export async function unlistUserFolder(
     )
     .bind(nowIso(), folderId, userId)
     .run();
-  return (result.meta.changes ?? 0) > 0;
+  const changed = (result.meta.changes ?? 0) > 0;
+  if (changed) {
+    // Removing a folder drops its per-app scoping with it, so a later
+    // re-add does not silently resurrect an old restriction.
+    await db.prepare("DELETE FROM folder_apps WHERE folder_id = ?").bind(folderId).run();
+  }
+  return changed;
 }
 
 export async function setFolderApproval(
@@ -624,6 +769,205 @@ export async function listActivity(
     .bind(userId, Math.min(Math.max(limit, 1), 100))
     .all<ActivityRow>();
   return result.results;
+}
+
+export interface ApprovalRow {
+  id: string;
+  user_id: string;
+  device_id: string;
+  grant_id: string | null;
+  client: string;
+  tool: string;
+  folder_id: string;
+  folder_label: string;
+  path: string;
+  op: string;
+  content_hash: string;
+  pre_hash: string;
+  diff: string;
+  preview: string;
+  argv: string;
+  size: number;
+  status: string;
+  created_at: string;
+  expires_at: string;
+  decided_at: string | null;
+  executed_at: string | null;
+}
+
+// createApproval records a dashboard approval request the bridge just
+// returned as approval_required. The row is transport + record-keeping:
+// the bridge holds the token and the hashes, and the dashboard reads
+// this row to show the diff. The diff/preview come from the bridge, so
+// what the user reviews is what the bridge computed from the exact bytes.
+export async function createApproval(
+  db: D1Database,
+  row: {
+    id: string;
+    userId: string;
+    deviceId: string;
+    grantId: string | null;
+    client: string;
+    tool: string;
+    folderId: string;
+    folderLabel: string;
+    path: string;
+    op: string;
+    contentHash: string;
+    preHash: string;
+    diff: string;
+    preview: string;
+    argv: string[];
+    size: number;
+    expiresInSeconds: number;
+  },
+): Promise<void> {
+  const now = new Date();
+  await db
+    .prepare(
+      `INSERT INTO approvals
+       (id, user_id, device_id, grant_id, client, tool, folder_id, folder_label, path, op,
+        content_hash, pre_hash, diff, preview, argv, size, status, created_at, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+       ON CONFLICT(id) DO NOTHING`,
+    )
+    .bind(
+      row.id,
+      row.userId,
+      row.deviceId,
+      row.grantId,
+      row.client,
+      row.tool,
+      row.folderId,
+      row.folderLabel,
+      row.path,
+      row.op,
+      row.contentHash,
+      row.preHash,
+      row.diff,
+      row.preview,
+      JSON.stringify(row.argv),
+      row.size,
+      now.toISOString(),
+      new Date(now.getTime() + row.expiresInSeconds * 1000).toISOString(),
+    )
+    .run();
+}
+
+// pruneApprovals marks pending requests past their expiry as expired, so
+// a stale request can never be approved from the dashboard.
+export async function pruneApprovals(db: D1Database, userId: string): Promise<void> {
+  await db
+    .prepare(
+      `UPDATE approvals SET status = 'expired'
+       WHERE user_id = ? AND status = 'pending' AND expires_at <= ?`,
+    )
+    .bind(userId, nowIso())
+    .run();
+}
+
+// listApprovals returns the newest approval requests for a user, pending
+// first. Expired pending rows are marked on the same trip.
+export async function listApprovals(
+  db: D1Database,
+  userId: string,
+  limit = 50,
+): Promise<ApprovalRow[]> {
+  await pruneApprovals(db, userId);
+  const result = await db
+    .prepare(
+      `SELECT * FROM approvals WHERE user_id = ?
+       ORDER BY CASE status WHEN 'pending' THEN 0 ELSE 1 END, created_at DESC LIMIT ?`,
+    )
+    .bind(userId, Math.min(Math.max(limit, 1), 100))
+    .all<ApprovalRow>();
+  return result.results;
+}
+
+export async function getApproval(
+  db: D1Database,
+  userId: string,
+  id: string,
+): Promise<ApprovalRow | null> {
+  const row = await db
+    .prepare("SELECT * FROM approvals WHERE id = ? AND user_id = ?")
+    .bind(id, userId)
+    .first<ApprovalRow>();
+  return row ?? null;
+}
+
+// setApprovalStatus moves a pending request to its decided state. It
+// only touches pending rows: a request that is already approved, denied,
+// expired, or executed stays as it is, so a late second call cannot
+// resurrect it. Returns false when the row was not pending.
+export async function setApprovalStatus(
+  db: D1Database,
+  userId: string,
+  id: string,
+  status: "approved" | "denied" | "expired" | "executed" | "failed",
+): Promise<boolean> {
+  const now = nowIso();
+  const result = await db
+    .prepare(
+      `UPDATE approvals
+       SET status = ?, decided_at = ?, executed_at = CASE WHEN ? = 'executed' THEN ? ELSE executed_at END
+       WHERE id = ? AND user_id = ? AND status = 'pending'`,
+    )
+    .bind(status, now, status, now, id, userId)
+    .run();
+  return (result.meta?.changes ?? 0) > 0;
+}
+
+// getSetting reads one per-user setting by key, or null when it was
+// never set.
+export async function getSetting(
+  db: D1Database,
+  userId: string,
+  key: string,
+): Promise<string | null> {
+  const row = await db
+    .prepare("SELECT value FROM settings WHERE user_id = ? AND key = ?")
+    .bind(userId, key)
+    .first<{ value: string }>();
+  return row?.value ?? null;
+}
+
+export async function setSetting(
+  db: D1Database,
+  userId: string,
+  key: string,
+  value: string,
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO settings (user_id, key, value, updated_at) VALUES (?, ?, ?, ?)
+       ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+    )
+    .bind(userId, key, value, nowIso())
+    .run();
+}
+
+export type WriteApprovalMode = "ai" | "manual";
+
+// getWriteApprovalMode returns the user's write approval mode. The
+// default is "ai": the connected app's own confirmation card is the gate
+// for normal writes, and dashboard pre-approval applies only to
+// high-risk ops (delete, exec, executable files). "manual" means every
+// write and exec needs the user's manual approval in the dashboard.
+export async function getWriteApprovalMode(
+  db: D1Database,
+  userId: string,
+): Promise<WriteApprovalMode> {
+  const value = await getSetting(db, userId, "write_approval_mode");
+  return value === "manual" ? "manual" : "ai";
+}
+
+export async function setWriteApprovalMode(
+  db: D1Database,
+  userId: string,
+  mode: WriteApprovalMode,
+): Promise<void> {
+  await setSetting(db, userId, "write_approval_mode", mode);
 }
 
 export async function createMcpSession(

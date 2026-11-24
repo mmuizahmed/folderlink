@@ -46,6 +46,7 @@ export function fixtureDashboard(longNames = false): DashboardData {
         approval: "approved",
         deviceName: "ThinkPad",
         detail: "read-only",
+        apps: null,
       },
       {
         id: "f2",
@@ -53,6 +54,7 @@ export function fixtureDashboard(longNames = false): DashboardData {
         approval: "approved",
         deviceName: "ThinkPad",
         detail: "read-only",
+        apps: null,
       },
       {
         id: "f3",
@@ -60,24 +62,43 @@ export function fixtureDashboard(longNames = false): DashboardData {
         approval: "revoked",
         deviceName: "ThinkPad",
         detail: "paused · hidden from AI",
+        apps: null,
       },
     ],
     apps: [
-      { id: "gpt", name: "ChatGPT", mark: "GPT", tone: "gpt", detail: "Read-only" },
+      {
+        id: "gpt",
+        name: "ChatGPT",
+        identity: "chatgpt",
+        mark: "GPT",
+        tone: "gpt",
+        detail: "Read-only",
+      },
       {
         id: "claude",
         name: "Claude",
+        identity: "claude",
         mark: "C",
         tone: "claude",
         detail: "Read-only",
       },
     ],
     activity: [],
+    approvals: [],
+    writeApprovalMode: "ai",
   };
 }
 
 export function emptyDashboard(user: SessionUser): DashboardData {
-  return { user, devices: [], folders: [], apps: [], activity: [] };
+  return {
+    user,
+    devices: [],
+    folders: [],
+    apps: [],
+    activity: [],
+    approvals: [],
+    writeApprovalMode: "ai",
+  };
 }
 
 export function offlineDashboard(): DashboardData {

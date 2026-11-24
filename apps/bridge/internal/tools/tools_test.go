@@ -8,7 +8,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/approve"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/config"
+	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/execrun"
+	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/mode"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/pick"
 )
 
@@ -40,21 +43,22 @@ func TestDispatchReadsOnlyTheAllowlist(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	deps := testDeps()
 	ctx := context.Background()
 
-	body := call(t, ctx, store, map[string]any{"op": "read_file", "folderId": folder.ID, "path": "hello.txt"})
+	body := call(t, ctx, store, deps, map[string]any{"op": "read_file", "folderId": folder.ID, "path": "hello.txt"})
 	if !strings.Contains(body, "hello from the bridge") {
 		t.Fatal(body)
 	}
 
 	for _, path := range []string{".env", "../proj-evil/x.txt", "hello.txt/../../../../etc/passwd"} {
-		denied := call(t, ctx, store, map[string]any{"op": "read_file", "folderId": folder.ID, "path": path})
+		denied := call(t, ctx, store, deps, map[string]any{"op": "read_file", "folderId": folder.ID, "path": path})
 		if strings.Contains(denied, secret) || strings.Contains(denied, `"ok":true`) {
 			t.Fatalf("path %s leaked or succeeded: %s", path, denied)
 		}
 	}
 
-	unknown := call(t, ctx, store, map[string]any{
+	unknown := call(t, ctx, store, deps, map[string]any{
 		"op":       "read_file",
 		"folderId": "00000000-0000-4000-8000-000000000000",
 		"path":     "hello.txt",
@@ -64,7 +68,7 @@ func TestDispatchReadsOnlyTheAllowlist(t *testing.T) {
 		t.Fatal(unknown)
 	}
 
-	unsupported := call(t, ctx, store, map[string]any{"op": "exec", "folderId": folder.ID, "path": "hello.txt"})
+	unsupported := call(t, ctx, store, deps, map[string]any{"op": "exec", "folderId": folder.ID, "path": "hello.txt"})
 	if !strings.Contains(unsupported, "not supported") {
 		t.Fatal(unsupported)
 	}
@@ -77,30 +81,40 @@ func TestPickFolderUsesTheInjectedDialog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	deps := testDeps()
 	previous := pick.Open
 	pick.Open = func(context.Context) (string, error) { return chosen, nil }
 	t.Cleanup(func() { pick.Open = previous })
-	body := call(t, context.Background(), store, map[string]any{"op": "pick_folder"})
+	body := call(t, context.Background(), store, deps, map[string]any{"op": "pick_folder"})
 	if !strings.Contains(body, `"ok":true`) || !strings.Contains(body, filepath.Base(chosen)) {
 		t.Fatal(body)
 	}
 	canceled := pick.ErrCanceled
 	pick.Open = func(context.Context) (string, error) { return "", canceled }
-	denied := call(t, context.Background(), store, map[string]any{"op": "pick_folder"})
+	denied := call(t, context.Background(), store, deps, map[string]any{"op": "pick_folder"})
 	if !strings.Contains(denied, "canceled") {
 		t.Fatal(denied)
 	}
 }
 
-func call(t *testing.T, ctx context.Context, store *config.Store, payload map[string]any) string {
+func call(t *testing.T, ctx context.Context, store *config.Store, deps Deps, payload map[string]any) string {
 	t.Helper()
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		t.Fatal(err)
 	}
-	encoded, err := json.Marshal(Dispatch(ctx, store, raw))
+	encoded, err := json.Marshal(Dispatch(ctx, store, deps, raw))
 	if err != nil {
 		t.Fatal(err)
 	}
 	return string(encoded)
+}
+
+func testDeps() Deps {
+	return Deps{
+		Approve:      approve.New(),
+		Exec:         execrun.NewRegistry(),
+		Mode:         mode.New("ai"),
+		DashboardURL: "https://folderlink.muiz.pk",
+	}
 }

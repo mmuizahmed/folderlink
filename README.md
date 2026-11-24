@@ -34,7 +34,7 @@
 
 ## How it works
 
-1. Install FolderLink. Opening it connects this computer in your browser.
+1. Install FolderLink. It runs in the background and opens your browser to connect this computer.
 2. Sign in with Google, allow the computer, and add a folder from the dashboard.
 3. Add the connector in ChatGPT or Claude. The address is `https://folderlink.muiz.pk/mcp`.
 
@@ -72,7 +72,7 @@ curl -fsSL https://folderlink.muiz.pk/install.sh | sh
 
 The installer checks `checksums.txt`, puts FolderLink in your user directory, and opens the browser to connect this computer. Add a folder from the dashboard. In ChatGPT or Claude, add `https://folderlink.muiz.pk/mcp`.
 
-Archives are also on [GitHub Releases](https://github.com/mmuizahmed/mcp-bridge/releases).
+Or install by hand from [GitHub Releases](https://github.com/mmuizahmed/mcp-bridge/releases): download the archive for your computer (on Windows, both `folderlink_windows_amd64.zip` and `folderlink-bg_windows_amd64.zip`), unzip into one folder, and run `folderlink install` — not `folderlink` on its own. Running `folderlink` directly opens a terminal window, and the connection dies when you close it. `folderlink install` copies the app to a stable folder, starts it at login, and shows a FolderLink icon in the system tray (Windows) — click it for the connection status, the dashboard, restart, or quit. No terminal window. If something looks wrong, run `folderlink doctor`.
 
 ```mermaid
 sequenceDiagram

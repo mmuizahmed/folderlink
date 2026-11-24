@@ -28,14 +28,20 @@ import {
   deviceByPublicKey,
   ensureDevUser,
   ensureLocalUser,
+  folderApps,
+  getApproval,
   getDevice,
+  getWriteApprovalMode,
+  grantForAccessToken,
   insertDevice,
   listActivity,
+  listApprovals,
   listDevicesForUser,
   listFoldersForUser,
   lookupPairingCode,
   mcpSessionValid,
   notePairFailure,
+  nowIso,
   pairFailureCount,
   pairingCode,
   rememberNonce,
@@ -43,8 +49,11 @@ import {
   renameUserFolder,
   saveLoginState,
   savePairingCode,
+  setApprovalStatus,
   setDeviceStatus,
+  setFolderApps,
   setFolderApproval,
+  setWriteApprovalMode,
   takeLoginState,
   touchDeviceMeta,
   unlistUserFolder,
@@ -52,6 +61,8 @@ import {
   userForAccessToken,
   userForSession,
 } from "./db.ts";
+import type { GrantRef } from "./db.ts";
+import { appIdentity } from "./apps.ts";
 import type { Env } from "./env.ts";
 import { publicBaseUrl, webOrigin } from "./env.ts";
 import {
@@ -73,6 +84,10 @@ type AuthOk = {
   ok: true;
   user: { id: string; status: string; email: string; name: string; avatarUrl: string };
   via: "bearer" | "session";
+  // grant is the OAuth grant behind a bearer token: the unit folder
+  // scoping is enforced on, and the source of app attribution. Null for
+  // session auth (the dashboard) and for tokens without a grant.
+  grant: GrantRef | null;
 };
 type AuthNo = { ok: false; response: Response };
 
@@ -197,11 +212,32 @@ async function route(request: Request, env: Env, url: URL): Promise<Response> {
   if (approval && request.method === "POST") {
     return approveFolder(request, env, approval[1] ?? "");
   }
+  const folderAppsRoute = url.pathname.match(/^\/api\/folders\/([^/]+)\/apps$/);
+  if (folderAppsRoute && request.method === "POST") {
+    return setFolderAppsHandler(request, env, folderAppsRoute[1] ?? "");
+  }
   if (url.pathname === "/api/apps" && request.method === "GET") {
     return listApps(request, env);
   }
   if (url.pathname === "/api/activity" && request.method === "GET") {
     return activity(request, env);
+  }
+  if (url.pathname === "/api/approvals" && request.method === "GET") {
+    return approvals(request, env);
+  }
+  const approveRoute = url.pathname.match(/^\/api\/approvals\/([^/]+)\/approve$/);
+  if (approveRoute && request.method === "POST") {
+    return decideApproval(request, env, approveRoute[1] ?? "", true);
+  }
+  const denyRoute = url.pathname.match(/^\/api\/approvals\/([^/]+)\/deny$/);
+  if (denyRoute && request.method === "POST") {
+    return decideApproval(request, env, denyRoute[1] ?? "", false);
+  }
+  if (url.pathname === "/api/settings" && request.method === "GET") {
+    return settings(request, env);
+  }
+  if (url.pathname === "/api/settings/write-approval" && request.method === "POST") {
+    return setWriteApprovalModeHandler(request, env);
   }
   const revokeApp = url.pathname.match(/^\/api\/apps\/([^/]+)\/revoke$/);
   if (revokeApp && request.method === "POST") {
@@ -287,12 +323,18 @@ async function mcp(request: Request, env: Env): Promise<Response> {
     request.headers.get("mcp-protocol-version"),
     {
       folders: async (userId) => {
-        const rows = await listFoldersForUser(env.DB, userId);
+        // The initialize instructions list only the folders this grant
+        // may see, so an app never learns about a folder it cannot use.
+        const rows = await listFoldersForUser(env.DB, userId, auth.grant?.id ?? null);
         return rows.map((row) => ({ label: row.label, approval: row.approval }));
       },
-      call: (userId, call) => callUserTool(env, userId, call),
+      call: (userId, call) => callUserTool(env, userId, call, auth.grant ?? null),
       createSession: (userId, protocol) => createMcpSession(env.DB, userId, protocol),
       sessionValid: (id, userId) => mcpSessionValid(env.DB, id, userId),
+      // The identity drives per-app tool listing (run_command is hidden
+      // from Muse). It is attribution only: authorization uses the
+      // grant, never the name.
+      identity: appIdentity(auth.grant?.name ?? null),
       deleteSession: async (id) => {
         await deleteMcpSession(env.DB, id, auth.user.id);
       },
@@ -594,6 +636,9 @@ async function activity(request: Request, env: Env): Promise<Response> {
       target: [row.folder, row.path].filter(Boolean).join("/"),
       detail: row.ok ? `${row.client} · ok` : `${row.client} · ${row.error_code ?? "failed"}`,
       denied: row.ok === 0,
+      // client is the app identity (chatgpt / claude / muse / unknown),
+      // so the dashboard can show the right mark for the row.
+      client: row.client,
     })),
   });
 }
@@ -615,12 +660,170 @@ async function revokeDevice(request: Request, env: Env, deviceId: string): Promi
   return json({ ok: true });
 }
 
+// approvals lists the dashboard approval requests for the user, pending
+// first. Expired pending rows are marked on the same trip (listApprovals
+// prunes them), so the dashboard never shows a request the bridge would
+// refuse.
+async function approvals(request: Request, env: Env): Promise<Response> {
+  const auth = await authenticate(request, env, "either");
+  if (!auth.ok) {
+    return auth.response;
+  }
+  const rows = await listApprovals(env.DB, auth.user.id);
+  return json({
+    approvals: rows.map((row) => ({
+      id: row.id,
+      tool: row.tool,
+      op: row.op,
+      folderId: row.folder_id,
+      folderLabel: row.folder_label,
+      path: row.path,
+      client: row.client,
+      contentHash: row.content_hash,
+      preHash: row.pre_hash,
+      diff: row.diff,
+      preview: row.preview,
+      argv: parseArgv(row.argv),
+      size: row.size,
+      status: row.status,
+      createdAt: row.created_at,
+      expiresAt: row.expires_at,
+      decidedAt: row.decided_at,
+      executedAt: row.executed_at,
+    })),
+  });
+}
+
+function parseArgv(raw: string): string[] {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.every((item) => typeof item === "string")) {
+      return parsed as string[];
+    }
+  } catch {
+    // A corrupt row shows no argv rather than failing the whole list.
+  }
+  return [];
+}
+
+// decideApproval approves or denies one pending request. The bridge is
+// the authority: the worker asks it over the websocket, and only marks
+// the row decided when the bridge confirms. When the bridge has no such
+// request (it restarted and forgot the token), the row is expired and
+// the dashboard gets a 410.
+async function decideApproval(
+  request: Request,
+  env: Env,
+  id: string,
+  approve: boolean,
+): Promise<Response> {
+  const auth = await authenticate(request, env, "either");
+  if (!auth.ok) {
+    return auth.response;
+  }
+  if (!csrfOk(request, auth.via)) {
+    return error(403, "forbidden", "The request was rejected.");
+  }
+  const row = await getApproval(env.DB, auth.user.id, id);
+  if (!row) {
+    return error(404, "not_found", "That approval request was not found.");
+  }
+  if (row.status !== "pending") {
+    return error(409, "conflict", "That approval request was already decided.");
+  }
+  if (row.expires_at <= nowIso()) {
+    await setApprovalStatus(env.DB, auth.user.id, id, "expired");
+    return error(410, "gone", "That approval request has expired.");
+  }
+  const stub = env.DEVICE.get(env.DEVICE.idFromName(row.device_id));
+  const presence = await stub.presence();
+  if (!presence.connected) {
+    return error(
+      409,
+      "conflict",
+      "The device is not connected. Open FolderLink on your computer, then try again.",
+    );
+  }
+  const result = await stub.invoke({
+    op: approve ? "approve_request" : "deny_request",
+    requestId: id,
+  });
+  if (!result.ok) {
+    if (result.error.code === "approval_expired") {
+      await setApprovalStatus(env.DB, auth.user.id, id, "expired");
+      return error(410, "gone", "That approval request has expired.");
+    }
+    return error(502, "device_error", "The device could not confirm the decision.");
+  }
+  await setApprovalStatus(env.DB, auth.user.id, id, approve ? "approved" : "denied");
+  return json({ ok: true });
+}
+
+// settings returns the user's settings, including the write approval mode.
+async function settings(request: Request, env: Env): Promise<Response> {
+  const auth = await authenticate(request, env, "either");
+  if (!auth.ok) {
+    return auth.response;
+  }
+  return json({ writeApprovalMode: await getWriteApprovalMode(env.DB, auth.user.id) });
+}
+
+// setWriteApprovalModeHandler changes the write approval mode. The mode
+// is the top authority: in manual mode every write and exec needs the
+// user's manual approval, and neither a client card nor a remember-rule
+// bypasses it. After saving, the new mode is pushed to every connected
+// device over the websocket; a device that is offline gets it on its
+// next hello. The push is best effort — the save is what matters.
+async function setWriteApprovalModeHandler(request: Request, env: Env): Promise<Response> {
+  const auth = await authenticate(request, env, "either");
+  if (!auth.ok) {
+    return auth.response;
+  }
+  if (!csrfOk(request, auth.via)) {
+    return error(403, "forbidden", "The request was rejected.");
+  }
+  const body = await readBody(request);
+  if (
+    body instanceof Response ||
+    !isRecord(body) ||
+    (body.mode !== "ai" && body.mode !== "manual")
+  ) {
+    return error(400, "bad_request", "mode must be ai or manual.");
+  }
+  await setWriteApprovalMode(env.DB, auth.user.id, body.mode);
+  try {
+    const devices = await listDevicesForUser(env.DB, auth.user.id);
+    for (const device of devices) {
+      if (device.status !== "active") {
+        continue;
+      }
+      try {
+        await env.DEVICE.get(env.DEVICE.idFromName(device.id)).pushSettings({
+          writeApprovalMode: body.mode,
+        });
+      } catch {
+        // That device is offline; its next hello re-syncs.
+      }
+    }
+  } catch {
+    // The push is best effort; the save above is what matters.
+  }
+  return json({ ok: true, mode: body.mode });
+}
+
 async function folders(request: Request, env: Env): Promise<Response> {
   const auth = await authenticate(request, env, "either");
   if (!auth.ok) {
     return auth.response;
   }
   const rows = await listFoldersForUser(env.DB, auth.user.id);
+  // apps is null when the folder is unrestricted (visible to every app),
+  // otherwise the grant ids allowed to see it. The dashboard needs the
+  // ids, not names, so it can save the same list back.
+  const scoped = await folderApps(
+    env.DB,
+    rows.map((folder) => folder.id),
+  );
   return json({
     folders: rows.map((folder) => ({
       id: folder.id,
@@ -628,8 +831,44 @@ async function folders(request: Request, env: Env): Promise<Response> {
       approval: folder.approval,
       deviceId: folder.device_id,
       deviceName: folder.device_name,
+      apps: scoped.get(folder.id) ?? null,
     })),
   });
+}
+
+// setFolderAppsHandler replaces the allowed-apps list for one folder.
+// Body: { apps: string[] | null } — null is unrestricted, [] is hidden
+// from every app. Grant ids must belong to the caller.
+async function setFolderAppsHandler(
+  request: Request,
+  env: Env,
+  folderId: string,
+): Promise<Response> {
+  const auth = await authenticate(request, env, "either");
+  if (!auth.ok) {
+    return auth.response;
+  }
+  if (!csrfOk(request, auth.via)) {
+    return error(403, "forbidden", "The request was rejected.");
+  }
+  const body = await readBody(request);
+  if (
+    body instanceof Response ||
+    !isRecord(body) ||
+    !("apps" in body) ||
+    (body.apps !== null &&
+      (!Array.isArray(body.apps) || body.apps.some((app) => typeof app !== "string")))
+  ) {
+    return error(400, "bad_request", "apps must be an array of app ids, or null.");
+  }
+  const result = await setFolderApps(env.DB, auth.user.id, folderId, body.apps as string[] | null);
+  if (!result.ok) {
+    if (result.reason === "not_found") {
+      return error(404, "not_found", "That folder was not found.");
+    }
+    return error(400, "bad_request", "One of the apps was not found.");
+  }
+  return json({ ok: true });
 }
 
 async function approveFolder(request: Request, env: Env, folderId: string): Promise<Response> {
@@ -792,6 +1031,7 @@ async function listApps(request: Request, env: Env): Promise<Response> {
     apps: grants.map((grant) => ({
       id: grant.id,
       name: grant.name,
+      identity: appIdentity(grant.name),
       scope: grant.scope,
       createdAt: grant.createdAt,
     })),
@@ -836,6 +1076,7 @@ async function authenticate(
         avatarUrl: user.avatar_url,
       },
       via: "bearer",
+      grant: await grantForAccessToken(env.DB, bearer),
     };
   }
   if (kind === "bearer") {
@@ -862,6 +1103,7 @@ async function authenticate(
       avatarUrl: user.avatar_url,
     },
     via: "session",
+    grant: null,
   };
 }
 

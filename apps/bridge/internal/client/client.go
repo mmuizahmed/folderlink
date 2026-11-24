@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -18,9 +19,13 @@ import (
 
 	"github.com/coder/websocket"
 
+	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/approve"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/browser"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/config"
+	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/execrun"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/identity"
+	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/mode"
+	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/notify"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/pair"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/protocol"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/tools"
@@ -32,6 +37,29 @@ var (
 )
 
 const pickerOperationTimeout = 10 * time.Minute
+
+// State is the bridge's connection state, reported to Config.OnState when set.
+type State int
+
+const (
+	// StateConnecting is the initial state and the state while pairing or redialling.
+	StateConnecting State = iota
+	// StateConnected means the websocket is open and the hello was accepted.
+	StateConnected
+	// StateOffline means the last connection dropped and the bridge is backing off.
+	StateOffline
+)
+
+func (s State) String() string {
+	switch s {
+	case StateConnected:
+		return "Connected"
+	case StateOffline:
+		return "Offline"
+	default:
+		return "Connecting"
+	}
+}
 
 // Config controls one running bridge.
 type Config struct {
@@ -49,6 +77,28 @@ type Config struct {
 	HelloTimeout time.Duration
 	OpTimeout    time.Duration
 	Backoff      func(attempt int) time.Duration
+	// OnState is called on every connection-state change, if set. It is
+	// how the system tray knows what to show. It must not block.
+	OnState func(State)
+	// StateDir is the config directory. When set, the time of the last
+	// successful connection is recorded there for `folderlink doctor`.
+	StateDir string
+	// Notify sends a toast for refused reads (always) and successful reads
+	// (opt-in). Nil disables notifications; console runs leave it nil.
+	Notify *notify.Notifier
+	// Approve holds pending dashboard approvals and minted tokens. Nil
+	// disables the write/exec tools; Run creates one when unset.
+	Approve *approve.Store
+	// Exec tracks running commands for exec_poll. Nil disables run_command;
+	// Run creates one when unset.
+	Exec *execrun.Registry
+	// Mode is the write approval mode the bridge enforces. Run creates
+	// one from the local cache when unset; the worker re-syncs it on
+	// hello and pushes changes live.
+	Mode *mode.Store
+	// OnMode is called when the mode changes (hello sync or a settings
+	// push), if set. It must not block.
+	OnMode func(mode.Mode)
 }
 
 // Run pairs the device if needed and reconnects until ctx is canceled.
@@ -62,6 +112,7 @@ func Run(ctx context.Context, cfg Config) error {
 		if ctx.Err() != nil {
 			return nil
 		}
+		cfg.setState(StateConnecting)
 		err := ensurePaired(ctx, cfg)
 		if ctx.Err() != nil {
 			return nil
@@ -82,6 +133,9 @@ func Run(ctx context.Context, cfg Config) error {
 		if err != nil && !errors.Is(err, errRevoked) && !errors.Is(err, errUnpaired) {
 			slog.Info("connection closed", "err", err.Error())
 		}
+		if err != nil {
+			cfg.setState(StateOffline)
+		}
 		if time.Since(started) > 30*time.Second {
 			attempt = 0
 		}
@@ -90,6 +144,27 @@ func Run(ctx context.Context, cfg Config) error {
 		}
 		attempt++
 	}
+}
+
+// LastConnectedName is the file in the config directory that records the
+// last successful connection, for `folderlink doctor`.
+const LastConnectedName = "last-connected"
+
+func (cfg Config) setState(s State) {
+	if cfg.OnState != nil {
+		cfg.OnState(s)
+	}
+}
+
+// recordConnected notes the current time in the config directory. It never
+// fails the connection: a bridge that cannot write its own directory still
+// works, it just has nothing for doctor to report.
+func recordConnected(cfg Config) {
+	if cfg.StateDir == "" {
+		return
+	}
+	_ = os.WriteFile(filepath.Join(cfg.StateDir, LastConnectedName),
+		[]byte(time.Now().UTC().Format(time.RFC3339)), 0o600)
 }
 
 func (cfg Config) withDefaults() Config {
@@ -122,6 +197,23 @@ func (cfg Config) withDefaults() Config {
 	}
 	if cfg.Name == "" {
 		cfg.Name = config.DefaultName
+	}
+	if cfg.Approve == nil {
+		cfg.Approve = approve.New()
+	}
+	if cfg.Exec == nil {
+		cfg.Exec = execrun.NewRegistry()
+	}
+	if cfg.Mode == nil {
+		// Seed from the local cache. An empty cache means manual: fail
+		// closed until the worker syncs the mode on hello.
+		cached := ""
+		if cfg.Store != nil {
+			if file, err := cfg.Store.Load(); err == nil {
+				cached = file.WriteApprovalMode
+			}
+		}
+		cfg.Mode = mode.New(cached)
 	}
 	return cfg
 }
@@ -260,6 +352,14 @@ func serveOnce(ctx context.Context, cfg Config) error {
 	go func() {
 		errCh <- sess.readLoop(sessCtx, activity, func(msg protocol.Message) {
 			sess.handleRequest(sessCtx, cfg, msg)
+		}, func(msg protocol.Message) {
+			var payload struct {
+				WriteApprovalMode string `json:"writeApprovalMode"`
+			}
+			if json.Unmarshal(msg.Payload, &payload) != nil {
+				return
+			}
+			applyMode(cfg, payload.WriteApprovalMode)
 		})
 	}()
 
@@ -275,6 +375,11 @@ func serveOnce(ctx context.Context, cfg Config) error {
 		}
 		return errUnpaired
 	}
+	// The hello acknowledgement carries the write approval mode: apply
+	// it before the first tool call can arrive.
+	applyMode(cfg, ack.WriteApprovalMode)
+	cfg.setState(StateConnected)
+	recordConnected(cfg)
 	fmt.Fprintln(cfg.Stdout, "Connected.")
 	go sess.ping(sessCtx, cfg.Heartbeat)
 
@@ -327,6 +432,10 @@ type helloAck struct {
 	Reason            string   `json:"reason"`
 	HeartbeatSec      int      `json:"heartbeatSec"`
 	ApprovedFolderIDs []string `json:"approvedFolderIds"`
+	// WriteApprovalMode is the user's write approval mode ("ai" or
+	// "manual"), synced from the worker. Empty when the worker predates
+	// the mode: applyMode ignores it and the current mode stands.
+	WriteApprovalMode string `json:"writeApprovalMode"`
 }
 
 type folderClaim struct {
@@ -433,7 +542,13 @@ func (s *session) handleRequest(ctx context.Context, cfg Config, msg protocol.Me
 		}
 		opCtx, cancel := context.WithTimeout(ctx, opTimeout)
 		defer cancel()
-		result := tools.Dispatch(opCtx, cfg.Store, msg.Payload)
+		result := tools.Dispatch(opCtx, cfg.Store, tools.Deps{
+			Approve:      cfg.Approve,
+			Exec:         cfg.Exec,
+			Mode:         cfg.Mode,
+			DashboardURL: cfg.Web,
+		}, msg.Payload)
+		notifyResult(cfg, msg.Payload, result)
 		raw, err := json.Marshal(result)
 		if err != nil {
 			_ = s.write(ctx, failureMessage(msg.ID, "internal", "The request could not be completed."))
@@ -446,6 +561,125 @@ func (s *session) handleRequest(ctx context.Context, cfg Config, msg protocol.Me
 			Payload: raw,
 		})
 	}()
+}
+
+// notifyResult tells the user about a read or a write, through the
+// notifier. Only read and write operations notify: a refusal is always
+// shown (an app asking for a secret is the event to see), a successful
+// read only when the user opted in, a successful write or a started
+// command always (a file changing is the event to see), and an
+// approval_required result always (the user has to act on it). Anything
+// else — a missing file, a bad request, a timeout — is not a refusal and
+// stays quiet.
+func notifyResult(cfg Config, raw json.RawMessage, result any) {
+	if cfg.Notify == nil {
+		return
+	}
+	var req notifyRequest
+	if json.Unmarshal(raw, &req) != nil {
+		return
+	}
+	switch req.Op {
+	case "list_files", "read_file", "search_files", "read_media", "file_info":
+		notifyReadResult(cfg, req, result)
+	case "write_file", "delete_file", "run_command":
+		notifyWriteResult(cfg, req, result)
+	}
+}
+
+// notifyRequest is the part of a tool request the notifier needs.
+type notifyRequest struct {
+	Op       string   `json:"op"`
+	FolderID string   `json:"folderId"`
+	Path     string   `json:"path"`
+	Command  string   `json:"command"`
+	Args     []string `json:"args"`
+}
+
+func notifyReadResult(cfg Config, req notifyRequest, result any) {
+	out, ok := resultEnvelope(result)
+	if !ok {
+		return
+	}
+	label := folderLabel(cfg, req.FolderID)
+	if out.OK {
+		cfg.Notify.Success(label, req.Path)
+		return
+	}
+	switch out.Error.Code {
+	case "denied", "outside_root", "binary":
+		cfg.Notify.Refused(label, req.Path)
+	}
+}
+
+func notifyWriteResult(cfg Config, req notifyRequest, result any) {
+	out, ok := resultEnvelope(result)
+	if !ok {
+		return
+	}
+	label := folderLabel(cfg, req.FolderID)
+	if out.OK {
+		switch out.Result.Status {
+		case "approval_required":
+			cfg.Notify.ApprovalNeeded(label, req.Path, out.Result.RequestID)
+		case "started":
+			cfg.Notify.CommandStarted(label, append([]string{req.Command}, req.Args...))
+		default:
+			// A write or delete that executed: always shown.
+			cfg.Notify.WriteDone(label, req.Path)
+		}
+		return
+	}
+	switch out.Error.Code {
+	case "denied", "outside_root", "binary", "hash_mismatch":
+		cfg.Notify.WriteRefused(label, req.Path)
+	}
+}
+
+// resultEnvelope decodes the ok/error/status shape Dispatch returns.
+func resultEnvelope(result any) (struct {
+	OK    bool `json:"ok"`
+	Error struct {
+		Code string `json:"code"`
+	} `json:"error"`
+	Result struct {
+		Status    string `json:"status"`
+		RequestID string `json:"requestId"`
+	} `json:"result"`
+}, bool) {
+	var out struct {
+		OK    bool `json:"ok"`
+		Error struct {
+			Code string `json:"code"`
+		} `json:"error"`
+		Result struct {
+			Status    string `json:"status"`
+			RequestID string `json:"requestId"`
+		} `json:"result"`
+	}
+	encoded, err := json.Marshal(result)
+	if err != nil {
+		return out, false
+	}
+	if json.Unmarshal(encoded, &out) != nil {
+		return out, false
+	}
+	return out, true
+}
+
+func folderLabel(cfg Config, folderID string) string {
+	label := folderID
+	if cfg.Store != nil {
+		if file, err := cfg.Store.Load(); err == nil {
+			for _, folder := range file.Folders {
+				if folder.ID == folderID {
+					label = folder.Label
+					break
+				}
+			}
+		}
+	}
+	return label
 }
 
 func failureMessage(id, codeName, message string) protocol.Message {
@@ -487,7 +721,7 @@ func (s *session) ping(ctx context.Context, every time.Duration) {
 	}
 }
 
-func (s *session) readLoop(ctx context.Context, activity chan<- struct{}, onRequest func(protocol.Message)) error {
+func (s *session) readLoop(ctx context.Context, activity chan<- struct{}, onRequest func(protocol.Message), onSettings func(protocol.Message)) error {
 	for {
 		_, data, err := s.conn.Read(ctx)
 		if err != nil {
@@ -506,9 +740,32 @@ func (s *session) readLoop(ctx context.Context, activity chan<- struct{}, onRequ
 			_ = s.write(ctx, protocol.Message{V: protocol.Version, Type: protocol.TypePong, ID: msg.ID, Payload: msg.Payload})
 		case protocol.TypeRequest:
 			onRequest(msg)
+		case protocol.TypeSettings:
+			if onSettings != nil {
+				onSettings(msg)
+			}
 		default:
 			s.deliver(msg)
 		}
+	}
+}
+
+// applyMode applies a write approval mode from the worker (hello_ack or
+// a settings push): it updates the in-memory mode, caches it in the
+// local config, and notifies the tray. An unknown or empty mode is
+// ignored: the current mode stands, so a bad payload can never silently
+// loosen the gate.
+func applyMode(cfg Config, modeStr string) {
+	m, ok := mode.Parse(modeStr)
+	if !ok || cfg.Mode == nil {
+		return
+	}
+	cfg.Mode.Set(m)
+	if cfg.Store != nil {
+		_ = cfg.Store.SetWriteApprovalMode(string(m))
+	}
+	if cfg.OnMode != nil {
+		cfg.OnMode(m)
 	}
 }
 

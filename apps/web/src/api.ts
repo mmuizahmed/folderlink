@@ -43,6 +43,9 @@ export interface Folder {
   approval: string;
   deviceId: string;
   deviceName: string;
+  // apps is null when the folder is unrestricted (every app may see it),
+  // otherwise the ids of the apps allowed to see it.
+  apps: string[] | null;
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -111,10 +114,17 @@ export const api = {
     }),
   removeFolder: (id: string) =>
     request<{ ok: boolean }>(`/api/folders/${id}/remove`, { method: "POST" }),
+  // apps is null for unrestricted (every app may see the folder), or the
+  // ids of the apps allowed to see it. An empty array hides it from all.
+  setFolderApps: (id: string, apps: string[] | null) =>
+    request<{ ok: boolean }>(`/api/folders/${id}/apps`, {
+      method: "POST",
+      body: JSON.stringify({ apps }),
+    }),
   apps: () =>
-    request<{ apps: Array<{ id: string; name: string; scope: string; createdAt: string }> }>(
-      "/api/apps",
-    ),
+    request<{
+      apps: Array<{ id: string; name: string; identity: string; scope: string; createdAt: string }>;
+    }>("/api/apps"),
   activity: () =>
     request<{
       activity: Array<{
@@ -124,7 +134,41 @@ export const api = {
         target: string;
         detail: string;
         denied: boolean;
+        client: string;
       }>;
     }>("/api/activity"),
   revokeApp: (id: string) => request<{ ok: boolean }>(`/api/apps/${id}/revoke`, { method: "POST" }),
+  settings: () => request<{ writeApprovalMode: string }>("/api/settings"),
+  setWriteApprovalMode: (mode: string) =>
+    request<{ ok: boolean; mode: string }>("/api/settings/write-approval", {
+      method: "POST",
+      body: JSON.stringify({ mode }),
+    }),
+  approvals: () =>
+    request<{
+      approvals: Array<{
+        id: string;
+        tool: string;
+        op: string;
+        folderId: string;
+        folderLabel: string;
+        path: string;
+        client: string;
+        contentHash: string;
+        preHash: string;
+        diff: string;
+        preview: string;
+        argv: string[];
+        size: number;
+        status: string;
+        createdAt: string;
+        expiresAt: string;
+        decidedAt: string | null;
+        executedAt: string | null;
+      }>;
+    }>("/api/approvals"),
+  approveApproval: (id: string) =>
+    request<{ ok: boolean }>(`/api/approvals/${id}/approve`, { method: "POST" }),
+  denyApproval: (id: string) =>
+    request<{ ok: boolean }>(`/api/approvals/${id}/deny`, { method: "POST" }),
 };
