@@ -60,11 +60,27 @@ builds:
       - arm64
 
 archives:
-  - formats: [tar.gz]
+  # Console binary archives: exactly one binary per platform.
+  - id: bridge
+    builds:
+      - bridge
+      - bridge-windows
+    formats: [tar.gz]
     format_overrides:
       - goos: windows
         formats: [zip]
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+  # Background binary archives (Windows only): exactly one binary per
+  # platform. Kept as a separate archive because GoReleaser refuses an
+  # archive whose binary count differs per platform — putting folderlink-bg
+  # into the console archive would give Windows two binaries while
+  # macOS/Linux have one.
+  - id: bridge-bg
+    builds:
+      - bridge-bg
+    formats: [zip]
+    name_template: "{{ .ProjectName }}-bg_{{ .Os }}_{{ .Arch }}"
 
 checksum:
   name_template: checksums.txt
