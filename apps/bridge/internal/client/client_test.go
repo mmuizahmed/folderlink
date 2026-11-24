@@ -251,7 +251,7 @@ func TestWatchFolders(t *testing.T) {
 	// No change yet: the session must stay alive.
 	select {
 	case <-ctx.Done():
-		t.Fatal("watchFolders cancelled with no folder change")
+		t.Fatal("watchFolders canceled with no folder change")
 	case <-time.After(50 * time.Millisecond):
 	}
 	// A mode-cache write is not a folder change: still alive.
@@ -260,7 +260,7 @@ func TestWatchFolders(t *testing.T) {
 	}
 	select {
 	case <-ctx.Done():
-		t.Fatal("watchFolders cancelled on a mode-only config write")
+		t.Fatal("watchFolders canceled on a mode-only config write")
 	case <-time.After(50 * time.Millisecond):
 	}
 	// A folder added while connected ends the session, so Run reconnects
@@ -277,7 +277,7 @@ func TestWatchFolders(t *testing.T) {
 	select {
 	case <-done:
 	case <-time.After(2 * time.Second):
-		t.Fatal("watchFolders did not return after cancelling")
+		t.Fatal("watchFolders did not return after canceling")
 	}
 }
 
