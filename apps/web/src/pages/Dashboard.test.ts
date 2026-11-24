@@ -1,7 +1,13 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { ActivityList, FolderDetails, FolderSummary, SettingsSection } from "./Dashboard.tsx";
+import {
+  ActivityList,
+  DiffView,
+  FolderDetails,
+  FolderSummary,
+  SettingsSection,
+} from "./Dashboard.tsx";
 import type {
   ActivityView,
   AppView,
@@ -237,5 +243,43 @@ describe("FolderDetails", () => {
     expect(html).toContain("portfolio");
     expect(html).toContain(">paused<");
     expect(html).toContain("Hidden from every app");
+  });
+});
+
+describe("DiffView", () => {
+  const diff = [
+    "--- a/apps/web/src/data/fixture.ts",
+    "+++ b/apps/web/src/data/fixture.ts",
+    "@@ -83,7 +83,98 @@ fixture",
+    '    detail: "Read-only",',
+    "  },",
+    "],",
+    "-  activity: [],",
+    "+  activity: [",
+    "+    {",
+    '+      id: "a1",',
+    "",
+  ].join("\n");
+
+  it("renders a GitHub-style diff with no raw markers", () => {
+    const html = renderToStaticMarkup(createElement(DiffView, { diff }));
+    expect(html).not.toContain("--- a/");
+    expect(html).not.toContain("+++ b/");
+    expect(html).not.toContain("@@");
+    expect(html).toContain("fixture");
+    expect(html).toContain("diff-add");
+    expect(html).toContain("diff-del");
+    expect(html).toContain("activity: [");
+    expect(html).toContain("activity: [],");
+  });
+
+  it("numbers the old and new sides", () => {
+    const html = renderToStaticMarkup(createElement(DiffView, { diff }));
+    // The removed line is old 86 with no new number; the first added
+    // line is new 86 with no old number; the context line above them
+    // is 83 on both sides.
+    expect(html).toContain('<span class="diff-no">86</span><span class="diff-no"></span>');
+    expect(html).toContain('<span class="diff-no"></span><span class="diff-no">86</span>');
+    expect(html).toContain('<span class="diff-no">83</span><span class="diff-no">83</span>');
   });
 });
