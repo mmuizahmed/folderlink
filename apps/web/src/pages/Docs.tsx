@@ -8,14 +8,17 @@ const PAGES = [
     slug: "getting-started",
     title: "Getting started",
     body: [
-      { kind: "p", text: "Install FolderLink with one command, then leave the window open." },
+      {
+        kind: "p",
+        text: "Install FolderLink with one command. It runs in the background, with no terminal window.",
+      },
       { kind: "h", text: "Windows" },
       { kind: "code", text: "irm https://folderlink.muiz.pk/install.ps1 | iex" },
       { kind: "h", text: "macOS and Linux" },
       { kind: "code", text: "curl -fsSL https://folderlink.muiz.pk/install.sh | sh" },
       {
         kind: "p",
-        text: "The app opens your browser to connect this computer. Sign in with Google and choose Allow.",
+        text: "Open https://folderlink.muiz.pk/pair in your browser and sign in with Google, then choose Allow.",
       },
       {
         kind: "p",

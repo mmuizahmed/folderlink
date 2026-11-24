@@ -10,6 +10,7 @@ export const MESSAGE_TYPES = [
   "request",
   "response",
   "error",
+  "settings",
 ] as const;
 
 export type MessageType = (typeof MESSAGE_TYPES)[number];
@@ -54,6 +55,17 @@ export interface HelloAckPayload {
   reason?: string;
   heartbeatSec: number;
   approvedFolderIds: string[];
+  // The user's write approval mode ("ai" | "manual"), so the bridge
+  // knows how to gate writes before its first tool call.
+  writeApprovalMode?: string;
+}
+
+// SettingsPayload is a server-push message: the worker sends it when a
+// setting changes, so a running bridge learns the new mode without
+// waiting for a reconnect. It is fire-and-forget; the bridge applies it
+// and caches it locally.
+export interface SettingsPayload {
+  writeApprovalMode: string;
 }
 
 export interface ErrorBody {
@@ -104,13 +116,71 @@ export interface ListFoldersParams {
   op: "list_folders";
 }
 
+export interface WriteFileParams {
+  op: "write_file";
+  folderId: string;
+  path: string;
+  // content is the exact bytes to write, as a string. encoding "utf8" is
+  // plain text; "base64" is binary bytes. Binary writes are always
+  // dashboard-gated (see ApprovalRequiredResult).
+  content: string;
+  encoding?: "utf8" | "base64";
+  // approvalId carries a dashboard approval from the first call. Without
+  // it, a dashboard-gated write returns approval_required instead of
+  // writing; with it, the bridge verifies the single-use token and the
+  // content hash before writing.
+  approvalId?: string;
+}
+
+export interface DeleteFileParams {
+  op: "delete_file";
+  folderId: string;
+  path: string;
+  approvalId?: string;
+}
+
+export interface RunCommandParams {
+  op: "run_command";
+  folderId: string;
+  // command is a bare program name from the bridge allowlist (no path,
+  // no shell). args are passed verbatim; the dashboard shows the exact
+  // argv for approval.
+  command: string;
+  args?: string[];
+  approvalId?: string;
+}
+
+export interface ExecPollParams {
+  op: "exec_poll";
+  // executionId is the id returned when run_command started the command.
+  // It carries the device id as a prefix, so the worker routes the poll
+  // to the device that started the command.
+  executionId: string;
+}
+
+export interface ApproveRequestParams {
+  op: "approve_request";
+  requestId: string;
+}
+
+export interface DenyRequestParams {
+  op: "deny_request";
+  requestId: string;
+}
+
 export type ToolParams =
   | ListFilesParams
   | ReadFileParams
   | SearchFilesParams
   | ReadMediaParams
   | FileInfoParams
-  | ListFoldersParams;
+  | ListFoldersParams
+  | WriteFileParams
+  | DeleteFileParams
+  | RunCommandParams
+  | ExecPollParams
+  | ApproveRequestParams
+  | DenyRequestParams;
 
 export interface FileEntry {
   name: string;
@@ -166,6 +236,76 @@ export interface ListFoldersResult {
   folders: Array<{ id: string; label: string }>;
 }
 
+export interface WriteFileResult {
+  written: boolean;
+  path: string;
+  bytes: number;
+  // preHash is the SHA-256 of the file before the write ("absent" for a
+  // new file); postHash is the SHA-256 after. The audit log records the
+  // hashes, never the content.
+  preHash: string;
+  postHash: string;
+  approvalId?: string;
+}
+
+export interface DeleteFileResult {
+  deleted: boolean;
+  path: string;
+  bytes: number;
+  preHash: string;
+  approvalId?: string;
+}
+
+export interface RunCommandResult {
+  status: "started";
+  executionId: string;
+  command: string;
+  args: string[];
+  approvalId?: string;
+}
+
+export interface ExecPollResult {
+  status: "running" | "done" | "failed" | "timeout";
+  executionId: string;
+  exitCode: number | null;
+  stdout: string;
+  stderr: string;
+  truncated: boolean;
+}
+
+// ApprovalRequiredResult is the first call's answer for a dashboard-gated
+// operation. It is a success, not an error, so the model can relay it:
+// the user approves in the dashboard, then the model re-calls the tool
+// with approvalId. The bridge computed the diff/preview from the exact
+// bytes that would be written; the worker stores this payload in the
+// approvals table for the dashboard to show.
+export interface ApprovalRequiredResult {
+  status: "approval_required";
+  requestId: string;
+  operation: "write_file" | "delete_file" | "run_command";
+  folder: string;
+  path: string;
+  dashboardUrl: string;
+  expiresIn: string;
+  message: string;
+  // Write details: the SHA-256 of the exact bytes to write, the SHA-256
+  // of the current file ("absent" for a new file), and the bridge-computed
+  // unified diff (text) or binary summary (binary writes).
+  contentHash?: string;
+  preHash?: string;
+  diff?: string;
+  // Delete details: size and a first-lines preview of what will be lost.
+  preview?: string;
+  size?: number;
+  // Exec details: the exact argv the dashboard shows for approval.
+  argv?: string[];
+}
+
+export interface ApproveRequestResult {
+  approved: boolean;
+  requestId: string;
+}
+
 export interface ToolSuccess {
   ok: true;
   result:
@@ -174,7 +314,13 @@ export interface ToolSuccess {
     | SearchFilesResult
     | ReadMediaResult
     | FileInfoResult
-    | ListFoldersResult;
+    | ListFoldersResult
+    | WriteFileResult
+    | DeleteFileResult
+    | RunCommandResult
+    | ExecPollResult
+    | ApprovalRequiredResult
+    | ApproveRequestResult;
 }
 
 export interface ToolFailure {

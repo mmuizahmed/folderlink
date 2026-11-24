@@ -13,19 +13,26 @@ import (
 )
 
 type request struct {
-	Op         string `json:"op"`
-	FolderID   string `json:"folderId"`
-	Path       string `json:"path"`
-	Label      string `json:"label"`
-	Name       string `json:"name"`
-	Limit      int    `json:"limit"`
-	Cursor     string `json:"cursor"`
-	StartLine  int    `json:"startLine"`
-	EndLine    int    `json:"endLine"`
-	ByteOffset int64  `json:"byteOffset"`
-	MaxBytes   int    `json:"maxBytes"`
-	Query      string `json:"query"`
-	MaxMatches int    `json:"maxMatches"`
+	Op          string   `json:"op"`
+	FolderID    string   `json:"folderId"`
+	Path        string   `json:"path"`
+	Label       string   `json:"label"`
+	Name        string   `json:"name"`
+	Limit       int      `json:"limit"`
+	Cursor      string   `json:"cursor"`
+	StartLine   int      `json:"startLine"`
+	EndLine     int      `json:"endLine"`
+	ByteOffset  int64    `json:"byteOffset"`
+	MaxBytes    int      `json:"maxBytes"`
+	Query       string   `json:"query"`
+	MaxMatches  int      `json:"maxMatches"`
+	Content     string   `json:"content"`
+	Encoding    string   `json:"encoding"`
+	ApprovalID  string   `json:"approvalId"`
+	Command     string   `json:"command"`
+	Args        []string `json:"args"`
+	ExecutionID string   `json:"executionId"`
+	RequestID   string   `json:"requestId"`
 }
 
 type failure struct {
@@ -42,7 +49,7 @@ type success struct {
 }
 
 // Dispatch executes one tool request against the folders stored on this computer.
-func Dispatch(ctx context.Context, store *config.Store, raw json.RawMessage) any {
+func Dispatch(ctx context.Context, store *config.Store, deps Deps, raw json.RawMessage) any {
 	var req request
 	if len(raw) == 0 || json.Unmarshal(raw, &req) != nil || req.Op == "" {
 		return fail("bad_request", "The request is not valid.")
@@ -50,6 +57,12 @@ func Dispatch(ctx context.Context, store *config.Store, raw json.RawMessage) any
 	switch req.Op {
 	case "pick_folder":
 		return pickFolder(ctx, store)
+	case "approve_request":
+		return approveRequest(deps, req)
+	case "deny_request":
+		return denyRequest(deps, req)
+	case "exec_poll":
+		return execPoll(deps, req)
 	case "rename_folder":
 		if err := store.Rename(req.FolderID, req.Label); err != nil {
 			return fail("bad_request", err.Error())
@@ -129,6 +142,12 @@ func Dispatch(ctx context.Context, store *config.Store, raw json.RawMessage) any
 			return fromErr(err)
 		}
 		return success{OK: true, Result: result}
+	case "write_file":
+		return writeFile(ctx, store, deps, folder, req)
+	case "delete_file":
+		return deleteFile(ctx, deps, folder, req)
+	case "run_command":
+		return runCommand(ctx, deps, folder, req)
 	default:
 		return fail("bad_request", "The operation is not supported.")
 	}

@@ -30,41 +30,42 @@ func TestDispatchNewReadTools(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	deps := testDeps()
 	ctx := context.Background()
 
-	listed := call(t, ctx, store, map[string]any{"op": "list_folders"})
+	listed := call(t, ctx, store, deps, map[string]any{"op": "list_folders"})
 	if !strings.Contains(listed, `"label":"notes"`) || !strings.Contains(listed, folder.ID) {
 		t.Fatalf("list_folders did not return the folder: %s", listed)
 	}
 
-	found := call(t, ctx, store, map[string]any{
+	found := call(t, ctx, store, deps, map[string]any{
 		"op": "search_files", "folderId": folder.ID, "query": "hello",
 	})
 	if !strings.Contains(found, "src/main.go") || !strings.Contains(found, `"line":3`) {
 		t.Fatalf("search_files missed the match: %s", found)
 	}
-	denied := call(t, ctx, store, map[string]any{
+	denied := call(t, ctx, store, deps, map[string]any{
 		"op": "search_files", "folderId": folder.ID, "query": "hello", "path": "../outside",
 	})
 	if strings.Contains(denied, `"ok":true`) {
 		t.Fatalf("search_files escaped the folder: %s", denied)
 	}
 
-	media := call(t, ctx, store, map[string]any{
+	media := call(t, ctx, store, deps, map[string]any{
 		"op": "read_media", "folderId": folder.ID, "path": "shot.png",
 	})
 	if !strings.Contains(media, `"mimeType":"image/png"`) {
 		t.Fatalf("read_media did not return the png: %s", media)
 	}
 
-	info := call(t, ctx, store, map[string]any{
+	info := call(t, ctx, store, deps, map[string]any{
 		"op": "file_info", "folderId": folder.ID, "path": "src/main.go",
 	})
 	if !strings.Contains(info, `"name":"main.go"`) || !strings.Contains(info, `"kind":"file"`) {
 		t.Fatalf("file_info was wrong: %s", info)
 	}
 
-	unknown := call(t, ctx, store, map[string]any{"op": "search_files", "folderId": folder.ID})
+	unknown := call(t, ctx, store, deps, map[string]any{"op": "search_files", "folderId": folder.ID})
 	if strings.Contains(unknown, `"ok":true`) {
 		t.Fatalf("search_files accepted an empty query: %s", unknown)
 	}

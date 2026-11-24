@@ -34,6 +34,32 @@ type File struct {
 	Web     string   `json:"web"`
 	Name    string   `json:"name"`
 	Folders []Folder `json:"folders"`
+	// AutoUpdate is nil when the user never set it, which means on.
+	// A pointer is used so an existing config file without this field
+	// does not silently turn updates off.
+	AutoUpdate *bool `json:"auto_update,omitempty"`
+	// NotifySuccess shows a toast for every successful read. Off by
+	// default: reads are frequent, and a toast per read is spam.
+	NotifySuccess bool `json:"notify_success,omitempty"`
+	// WriteApprovalMode is the cached write approval mode ("ai" or
+	// "manual"), synced from the worker over the websocket. Empty means
+	// never synced: the bridge fails closed to manual. The worker (D1)
+	// is the source of truth; this is only a cache.
+	WriteApprovalMode string `json:"write_approval_mode,omitempty"`
+}
+
+// AutoUpdateEnabled reports whether automatic updates are on: on unless
+// the config or the FOLDERLINK_AUTO_UPDATE environment variable says off.
+func (f File) AutoUpdateEnabled() bool {
+	if env := os.Getenv("FOLDERLINK_AUTO_UPDATE"); env != "" {
+		switch strings.ToLower(strings.TrimSpace(env)) {
+		case "0", "off", "false", "no":
+			return false
+		case "1", "on", "true", "yes":
+			return true
+		}
+	}
+	return f.AutoUpdate == nil || *f.AutoUpdate
 }
 
 // Store reads and writes config.json.
@@ -48,6 +74,11 @@ func Open(dir string) (*Store, error) {
 		return nil, err
 	}
 	return &Store{path: filepath.Join(dir, "config.json")}, nil
+}
+
+// Dir returns the config directory (the parent of config.json).
+func (s *Store) Dir() string {
+	return filepath.Dir(s.path)
 }
 
 // Load returns the config, creating defaults when the file is absent.
@@ -215,6 +246,22 @@ func (s *Store) SetName(name string) error {
 		return err
 	}
 	cfg.Name = name
+	return s.save(cfg)
+}
+
+// SetWriteApprovalMode caches the write approval mode synced from the
+// worker. It validates the value: an unknown mode is never stored.
+func (s *Store) SetWriteApprovalMode(mode string) error {
+	if mode != "ai" && mode != "manual" {
+		return fmt.Errorf("unknown write approval mode %q", mode)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	cfg, err := s.load()
+	if err != nil {
+		return err
+	}
+	cfg.WriteApprovalMode = mode
 	return s.save(cfg)
 }
 

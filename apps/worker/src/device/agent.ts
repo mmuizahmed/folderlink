@@ -1,7 +1,13 @@
 import { DurableObject } from "cloudflare:workers";
 import { parseEnvelope, parseHelloPayload, type ToolResult } from "@mcp-bridge/shared";
 import { freshTimestamp, verifySignature } from "../crypto.ts";
-import { setDeviceVersion, syncFolders, touchDevice, type DeviceRecord } from "../db.ts";
+import {
+  getWriteApprovalMode,
+  setDeviceVersion,
+  syncFolders,
+  touchDevice,
+  type DeviceRecord,
+} from "../db.ts";
 import type { Env } from "../env.ts";
 import type { InvokeRequest } from "./control.ts";
 
@@ -100,6 +106,30 @@ export class DeviceAgent extends DurableObject<Env> {
     return { connected: this.authenticatedSocket() !== null };
   }
 
+  // pushSettings sends a settings update to the connected bridge over
+  // the authenticated websocket, fire-and-forget: the bridge applies the
+  // mode and caches it. A bridge that is not connected gets the mode on
+  // its next hello instead. This is how a mode change in the dashboard
+  // reaches a running bridge without waiting for a reconnect.
+  async pushSettings(settings: { writeApprovalMode: string }): Promise<void> {
+    const ws = this.authenticatedSocket();
+    if (!ws) {
+      return;
+    }
+    try {
+      ws.send(
+        JSON.stringify({
+          v: 1,
+          type: "settings",
+          id: crypto.randomUUID(),
+          payload: { writeApprovalMode: settings.writeApprovalMode },
+        }),
+      );
+    } catch {
+      // The socket is gone; the next hello re-syncs.
+    }
+  }
+
   async disconnect(): Promise<void> {
     for (const ws of this.ctx.getWebSockets()) {
       ws.close(4003, "revoked");
@@ -125,6 +155,13 @@ export class DeviceAgent extends DurableObject<Env> {
     if (input.name !== undefined) payload.name = input.name;
     if (input.query !== undefined) payload.query = input.query;
     if (input.maxMatches !== undefined) payload.maxMatches = input.maxMatches;
+    if (input.content !== undefined) payload.content = input.content;
+    if (input.encoding !== undefined) payload.encoding = input.encoding;
+    if (input.approvalId !== undefined) payload.approvalId = input.approvalId;
+    if (input.command !== undefined) payload.command = input.command;
+    if (input.args !== undefined) payload.args = input.args;
+    if (input.executionId !== undefined) payload.executionId = input.executionId;
+    if (input.requestId !== undefined) payload.requestId = input.requestId;
     try {
       ws.send(JSON.stringify({ v: 1, type: "request", id, payload }));
     } catch {
@@ -204,12 +241,21 @@ export class DeviceAgent extends DurableObject<Env> {
       await setDeviceVersion(this.env.DB, device.id, hello.version);
     }
     await this.touch(device.id);
+    // The hello acknowledgement carries the write approval mode, so the
+    // bridge knows how to gate writes before it takes its first tool
+    // call. The bridge caches it locally and re-syncs on every hello.
+    const writeApprovalMode = await getWriteApprovalMode(this.env.DB, device.user_id);
     ws.send(
       JSON.stringify({
         v: 1,
         type: "hello_ack",
         id,
-        payload: { ok: true, heartbeatSec: 20, approvedFolderIds: approved },
+        payload: {
+          ok: true,
+          heartbeatSec: 20,
+          approvedFolderIds: approved,
+          writeApprovalMode,
+        },
       }),
     );
   }

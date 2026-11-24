@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -215,3 +216,124 @@ func writeJSON(t *testing.T, w http.ResponseWriter, v any) {
 type ioDiscard struct{}
 
 func (ioDiscard) Write(p []byte) (int, error) { return len(p), nil }
+
+func TestRunReportsState(t *testing.T) {
+	browserOpen := browser.Open
+	browser.Open = func(string) error { return nil }
+	t.Cleanup(func() { browser.Open = browserOpen })
+	home := t.TempDir()
+	id, err := identity.LoadOrCreate(home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store, err := config.Open(home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateDir := t.TempDir()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/api/pair/status":
+			writeJSON(t, w, map[string]string{"state": "active"})
+		case strings.HasSuffix(r.URL.Path, "/ws"):
+			conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
+			if err != nil {
+				return
+			}
+			defer func() { _ = conn.Close(websocket.StatusNormalClosure, "") }()
+			ctx := r.Context()
+			_, data, err := conn.Read(ctx)
+			if err != nil {
+				return
+			}
+			msg, err := protocol.Parse(data)
+			if err != nil || msg.Type != protocol.TypeHello {
+				t.Errorf("hello: %v", err)
+				return
+			}
+			ack, _ := json.Marshal(map[string]any{"ok": true, "heartbeatSec": 20, "approvedFolderIds": []string{}})
+			reply := protocol.Message{V: 1, Type: protocol.TypeHelloAck, ID: msg.ID, Payload: ack}
+			raw, _ := reply.Marshal()
+			if err := conn.Write(ctx, websocket.MessageText, raw); err != nil {
+				return
+			}
+			<-ctx.Done()
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	var mu sync.Mutex
+	var states []State
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+	done := make(chan struct{})
+	go func() {
+		_ = Run(ctx, Config{
+			Server:       srv.URL,
+			Web:          "http://localhost:5173",
+			Name:         "test",
+			Version:      "test",
+			Identity:     id,
+			Store:        store,
+			PollInterval: 20 * time.Millisecond,
+			Heartbeat:    time.Hour,
+			IdleTimeout:  time.Hour,
+			Backoff:      func(int) time.Duration { return 10 * time.Millisecond },
+			Stdout:       ioDiscard{},
+			StateDir:     stateDir,
+			OnState: func(s State) {
+				mu.Lock()
+				states = append(states, s)
+				mu.Unlock()
+			},
+		})
+		close(done)
+	}()
+
+	// Wait for the Connected state (Connecting comes first).
+	deadline := time.Now().Add(5 * time.Second)
+	connected := false
+	for time.Now().Before(deadline) {
+		mu.Lock()
+		for _, s := range states {
+			if s == StateConnected {
+				connected = true
+			}
+		}
+		mu.Unlock()
+		if connected {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if !connected {
+		mu.Lock()
+		got := append([]State(nil), states...)
+		mu.Unlock()
+		t.Fatalf("never reached Connected, states = %v", got)
+	}
+	mu.Lock()
+	if len(states) == 0 || states[0] != StateConnecting {
+		t.Errorf("first state = %v, want Connecting", states)
+	}
+	mu.Unlock()
+
+	// The connection time must be recorded for `folderlink doctor`.
+	raw, err := os.ReadFile(filepath.Join(stateDir, LastConnectedName))
+	if err != nil {
+		t.Fatalf("last-connected file: %v", err)
+	}
+	if _, err := time.Parse(time.RFC3339, strings.TrimSpace(string(raw))); err != nil {
+		t.Fatalf("last-connected %q is not RFC3339: %v", raw, err)
+	}
+
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("bridge did not stop")
+	}
+}

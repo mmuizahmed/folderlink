@@ -8,19 +8,31 @@
 // windowsgui subsystem so no console window appears. On macOS and Linux
 // the plain folderlink binary is used, because LaunchAgents and systemd
 // user services never allocate a console.
+//
+// Install first copies the running binary to a stable directory
+// (%LOCALAPPDATA%\FolderLink on Windows, ~/.local/share/folderlink
+// elsewhere) and points the login task at that copy, so it keeps working
+// if the user moves or deletes the download folder. Install also starts
+// the bridge immediately and verifies the registration actually exists,
+// instead of silently succeeding.
 package service
 
 import (
 	"errors"
 	"fmt"
+	"log/slog"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
 
-// Install registers FolderLink to start at login. It prints what it did.
+// Install registers FolderLink to start at login, copies the binary to a
+// stable location first, starts the bridge now, and verifies the
+// registration actually exists.
 func Install() error {
 	switch runtime.GOOS {
 	case "windows":
@@ -34,18 +46,187 @@ func Install() error {
 	}
 }
 
-// Uninstall removes the login registration created by Install.
+// InstallDir is the stable directory the background copy lives in, so the
+// login task keeps working if the user moves or deletes the download folder.
+func InstallDir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return installDirFor(runtime.GOOS, os.Getenv("LOCALAPPDATA"), home)
+}
+
+// installDirFor is InstallDir with its inputs exposed, for tests.
+func installDirFor(goos, localAppData, home string) (string, error) {
+	if home == "" {
+		return "", errors.New("cannot find the user home directory")
+	}
+	switch goos {
+	case "windows":
+		base := localAppData
+		if base == "" {
+			base = filepath.Join(home, "AppData", "Local")
+		}
+		return filepath.Join(base, "FolderLink"), nil
+	case "darwin", "linux":
+		return filepath.Join(home, ".local", "share", "folderlink"), nil
+	default:
+		return "", errors.New("background install is not supported on this operating system")
+	}
+}
+
+// installBinaryName is the file the login task runs: the no-console build on
+// Windows, the plain binary everywhere else.
+func installBinaryName() string {
+	if runtime.GOOS == "windows" {
+		return "folderlink-bg.exe"
+	}
+	return "folderlink"
+}
+
+// stageBinary copies the running bridge into the install directory and
+// returns the path of the copy the login task should run. On Windows it
+// also copies folderlink-bg.exe next to it when present, and returns that
+// copy, because the windowsgui build has no console window. When the binary
+// is already in the install directory (the installer runs it from there),
+// there is nothing to copy.
+func stageBinary() (string, error) {
+	dir, err := InstallDir()
+	if err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", err
+	}
+	self, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	target := filepath.Join(dir, filepath.Base(self))
+	if !sameFile(self, target) {
+		if _, err := copyFile(self, target); err != nil {
+			return "", err
+		}
+	}
+	if runtime.GOOS == "windows" {
+		bg := filepath.Join(filepath.Dir(self), "folderlink-bg.exe")
+		bgTarget := filepath.Join(dir, "folderlink-bg.exe")
+		if _, err := os.Stat(bg); err == nil {
+			if !sameFile(bg, bgTarget) {
+				if _, err := copyFile(bg, bgTarget); err != nil {
+					return "", err
+				}
+			}
+			return bgTarget, nil
+		}
+	}
+	return target, nil
+}
+
+// sameFile reports whether two paths name the same file. Windows paths are
+// case-insensitive; everywhere else they are not.
+func sameFile(a, b string) bool {
+	a, b = filepath.Clean(a), filepath.Clean(b)
+	if runtime.GOOS == "windows" {
+		return strings.EqualFold(a, b)
+	}
+	return a == b
+}
+
+// copyFile copies src to dst atomically (via a temp file and rename) and
+// returns dst. It never modifies src, so re-installing over a running copy
+// on Windows only works after the old bridge is stopped first.
+func copyFile(src, dst string) (string, error) {
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return "", err
+	}
+	tmp := dst + ".new"
+	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+		_ = os.Remove(tmp)
+		return "", err
+	}
+	// The staged copy is a binary, so it has to be executable. Write it at
+	// 0600 and chmod after, rather than writing it 0755 directly.
+	if err := os.Chmod(tmp, 0o755); err != nil {
+		_ = os.Remove(tmp)
+		return "", err
+	}
+	if err := os.Rename(tmp, dst); err != nil {
+		_ = os.Remove(tmp)
+		return "", err
+	}
+	return dst, nil
+}
+
+// verifyInstalled checks the login registration actually exists after
+// Install. A create command can report success while the task is missing
+// (a stale task, a permissions quirk); this catches that.
+func verifyInstalled() error {
+	installed, err := Installed()
+	if err != nil {
+		return err
+	}
+	if !installed {
+		return errors.New("background install did not take effect: the login task was not created")
+	}
+	return nil
+}
+
+// Stop halts the background bridge without removing the login
+// registration, so an update can replace the binary. Best effort: a
+// bridge that is not running reports an error here, and that is fine.
+func Stop() error {
+	switch runtime.GOOS {
+	case "windows":
+		return run("schtasks", "/end", "/tn", "FolderLink")
+	case "darwin":
+		return run("launchctl", "unload", launchAgentPath())
+	case "linux":
+		return run("systemctl", "--user", "stop", "folderlink.service")
+	default:
+		return errors.New("background install is not supported on this operating system")
+	}
+}
+
+// Start launches the background bridge again after an update.
+func Start() error {
+	switch runtime.GOOS {
+	case "windows":
+		return run("schtasks", "/run", "/tn", "FolderLink")
+	case "darwin":
+		return run("launchctl", "load", launchAgentPath())
+	case "linux":
+		return run("systemctl", "--user", "start", "folderlink.service")
+	default:
+		return errors.New("background install is not supported on this operating system")
+	}
+}
+
+// Uninstall stops the bridge, removes the login registration created by
+// Install, and removes the staged copy. The staged files are best effort:
+// on Windows a still-running bridge locks its own exe, so they may be left
+// behind until the next login.
 func Uninstall() error {
 	switch runtime.GOOS {
 	case "windows":
-		return run("schtasks", "/delete", "/tn", "FolderLink", "/f")
+		// Stop the running bridge first, otherwise its exe is locked and
+		// the staged copy below cannot be removed.
+		_ = run("schtasks", "/end", "/tn", "FolderLink")
+		if err := run("schtasks", "/delete", "/tn", "FolderLink", "/f"); err != nil {
+			return err
+		}
+		// Best effort: the task is already gone, which is what stops
+		// the bridge; a leftover verb is just a dead menu entry.
+		_ = RemoveContextMenu()
+		return removeInstallDir()
 	case "darwin":
 		plist := launchAgentPath()
 		_ = run("launchctl", "unload", plist)
 		if err := os.Remove(plist); err != nil && !os.IsNotExist(err) {
 			return err
 		}
-		return nil
+		return removeInstallDir()
 	case "linux":
 		unit := systemdUnitPath()
 		// Best effort: on a machine without a user bus, disable fails, but
@@ -55,10 +236,21 @@ func Uninstall() error {
 			return err
 		}
 		_ = run("systemctl", "--user", "daemon-reload")
-		return nil
+		return removeInstallDir()
 	default:
 		return errors.New("background uninstall is not supported on this operating system")
 	}
+}
+
+// removeInstallDir deletes the staged copy. Errors are ignored: the
+// registration above is already gone, which is what stops the bridge.
+func removeInstallDir() error {
+	dir, err := InstallDir()
+	if err != nil {
+		return nil
+	}
+	_ = os.RemoveAll(dir)
+	return nil
 }
 
 // Installed reports whether the login registration exists.
@@ -83,9 +275,9 @@ func Installed() (bool, error) {
 		}
 		return false, err
 	case "linux":
-		out, err := exec.Command("systemctl", "--user", "is-enabled", "folderlink.service").Output()
+		out, err := runOutput("systemctl", "--user", "is-enabled", "folderlink.service")
 		if err == nil {
-			return strings.TrimSpace(string(out)) == "enabled", nil
+			return strings.TrimSpace(out) == "enabled", nil
 		}
 		return false, nil
 	default:
@@ -94,14 +286,16 @@ func Installed() (bool, error) {
 }
 
 func installWindows() error {
-	exe, err := backgroundBinary()
+	// Stop any running bridge first: the staged copy is locked while it runs.
+	_ = run("schtasks", "/end", "/tn", "FolderLink")
+	exe, err := stageBinary()
 	if err != nil {
 		return err
 	}
 	// /it runs the task in the interactive session, so the folder picker
 	// dialog can appear. /rl limited keeps it at the user's privilege.
 	// /f replaces an older FolderLink task.
-	return run(
+	if err := run(
 		"schtasks", "/create",
 		"/tn", "FolderLink",
 		"/tr", fmt.Sprintf(`"%s" run`, exe),
@@ -109,29 +303,34 @@ func installWindows() error {
 		"/it",
 		"/rl", "limited",
 		"/f",
-	)
-}
-
-// backgroundBinary is the executable the login task should run. On Windows
-// that is folderlink-bg.exe next to this binary when it exists, because the
-// windowsgui build has no console window. Everywhere else it is this binary.
-func backgroundBinary() (string, error) {
-	self, err := os.Executable()
-	if err != nil {
-		return "", err
+	); err != nil {
+		return err
 	}
-	if runtime.GOOS == "windows" {
-		dir := filepath.Dir(self)
-		bg := filepath.Join(dir, "folderlink-bg.exe")
-		if _, err := os.Stat(bg); err == nil {
-			return bg, nil
-		}
+	if err := verifyInstalled(); err != nil {
+		return err
 	}
-	return self, nil
+	// The Start Menu shortcut gives FolderLink its notification identity
+	// (AppUserModelID). Best effort: a missing shortcut only means
+	// toasts are silent, and doctor reports it.
+	if err := EnsureToastShortcut(); err != nil {
+		slog.Warn("notification shortcut was not created", "err", err.Error())
+	}
+	// The Explorer right-click verb. Best effort as well: a missing verb
+	// only means no context menu, and doctor reports it.
+	if err := RegisterContextMenu(); err != nil {
+		slog.Warn("Explorer context menu was not registered", "err", err.Error())
+	}
+	// Start it now, so the user does not have to log out and back in.
+	// A task that is already running reports an error here; that means the
+	// bridge is up, which is the outcome we want.
+	if err := run("schtasks", "/run", "/tn", "FolderLink"); err != nil && !strings.Contains(err.Error(), "already running") {
+		return fmt.Errorf("background task was created but could not be started: %w", err)
+	}
+	return nil
 }
 
 func installDarwin() error {
-	exe, err := backgroundBinary()
+	exe, err := stageBinary()
 	if err != nil {
 		return err
 	}
@@ -160,7 +359,11 @@ func installDarwin() error {
 	if err := os.WriteFile(plist, []byte(body), 0o600); err != nil {
 		return err
 	}
-	return run("launchctl", "load", plist)
+	// load starts the bridge now (RunAtLoad); verify it took effect.
+	if err := run("launchctl", "load", plist); err != nil {
+		return err
+	}
+	return verifyInstalled()
 }
 
 func launchAgentPath() string {
@@ -169,7 +372,7 @@ func launchAgentPath() string {
 }
 
 func installLinux() error {
-	exe, err := backgroundBinary()
+	exe, err := stageBinary()
 	if err != nil {
 		return err
 	}
@@ -201,7 +404,11 @@ WantedBy=default.target
 	if err := run("systemctl", "--user", "daemon-reload"); err != nil {
 		return err
 	}
-	return run("systemctl", "--user", "enable", "--now", "folderlink.service")
+	// --now starts the bridge immediately; verify it took effect.
+	if err := run("systemctl", "--user", "enable", "--now", "folderlink.service"); err != nil {
+		return err
+	}
+	return verifyInstalled()
 }
 
 func systemdUnitPath() string {
@@ -209,7 +416,9 @@ func systemdUnitPath() string {
 	return filepath.Join(home, ".config", "systemd", "user", "folderlink.service")
 }
 
-func run(name string, args ...string) error {
+// run, runOutput and httpGet are variables so tests can stub them; the
+// client tests already stub browser.Open the same way.
+var run = func(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -220,6 +429,21 @@ func run(name string, args ...string) error {
 		return err
 	}
 	return nil
+}
+
+var runOutput = func(name string, args ...string) (string, error) {
+	out, err := exec.Command(name, args...).CombinedOutput()
+	return string(out), err
+}
+
+var httpGet = func(rawURL string) (int, error) {
+	client := &http.Client{Timeout: 5 * time.Second}
+	res, err := client.Get(rawURL)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = res.Body.Close() }()
+	return res.StatusCode, nil
 }
 
 func isNotFound(err error) bool {

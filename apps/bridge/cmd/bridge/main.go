@@ -9,14 +9,17 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/client"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/config"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/identity"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/pair"
 	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/service"
+	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/update"
 )
 
 var version = "0.1.0"
@@ -35,6 +38,7 @@ func run(args []string) error {
 	webFlag := fs.String("web", "", "control panel URL")
 	homeFlag := fs.String("home", "", "config directory (default: FOLDERLINK_HOME or the user config dir)")
 	labelFlag := fs.String("label", "", "folder label")
+	trayFlag := fs.Bool("tray", false, "show the system tray icon while running")
 	cmd, rest := splitCommand(args)
 	if err := fs.Parse(orderFlagsFirst(rest)); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -84,7 +88,7 @@ func run(args []string) error {
 		if len(rest) != 0 {
 			return errors.New("run does not take arguments")
 		}
-		return runBridge(id, store, cfg)
+		return runBridge(id, store, cfg, *trayFlag || isBackgroundBinary())
 	case "allow":
 		if len(rest) != 1 {
 			return errors.New("usage: folderlink allow <directory>")
@@ -131,8 +135,48 @@ func run(args []string) error {
 		if err := service.Install(); err != nil {
 			return err
 		}
-		fmt.Println("FolderLink will start automatically when you log in.")
+		dir, err := service.InstallDir()
+		if err != nil || dir == "" {
+			fmt.Println("FolderLink will start automatically when you log in.")
+			return nil
+		}
+		if runtime.GOOS == "windows" {
+			fmt.Printf("Installed to %s. FolderLink starts at login and shows a tray icon.\n", dir)
+		} else {
+			fmt.Printf("Installed to %s. FolderLink starts at login with no terminal.\n", dir)
+		}
 		return nil
+	case "doctor":
+		if len(rest) != 0 {
+			return errors.New("doctor does not take arguments")
+		}
+		pairState := func(ctx context.Context) (string, error) {
+			st, err := pair.Client{BaseURL: cfg.Server}.Status(ctx, id)
+			if err != nil {
+				return "", err
+			}
+			return st.State, nil
+		}
+		checks := service.Doctor(service.DoctorConfig{
+			Server:    cfg.Server,
+			HomeDir:   store.Dir(),
+			PairState: pairState,
+		})
+		problems := 0
+		for _, c := range checks {
+			fmt.Printf("[%s] %s: %s\n", c.Status, c.Name, c.Detail)
+			if c.Status == service.CheckFail {
+				problems++
+			}
+		}
+		if problems == 0 {
+			fmt.Println("Everything looks good.")
+		} else {
+			fmt.Printf("%d problem(s) found.\n", problems)
+		}
+		return nil
+	case "update":
+		return runUpdate(cfg, rest)
 	case "uninstall":
 		if len(rest) != 0 {
 			return errors.New("uninstall does not take arguments")
@@ -147,14 +191,34 @@ func run(args []string) error {
 	}
 }
 
-func runBridge(id *identity.Identity, store *config.Store, cfg config.File) error {
+func runBridge(id *identity.Identity, store *config.Store, cfg config.File, trayMode bool) error {
+	if trayMode {
+		return runTrayBridge(id, store, cfg)
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})))
 	fmt.Println("FolderLink is running.")
 	fmt.Println("Leave this window open. An AI app can read a folder only while this window stays open.")
 	fmt.Println("The first time, your browser opens so you can connect this computer.")
-	return client.Run(ctx, client.Config{
+	// A console run never applies an update by itself: the user is here,
+	// so tell them one is available instead.
+	go func() {
+		checkCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+		rel, err := update.Check(checkCtx, update.DefaultClient(), version)
+		if err != nil || rel == nil {
+			return
+		}
+		fmt.Printf("FolderLink %s is available (you have %s). Run `folderlink update` to install it.\n", rel.Tag, version)
+	}()
+	return client.Run(ctx, clientConfig(id, store, cfg))
+}
+
+// clientConfig builds the client configuration shared by the console run
+// and the tray run.
+func clientConfig(id *identity.Identity, store *config.Store, cfg config.File) client.Config {
+	return client.Config{
 		Server:   cfg.Server,
 		Web:      cfg.Web,
 		Name:     deviceName(cfg.Name),
@@ -162,13 +226,14 @@ func runBridge(id *identity.Identity, store *config.Store, cfg config.File) erro
 		Identity: id,
 		Store:    store,
 		Pair:     pair.Client{BaseURL: cfg.Server},
-	})
+		StateDir: store.Dir(),
+	}
 }
 
 func splitCommand(args []string) (string, []string) {
 	known := map[string]bool{
 		"run": true, "allow": true, "unallow": true, "folders": true, "status": true, "version": true,
-		"install": true, "uninstall": true,
+		"install": true, "uninstall": true, "doctor": true, "update": true,
 	}
 	for i := 0; i < len(args); i++ {
 		arg := args[i]

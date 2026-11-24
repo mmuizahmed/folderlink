@@ -18,6 +18,10 @@ const (
 	TypeRequest  = "request"
 	TypeResponse = "response"
 	TypeError    = "error"
+	// TypeSettings is a server-push message: the worker sends it when a
+	// setting changes, so a running bridge learns the new mode without
+	// waiting for a reconnect.
+	TypeSettings = "settings"
 )
 
 // Message is one websocket frame. Payload is signed only for hello.
@@ -57,7 +61,7 @@ func (m Message) Marshal() ([]byte, error) {
 
 func knownType(t string) bool {
 	switch t {
-	case TypeHello, TypeHelloAck, TypePing, TypePong, TypeRequest, TypeResponse, TypeError:
+	case TypeHello, TypeHelloAck, TypePing, TypePong, TypeRequest, TypeResponse, TypeError, TypeSettings:
 		return true
 	default:
 		return false
