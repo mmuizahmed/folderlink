@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -347,6 +348,11 @@ func serveOnce(ctx context.Context, cfg Config) error {
 	defer cancel()
 	activity := make(chan struct{}, 1)
 	go watchIdle(sessCtx, cancel, cfg.IdleTimeout, activity)
+	// A folder added while the bridge is connected (Explorer menu,
+	// `folderlink allow`) only reaches the dashboard at the next hello.
+	// Watch the local folder list and reconnect when it changes, so the
+	// new folder appears in the dashboard with no manual restart.
+	go watchFolders(sessCtx, cancel, cfg)
 
 	errCh := make(chan error, 1)
 	go func() {
@@ -423,6 +429,70 @@ func watchIdle(ctx context.Context, cancel context.CancelFunc, idle time.Duratio
 		case <-timer.C:
 			cancel()
 			return
+		}
+	}
+}
+
+// folderSnapshot returns the bridge's current folder list as sorted
+// identity strings (id, label, path), for change detection. The second
+// result is false when the config cannot be read: a transient read
+// failure must never look like an empty folder list.
+func folderSnapshot(cfg Config) ([]string, bool) {
+	if cfg.Store == nil {
+		return nil, false
+	}
+	file, err := cfg.Store.Load()
+	if err != nil {
+		return nil, false
+	}
+	out := make([]string, 0, len(file.Folders))
+	for _, folder := range file.Folders {
+		out = append(out, folder.ID+"\x00"+folder.Label+"\x00"+folder.Path)
+	}
+	sort.Strings(out)
+	return out, true
+}
+
+// watchFolders ends the current session when the local folder list
+// changes, so Run reconnects and the next hello sends the new claims.
+// It follows the watchIdle pattern: cancel the session context and let
+// serveOnce return; Run's reconnect loop does the rest. The baseline is
+// taken when the watcher starts (before hello), so a folder added
+// between the baseline and hello can cause at most one harmless extra
+// reconnect, and a folder added after hello triggers exactly one. Only
+// the folder set matters: other config writes (the mode cache) must not
+// trigger a reconnect, and a failed config read is retried next tick
+// instead of reconnecting.
+func watchFolders(ctx context.Context, cancel context.CancelFunc, cfg Config) {
+	if cfg.Store == nil {
+		return
+	}
+	interval := cfg.PollInterval
+	if interval <= 0 {
+		interval = 2 * time.Second
+	}
+	last, haveBaseline := folderSnapshot(cfg)
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			now, ok := folderSnapshot(cfg)
+			if !ok {
+				continue
+			}
+			if !haveBaseline {
+				last, haveBaseline = now, true
+				continue
+			}
+			if !slices.Equal(last, now) {
+				slog.Info("folder list changed; reconnecting to re-send folder claims")
+				cancel()
+				return
+			}
+			last = now
 		}
 	}
 }

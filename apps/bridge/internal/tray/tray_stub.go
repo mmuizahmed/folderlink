@@ -17,3 +17,8 @@ func Run(ctx context.Context, _ Options) {
 
 // Quit is a no-op without a tray: Run returns when ctx ends.
 func Quit() {}
+
+// IconICO returns nil without a tray: there is no icon to share.
+func IconICO() []byte {
+	return nil
+}

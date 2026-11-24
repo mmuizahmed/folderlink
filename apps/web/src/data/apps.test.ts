@@ -32,7 +32,7 @@ describe("markForIdentity", () => {
 });
 
 describe("logoForIdentity", () => {
-  it("returns a bundled logo for chatgpt and claude, and null otherwise", () => {
+  it("returns a bundled logo for chatgpt, claude and muse, and null otherwise", () => {
     // Vite inlines these small SVGs as data URIs (or serves them as
     // files in other environments), so assert on the content, not the
     // exact URL shape.
@@ -46,7 +46,11 @@ describe("logoForIdentity", () => {
     expect(claude?.src).toMatch(/data:image\/svg\+xml,|claude\.svg$/);
     expect(claude?.src).toContain("Claude");
     expect(claude?.invert).toBe(true);
-    expect(logoForIdentity("muse")).toBeNull();
+    const muse = logoForIdentity("muse");
+    expect(muse).not.toBeNull();
+    expect(muse?.src).toMatch(/data:image\/svg\+xml,|muse\.svg$/);
+    expect(muse?.src).toContain("0082FB");
+    expect(muse?.invert).toBe(false);
     expect(logoForIdentity("unknown")).toBeNull();
   });
 });

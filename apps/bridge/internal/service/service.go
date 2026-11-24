@@ -173,6 +173,39 @@ func verifyInstalled() error {
 	return nil
 }
 
+// RepairLogonPower clears the logon task's battery conditions on a
+// machine that was installed before install started doing it, and
+// verifies the repair took effect by re-reading the task settings. It is
+// what `folderlink doctor --fix` runs. Windows-only: the other platforms
+// have no such conditions.
+func RepairLogonPower() error {
+	if runtime.GOOS != "windows" {
+		return errors.New("the logon task is Windows-only")
+	}
+	installed, err := Installed()
+	if err != nil {
+		return err
+	}
+	if !installed {
+		return errors.New("not installed — run folderlink install first")
+	}
+	if err := clearBatteryConditions(); err != nil {
+		return err
+	}
+	out, err := runOutput("schtasks", "/query", "/tn", "FolderLink", "/xml")
+	if err != nil {
+		return fmt.Errorf("could not verify the repair: %w", err)
+	}
+	blocked, err := batteryConditionsBlocked(out)
+	if err != nil {
+		return fmt.Errorf("could not verify the repair: %w", err)
+	}
+	if blocked {
+		return errors.New("the battery conditions are still set — try running from an elevated PowerShell")
+	}
+	return nil
+}
+
 // Stop halts the background bridge without removing the login
 // registration, so an update can replace the binary. Best effort: a
 // bridge that is not running reports an error here, and that is fine.
@@ -308,6 +341,13 @@ func installWindows() error {
 	}
 	if err := verifyInstalled(); err != nil {
 		return err
+	}
+	// schtasks /create leaves the AC-power conditions on: a laptop on
+	// battery at logon silently skips the task, so the bridge never
+	// starts and nothing reports it. Clear them now. Best effort: a
+	// failure only means doctor will flag the condition.
+	if err := clearBatteryConditions(); err != nil {
+		slog.Warn("logon task may not start on battery power", "err", err.Error())
 	}
 	// The Start Menu shortcut gives FolderLink its notification identity
 	// (AppUserModelID). Best effort: a missing shortcut only means

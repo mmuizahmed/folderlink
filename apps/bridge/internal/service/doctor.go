@@ -52,6 +52,7 @@ func Doctor(cfg DoctorConfig) []Check {
 		checkStagedCopy(),
 		checkInstalled(installed),
 		checkEnabled(installed),
+		checkLogonPower(installed),
 		checkToastShortcut(),
 		checkContextMenu(),
 		checkProcessRunning(),
@@ -67,10 +68,12 @@ func checkStagedCopy() Check {
 		return Check{"Background copy", CheckFail, "cannot find the install location: " + err.Error()}
 	}
 	// The task runs the no-console build on Windows when it was staged;
-	// otherwise it runs the console copy.
+	// otherwise it runs the console copy. The detail names no binary:
+	// the background build's filename is an implementation detail, and
+	// the product presents itself as FolderLink everywhere.
 	bg := filepath.Join(dir, "folderlink-bg.exe")
 	if _, err := os.Stat(bg); err == nil {
-		return Check{"Background copy", CheckOK, "installed copy is at " + bg}
+		return Check{"Background copy", CheckOK, "background service is installed in " + dir}
 	}
 	plain := filepath.Join(dir, installBinaryName())
 	if _, err := os.Stat(plain); err == nil {
@@ -162,6 +165,39 @@ func checkEnabled(installed bool) Check {
 	}
 }
 
+// checkLogonPower reports whether the Windows logon task will start on
+// battery power. The task can be Ready and Enabled and still never fire
+// at a battery logon: schtasks /create leaves the AC-power conditions on
+// by default, and Windows then silently skips the trigger. The fix is
+// `folderlink doctor --fix` (or a re-install, which clears them now).
+func checkLogonPower(installed bool) Check {
+	if !installed {
+		return Check{"Logon power", CheckSkip, "not installed"}
+	}
+	if runtime.GOOS != "windows" {
+		return Check{"Logon power", CheckSkip, "Windows-only"}
+	}
+	out, err := runOutput("schtasks", "/query", "/tn", "FolderLink", "/xml")
+	return checkLogonPowerXML(out, err)
+}
+
+// checkLogonPowerXML turns a schtasks /xml dump into the Logon power
+// check. It is a separate function so tests can feed it canned XML
+// without a Windows machine.
+func checkLogonPowerXML(out string, err error) Check {
+	if err != nil {
+		return Check{"Logon power", CheckFail, "cannot read the task settings: " + err.Error()}
+	}
+	blocked, err := batteryConditionsBlocked(out)
+	if err != nil {
+		return Check{"Logon power", CheckFail, "cannot read the task settings: " + err.Error()}
+	}
+	if blocked {
+		return Check{"Logon power", CheckFail, "the login task will not start on battery power — run folderlink doctor --fix (or folderlink install again)"}
+	}
+	return Check{"Logon power", CheckOK, "starts at login on battery power too"}
+}
+
 func checkToastShortcut() Check {
 	if runtime.GOOS != "windows" {
 		return Check{"Notifications", CheckSkip, "notifications are Windows-only"}
@@ -189,7 +225,7 @@ func checkProcessRunning() Check {
 		// as folderlink.exe, so that name would always match.
 		out, err := runOutput("tasklist", "/fi", "imagename eq folderlink-bg.exe", "/fo", "csv")
 		if err == nil && strings.Contains(out, "folderlink-bg.exe") {
-			return Check{"Bridge process", CheckOK, "folderlink-bg.exe is running"}
+			return Check{"Bridge process", CheckOK, "the background bridge is running"}
 		}
 		return Check{"Bridge process", CheckFail, "the background bridge is not running — run folderlink install, then check the tray icon"}
 	default:

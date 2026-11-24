@@ -147,8 +147,17 @@ func run(args []string) error {
 		}
 		return nil
 	case "doctor":
-		if len(rest) != 0 {
-			return errors.New("doctor does not take arguments")
+		fix := false
+		if len(rest) == 1 && rest[0] == "--fix" {
+			fix = true
+		} else if len(rest) != 0 {
+			return errors.New("doctor takes no arguments except --fix")
+		}
+		if fix {
+			if err := service.RepairLogonPower(); err != nil {
+				return err
+			}
+			fmt.Println("Repaired: the login task will now start on battery power too.")
 		}
 		pairState := func(ctx context.Context) (string, error) {
 			st, err := pair.Client{BaseURL: cfg.Server}.Status(ctx, id)

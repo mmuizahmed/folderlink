@@ -43,6 +43,14 @@ func decodeIcon(b64 string) []byte {
 	return b
 }
 
+// IconICO returns the decoded .ico bytes for the FolderLink mark, or nil
+// when the icon did not decode. Other packages use it for places that need
+// the mark as a file — the Explorer context menu points at a real .ico on
+// disk, which the installer writes from these bytes.
+func IconICO() []byte {
+	return iconICO
+}
+
 // Run starts the system tray on the main goroutine and blocks until the user
 // quits or ctx ends. It must be called from the main goroutine: on macOS the
 // tray needs the main thread, and on Windows the message loop lives here.
