@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Drives the local vertical slice against a worker that is already running.
-# Start it first: pnpm --filter @mcp-bridge/worker dev
+# Start it first: pnpm --filter @folderlink/worker dev
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -11,7 +11,7 @@ mkdir -p "$PROJ/notes"
 printf 'hello from the bridge\n' > "$PROJ/notes/hello.txt"
 printf 'SUPERSECRETVALUE\n' > "$PROJ/notes/.env"
 
-export MCP_BRIDGE_HOME="$HOME_DIR"
+export FOLDERLINK_HOME="$HOME_DIR"
 (
   cd "$ROOT/apps/bridge"
   go run ./cmd/bridge --server "$SERVER" allow "$PROJ/notes" --label notes

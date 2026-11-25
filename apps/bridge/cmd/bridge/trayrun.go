@@ -13,15 +13,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/browser"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/client"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/config"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/identity"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/mode"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/notify"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/service"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/tray"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/update"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/browser"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/client"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/config"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/identity"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/mode"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/notify"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/service"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/tray"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/update"
 )
 
 // isBackgroundBinary reports whether this process is the no-console build.
@@ -255,7 +255,7 @@ func applyRelease(ctx context.Context, rel *update.Release) error {
 		return err
 	}
 	if !installed {
-		_ = browser.Open("https://github.com/mmuizahmed/mcp-bridge/releases/latest")
+		_ = browser.Open("https://github.com/mmuizahmed/folderlink/releases/latest")
 		return fmt.Errorf("FolderLink is not installed as a background program; download the release from the browser")
 	}
 	dir, err := service.InstallDir()

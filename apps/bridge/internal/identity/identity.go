@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/protocol"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/protocol"
 )
 
 // Identity is the long-lived device keypair.

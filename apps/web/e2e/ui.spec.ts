@@ -268,7 +268,7 @@ test.describe("visual and glitch checks", () => {
       await expect(footer.getByRole("link", { name: "Terms" })).toBeVisible();
       await expect(footer.getByRole("link", { name: "GitHub" })).toHaveAttribute(
         "href",
-        "https://github.com/mmuizahmed/mcp-bridge",
+        "https://github.com/mmuizahmed/folderlink",
       );
     }
     expect(errors).toEqual([]);

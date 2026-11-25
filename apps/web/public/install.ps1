@@ -1,7 +1,7 @@
 # FolderLink installer for Windows. No administrator rights.
 $ErrorActionPreference = "Stop"
 
-$Repo = "mmuizahmed/mcp-bridge"
+$Repo = "mmuizahmed/folderlink"
 $Asset = "folderlink_windows_amd64.zip"
 # Old layout (releases before the single-zip change) shipped the background
 # binary in its own zip. New releases put both exes in $Asset; this is only

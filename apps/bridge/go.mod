@@ -1,4 +1,4 @@
-module github.com/mmuizahmed/mcp-bridge/apps/bridge
+module github.com/mmuizahmed/folderlink/apps/bridge
 
 go 1.22
 

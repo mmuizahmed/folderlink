@@ -36,9 +36,9 @@ Done (Nov 23, 2026, verified with a real client connection):
 
 ## Phase 4 — Later capabilities
 
-TODO:
+Done:
 
 - A one-line install script for the bridge binary.
 - File write.
 - Command execution.
-- Approval mode, where the person at the laptop confirms a tool call before it runs.
+- Approval mode, where the person at the laptop confirms a tool call before it runs. Every write needs dashboard approval; the mode setting (AI approval or manual approval) is in the dashboard Settings.

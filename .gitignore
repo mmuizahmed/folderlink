@@ -10,8 +10,10 @@ blob-report
 .dev.vars
 *.log
 .DS_Store
-apps/bridge/mcp-bridge
-apps/bridge/mcp-bridge.exe
+apps/bridge/folderlink
+apps/bridge/folderlink.exe
+apps/bridge/folderlink-bg
+apps/bridge/folderlink-bg.exe
 apps/bridge/*.test
 .env
 .env.*

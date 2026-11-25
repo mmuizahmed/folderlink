@@ -11,7 +11,7 @@ below exist; until then it is skipped and releases ship unsigned.
 ## 1. Apply (free, takes days)
 
 1. Go to **https://signpath.org/apply** and apply for the free
-   open-source program. Link this repo (`github.com/mmuizahmed/mcp-bridge`,
+   open-source program. Link this repo (`github.com/mmuizahmed/folderlink`,
    MIT license) and describe FolderLink: a self-hosted MCP bridge that lets
    AI apps read folders on the user's own laptop.
 2. Wait for approval. New/small projects are sometimes rejected; if that

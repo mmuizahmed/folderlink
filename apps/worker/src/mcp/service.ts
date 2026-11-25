@@ -1,4 +1,4 @@
-import type { ToolResult } from "@mcp-bridge/shared";
+import type { ToolResult } from "@folderlink/shared";
 import type { InvokeRequest } from "../device/control.ts";
 import type { Env } from "../env.ts";
 import { publicBaseUrl } from "../env.ts";

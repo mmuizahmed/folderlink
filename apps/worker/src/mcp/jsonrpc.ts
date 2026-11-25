@@ -1,5 +1,5 @@
-import { SUPPORTED_MCP_PROTOCOL_VERSIONS } from "@mcp-bridge/shared";
-import type { ToolResult } from "@mcp-bridge/shared";
+import { SUPPORTED_MCP_PROTOCOL_VERSIONS } from "@folderlink/shared";
+import type { ToolResult } from "@folderlink/shared";
 import { parseToolCall, type ParsedCall } from "./args.ts";
 
 export interface McpDeps {

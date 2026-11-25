@@ -6,9 +6,9 @@ import { Mark } from "../components/Icons.tsx";
 import { installCommandForThisComputer } from "../downloads.ts";
 import { usePageTitle, useSession } from "../session.ts";
 
-const RELEASES = "https://github.com/mmuizahmed/mcp-bridge/releases";
-const SOURCE = "https://github.com/mmuizahmed/mcp-bridge";
-const LATEST = "https://github.com/mmuizahmed/mcp-bridge/releases/latest/download";
+const RELEASES = "https://github.com/mmuizahmed/folderlink/releases";
+const SOURCE = "https://github.com/mmuizahmed/folderlink";
+const LATEST = "https://github.com/mmuizahmed/folderlink/releases/latest/download";
 
 // InstallCommand is the primary install path: the one-line installer for
 // this computer, as a copyable code block. The ZIP download is only a

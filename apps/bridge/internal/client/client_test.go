@@ -16,10 +16,10 @@ import (
 
 	"github.com/coder/websocket"
 
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/browser"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/config"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/identity"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/protocol"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/browser"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/config"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/identity"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/protocol"
 )
 
 func TestRunAnswersReadAndRejectsEscape(t *testing.T) {

@@ -7,9 +7,9 @@ import (
 	"errors"
 	"path/filepath"
 
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/config"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/guard"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/pick"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/config"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/guard"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/pick"
 )
 
 type request struct {

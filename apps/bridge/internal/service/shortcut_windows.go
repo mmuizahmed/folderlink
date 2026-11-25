@@ -11,7 +11,7 @@ import (
 
 	"github.com/go-ole/go-ole"
 
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/notify"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/notify"
 )
 
 // toastShortcutPath is the Start Menu shortcut that gives FolderLink its

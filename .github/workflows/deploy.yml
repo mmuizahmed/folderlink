@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   worker:
-    if: github.ref == 'refs/heads/main' && github.repository == 'mmuizahmed/mcp-bridge'
+    if: github.ref == 'refs/heads/main' && github.repository == 'mmuizahmed/folderlink'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production
@@ -32,7 +32,7 @@ jobs:
       - name: Reject a local production config
         run: node scripts/deploy-preflight.mjs
       - name: Build the website
-        run: pnpm --filter @mcp-bridge/web build
+        run: pnpm --filter @folderlink/web build
       - name: Confirm the Cloudflare account
         working-directory: apps/worker
         run: pnpm exec wrangler whoami
@@ -68,7 +68,7 @@ jobs:
   # not, so re-running Deploy on an unchanged main creates nothing.
   tag-release:
     needs: worker
-    if: github.ref == 'refs/heads/main' && github.repository == 'mmuizahmed/mcp-bridge'
+    if: github.ref == 'refs/heads/main' && github.repository == 'mmuizahmed/folderlink'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

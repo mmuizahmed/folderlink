@@ -1,4 +1,4 @@
-import type { ToolResult } from "@mcp-bridge/shared";
+import type { ToolResult } from "@folderlink/shared";
 
 export interface InvokeRequest {
   op:

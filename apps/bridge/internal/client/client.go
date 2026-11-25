@@ -20,16 +20,16 @@ import (
 
 	"github.com/coder/websocket"
 
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/approve"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/browser"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/config"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/execrun"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/identity"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/mode"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/notify"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/pair"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/protocol"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/tools"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/approve"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/browser"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/config"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/execrun"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/identity"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/mode"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/notify"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/pair"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/protocol"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/tools"
 )
 
 var (

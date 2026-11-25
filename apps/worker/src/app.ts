@@ -3,7 +3,7 @@ import {
   isRecord,
   parsePairBeginPayload,
   parsePairStatusPayload,
-} from "@mcp-bridge/shared";
+} from "@folderlink/shared";
 import { exchangeGoogleCode, googleAuthURL, googleConfigured } from "./auth/google.ts";
 import { nextFromLoginState, packLoginState, safeNext } from "./auth/return.ts";
 import {

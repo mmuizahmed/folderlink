@@ -105,6 +105,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Install Playwright
-        run: pnpm --filter @mcp-bridge/web exec playwright install --with-deps chromium
+        run: pnpm --filter @folderlink/web exec playwright install --with-deps chromium
       - name: Run UI tests
-        run: pnpm --filter @mcp-bridge/web test:ui
+        run: pnpm --filter @folderlink/web test:ui

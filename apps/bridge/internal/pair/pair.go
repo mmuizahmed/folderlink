@@ -13,8 +13,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/identity"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/protocol"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/identity"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/protocol"
 )
 
 // HTTPError is a non-2xx response from the worker.

@@ -14,8 +14,8 @@ import (
 
 	"github.com/getlantern/systray"
 
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/browser"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/mode"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/browser"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/mode"
 )
 
 // The tray icons are stored as base64 text, not binaries: the GitHub push

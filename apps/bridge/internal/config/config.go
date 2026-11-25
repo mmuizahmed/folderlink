@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/guard"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/identity"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/guard"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/identity"
 )
 
 const (

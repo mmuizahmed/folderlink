@@ -3,8 +3,8 @@ package tray
 import (
 	"testing"
 
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/client"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/mode"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/client"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/mode"
 )
 
 func TestStatusTitle(t *testing.T) {

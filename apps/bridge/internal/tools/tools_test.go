@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/approve"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/config"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/execrun"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/mode"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/pick"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/approve"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/config"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/execrun"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/mode"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/pick"
 )
 
 func TestDispatchReadsOnlyTheAllowlist(t *testing.T) {

@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/config"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/service"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/update"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/config"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/service"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/update"
 )
 
 // runUpdate is `folderlink update`: check GitHub for a newer release,

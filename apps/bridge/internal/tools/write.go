@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/approve"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/config"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/execrun"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/guard"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/mode"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/approve"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/config"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/execrun"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/guard"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/mode"
 )
 
 // Deps are the optional write/exec collaborators. A nil Approve store or

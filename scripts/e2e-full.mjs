@@ -358,7 +358,7 @@ async function main() {
     "pnpm",
     [
       "--filter",
-      "@mcp-bridge/worker",
+      "@folderlink/worker",
       "exec",
       "wrangler",
       "d1",
@@ -376,7 +376,7 @@ async function main() {
     "pnpm",
     [
       "--filter",
-      "@mcp-bridge/worker",
+      "@folderlink/worker",
       "exec",
       "wrangler",
       "dev",

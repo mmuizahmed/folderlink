@@ -5,11 +5,11 @@
     <img alt="FolderLink" src="docs/brand/logo-lockup.svg" height="64">
   </picture>
   <p><strong>Your folders. Your AI.</strong></p>
-  <p>Let ChatGPT, Claude and other AI apps read the project folders you choose, right from their website. No uploads, no copy-paste. Read-only, logged, and revocable in one click.</p>
+  <p>Let ChatGPT, Claude and other AI apps read the project folders you choose, right from their website. No uploads, no copy-paste. Approved, logged, and revocable in one click.</p>
   <p>
-    <a href="https://github.com/mmuizahmed/mcp-bridge/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/mmuizahmed/mcp-bridge/actions/workflows/ci.yml/badge.svg"></a>
+    <a href="https://github.com/mmuizahmed/folderlink/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/mmuizahmed/folderlink/actions/workflows/ci.yml/badge.svg"></a>
     <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-22c55e"></a>
-    <a href="https://github.com/mmuizahmed/mcp-bridge/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/mmuizahmed/mcp-bridge?label=release"></a>
+    <a href="https://github.com/mmuizahmed/folderlink/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/mmuizahmed/folderlink?label=release"></a>
     <a href="https://go.dev/"><img alt="Go 1.22" src="https://img.shields.io/badge/go-1.22-00ADD8"></a>
   </p>
   <p>
@@ -72,7 +72,7 @@ curl -fsSL https://folderlink.muiz.pk/install.sh | sh
 
 The installer checks `checksums.txt`, puts FolderLink in your user directory, and opens the browser to connect this computer. Add a folder from the dashboard. In ChatGPT or Claude, add `https://folderlink.muiz.pk/mcp`.
 
-Or install by hand from [GitHub Releases](https://github.com/mmuizahmed/mcp-bridge/releases): download the archive for your computer (on Windows, both `folderlink_windows_amd64.zip` and `folderlink-bg_windows_amd64.zip`), unzip into one folder, and run `folderlink install` — not `folderlink` on its own. Running `folderlink` directly opens a terminal window, and the connection dies when you close it. `folderlink install` copies the app to a stable folder, starts it at login, and shows a FolderLink icon in the system tray (Windows) — click it for the connection status, the dashboard, restart, or quit. No terminal window. If something looks wrong, run `folderlink doctor`.
+Or install by hand from [GitHub Releases](https://github.com/mmuizahmed/folderlink/releases): download the archive for your computer (on Windows, `folderlink_windows_amd64.zip` — or `folderlink_windows_arm64.zip` on Arm — which holds both the app and the background service), unzip into one folder, and run `folderlink install` — not `folderlink` on its own. Running `folderlink` directly opens a terminal window, and the connection dies when you close it. `folderlink install` copies the app to a stable folder, starts it at login, and shows a FolderLink icon in the system tray (Windows) — click it for the connection status, the dashboard, restart, or quit. No terminal window. If something looks wrong, run `folderlink doctor`.
 
 ```mermaid
 sequenceDiagram
@@ -99,7 +99,7 @@ sequenceDiagram
 
 ## Security
 
-- Reads only. FolderLink cannot write files or run commands.
+- Writes and commands exist, but only behind dashboard approval: every write needs your approval here first, and commands run only from an allowlist.
 - The folder list is enforced on your laptop. The server cannot add a path.
 - `.env`, keys, and certificates are refused by default.
 - The laptop holds an Ed25519 device key. The server checks it on every connection.
@@ -134,7 +134,7 @@ Local worker, pairing, and MCP Inspector steps are in [docs/DEVELOPMENT.md](docs
 
 ## Roadmap
 
-Later: writing files, running commands, and asking before each action. The list is [docs/ROADMAP.md](docs/ROADMAP.md).
+Shipped: writing files, running commands, and asking before each action. The list is [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## License
 

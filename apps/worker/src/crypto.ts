@@ -1,4 +1,4 @@
-import { canonicalJSON } from "@mcp-bridge/shared";
+import { canonicalJSON } from "@folderlink/shared";
 
 export async function sha256Hex(value: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));

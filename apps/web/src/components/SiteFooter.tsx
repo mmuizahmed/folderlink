@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-const SOURCE = "https://github.com/mmuizahmed/mcp-bridge";
+const SOURCE = "https://github.com/mmuizahmed/folderlink";
 
 export function SiteFooter() {
   return (

@@ -15,7 +15,7 @@ pnpm test
 
 ```bash
 cp apps/worker/.dev.vars.example apps/worker/.dev.vars
-pnpm --filter @mcp-bridge/worker exec wrangler d1 migrations apply folderlink --local
+pnpm --filter @folderlink/worker exec wrangler d1 migrations apply folderlink --local
 ```
 
 Terminal 1, the worker:

@@ -3,10 +3,10 @@ import { Link } from "react-router-dom";
 import { SiteFooter } from "../components/SiteFooter.tsx";
 import { Mark } from "../components/Icons.tsx";
 
-const ISSUES = "https://github.com/mmuizahmed/mcp-bridge/issues";
-const SOURCE = "https://github.com/mmuizahmed/mcp-bridge";
-const SECURITY = "https://github.com/mmuizahmed/mcp-bridge/blob/main/SECURITY.md";
-const SELF_HOST = "https://github.com/mmuizahmed/mcp-bridge/blob/main/docs/SELF-HOSTING.md";
+const ISSUES = "https://github.com/mmuizahmed/folderlink/issues";
+const SOURCE = "https://github.com/mmuizahmed/folderlink";
+const SECURITY = "https://github.com/mmuizahmed/folderlink/blob/main/SECURITY.md";
+const SELF_HOST = "https://github.com/mmuizahmed/folderlink/blob/main/docs/SELF-HOSTING.md";
 
 export function LegalLayout({ title, children }: { title: string; children: ReactNode }) {
   return (

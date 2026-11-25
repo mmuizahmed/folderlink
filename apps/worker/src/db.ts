@@ -1,4 +1,4 @@
-import { PAIRING_ALPHABET, formatPairingCode, normalizePairingCode } from "@mcp-bridge/shared";
+import { PAIRING_ALPHABET, formatPairingCode, normalizePairingCode } from "@folderlink/shared";
 import { sha256Hex } from "./crypto.ts";
 import type { FolderRow } from "./routing.ts";
 

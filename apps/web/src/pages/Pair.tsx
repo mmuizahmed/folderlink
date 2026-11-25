@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { normalizePairingCode } from "@mcp-bridge/shared";
+import { normalizePairingCode } from "@folderlink/shared";
 import { AccountMenu, Avatar } from "../components/AccountMenu.tsx";
 import { GoogleButton } from "../components/GoogleButton.tsx";
 import { IconLaptop, Mark } from "../components/Icons.tsx";

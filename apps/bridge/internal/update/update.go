@@ -41,7 +41,7 @@ import (
 	"time"
 )
 
-const Repo = "mmuizahmed/mcp-bridge"
+const Repo = "mmuizahmed/folderlink"
 
 // APIBase is the releases/latest endpoint. It is a variable so tests can
 // point it at a local server.

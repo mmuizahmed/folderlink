@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/sys/windows/registry"
 
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/tray"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/tray"
 )
 
 // The Explorer right-click verb is a plain registry entry, not a COM shell

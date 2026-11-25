@@ -15,8 +15,8 @@ package tray
 import (
 	"sync"
 
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/client"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/mode"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/client"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/mode"
 )
 
 // Options controls the tray menu.

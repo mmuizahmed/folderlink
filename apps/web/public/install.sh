@@ -2,7 +2,7 @@
 # FolderLink installer for macOS and Linux. No root required.
 set -eu
 
-repo="mmuizahmed/mcp-bridge"
+repo="mmuizahmed/folderlink"
 os=$(uname -s)
 arch=$(uname -m)
 case "$os:$arch" in

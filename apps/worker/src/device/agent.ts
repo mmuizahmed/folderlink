@@ -1,5 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
-import { parseEnvelope, parseHelloPayload, type ToolResult } from "@mcp-bridge/shared";
+import { parseEnvelope, parseHelloPayload, type ToolResult } from "@folderlink/shared";
 import { freshTimestamp, verifySignature } from "../crypto.ts";
 import {
   getWriteApprovalMode,

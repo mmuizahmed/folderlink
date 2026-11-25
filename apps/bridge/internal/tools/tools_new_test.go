@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/config"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/config"
 )
 
 func TestDispatchNewReadTools(t *testing.T) {

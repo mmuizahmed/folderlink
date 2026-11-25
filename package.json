@@ -14,8 +14,8 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "vitest run && pnpm test:go",
     "test:go": "cd apps/bridge && go test ./...",
-    "dev:web": "pnpm --filter @mcp-bridge/web dev",
-    "dev:worker": "pnpm --filter @mcp-bridge/worker dev",
+    "dev:web": "pnpm --filter @folderlink/web dev",
+    "dev:worker": "pnpm --filter @folderlink/worker dev",
     "setup": "node scripts/setup-host.mjs"
   },
   "pnpm": {

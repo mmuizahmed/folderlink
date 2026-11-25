@@ -1,4 +1,4 @@
-const RELEASE = "https://github.com/mmuizahmed/mcp-bridge/releases/latest/download";
+const RELEASE = "https://github.com/mmuizahmed/folderlink/releases/latest/download";
 
 // installCommandForThisComputer is the one-line install for this computer:
 // PowerShell on Windows, the shell installer everywhere else. It is the

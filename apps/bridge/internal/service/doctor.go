@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/client"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/client"
 )
 
 // Check statuses.

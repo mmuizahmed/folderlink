@@ -14,12 +14,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/client"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/config"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/identity"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/pair"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/service"
-	"github.com/mmuizahmed/mcp-bridge/apps/bridge/internal/update"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/client"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/config"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/identity"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/pair"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/service"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/update"
 )
 
 var version = "0.1.0"

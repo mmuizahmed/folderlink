@@ -1,5 +1,5 @@
 {
-  "name": "@mcp-bridge/web",
+  "name": "@folderlink/web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
   "dependencies": {
     "@fontsource/inter": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
-    "@mcp-bridge/shared": "workspace:*",
+    "@folderlink/shared": "workspace:*",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^6.30.1"

@@ -18,7 +18,7 @@ The top of the file is for `wrangler dev`. `WEB_ORIGIN` is the Vite app on `http
 A self-hosted copy creates its own database and pastes the printed id into `[[env.production.d1_databases]]`:
 
 ```bash
-pnpm --filter @mcp-bridge/worker exec wrangler d1 create folderlink
+pnpm --filter @folderlink/worker exec wrangler d1 create folderlink
 ```
 
 Leave `DEV_AUTH` unset. That switch is only for localhost. `node scripts/deploy-preflight.mjs` rejects a production config that still has the placeholder database id `00000000-0000-0000-0000-000000000001`, a `WEB_ORIGIN` or `PUBLIC_BASE_URL` on localhost or `127.0.0.1`, or `DEV_AUTH`.
@@ -34,14 +34,14 @@ The production Worker serves `apps/web/dist` with Workers Static Assets. A path 
 Build the site, apply the remote migrations, then deploy:
 
 ```bash
-pnpm --filter @mcp-bridge/web build
-pnpm --filter @mcp-bridge/worker exec wrangler d1 migrations apply folderlink --env production --remote
-pnpm --filter @mcp-bridge/worker exec wrangler deploy --env production
+pnpm --filter @folderlink/web build
+pnpm --filter @folderlink/worker exec wrangler d1 migrations apply folderlink --env production --remote
+pnpm --filter @folderlink/worker exec wrangler deploy --env production
 ```
 
 ## Manual deploy
 
-`.github/workflows/deploy.yml` starts only from `workflow_dispatch`. The job runs in the `production` environment, with a 15 minute limit, and only when the ref is `refs/heads/main` in `mmuizahmed/mcp-bridge`. Deploys share the `deploy-production` concurrency group, and a deploy that is already running is left to finish. Add a required reviewer on the `production` environment before the first run.
+`.github/workflows/deploy.yml` starts only from `workflow_dispatch`. The job runs in the `production` environment, with a 15 minute limit, and only when the ref is `refs/heads/main` in `mmuizahmed/folderlink`. Deploys share the `deploy-production` concurrency group, and a deploy that is already running is left to finish. Add a required reviewer on the `production` environment before the first run.
 
 The job checks the Wrangler config, builds the website, runs `wrangler whoami` and `wrangler d1 list`, applies migrations, then deploys. Put `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` on the `production` environment.
 
