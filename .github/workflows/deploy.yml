@@ -73,6 +73,11 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: write
+      # The dispatch step calls the workflow-dispatch API, which requires
+      # actions: write. contents: write alone is not enough — without
+      # this the dispatch fails with 403 "Resource not accessible by
+      # integration" even though the tag push succeeds.
+      actions: write
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
