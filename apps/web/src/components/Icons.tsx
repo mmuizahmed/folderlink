@@ -60,6 +60,53 @@ export function IconActivity() {
   );
 }
 
+export function IconSearch() {
+  return (
+    <Svg>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </Svg>
+  );
+}
+
+export function IconShield() {
+  return (
+    <Svg>
+      <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" />
+      <path d="m9 12 2 2 4-4" />
+    </Svg>
+  );
+}
+
+export function IconTerminal() {
+  return (
+    <Svg>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="m7 9 3 3-3 3" />
+      <path d="M13 15h5" />
+    </Svg>
+  );
+}
+
+export function IconRefresh() {
+  return (
+    <Svg>
+      <path d="M20 12a8 8 0 1 1-2.3-5.6" />
+      <path d="M20 3v4h-4" />
+    </Svg>
+  );
+}
+
+export function IconDownload() {
+  return (
+    <Svg>
+      <path d="M12 3v12" />
+      <path d="m7 11 5 5 5-5" />
+      <path d="M4 21h16" />
+    </Svg>
+  );
+}
+
 export function IconSettings() {
   return (
     <Svg>
