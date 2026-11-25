@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
   ActivityList,
+  AppList,
   DiffView,
   FolderDetails,
   FolderSummary,
@@ -118,6 +119,7 @@ describe("SettingsSection", () => {
     expect(ai.match(/checked=""/g)?.length).toBe(1);
     expect(ai).toContain('class="mode-option selected"');
     expect(ai).toContain("AI approval");
+    expect(ai).toContain("Every write still needs your approval here in the dashboard.");
 
     const manual = renderToStaticMarkup(
       createElement(SettingsSection, {
@@ -144,7 +146,19 @@ describe("SettingsSection", () => {
     );
     expect(html).toContain("Saved.");
     expect(html).toContain("Sign out");
-    expect(html).toContain("ChatGPT and Claude connect from their own apps.");
+    expect(html).toContain("signed in as muiz@example.com");
+    expect(html).toContain("Signing out ends this browser session");
+    expect(html).toContain("your folders and approvals stay");
+  });
+});
+
+describe("AppList", () => {
+  it("names all three apps in the empty state", () => {
+    const html = renderToStaticMarkup(
+      createElement(AppList, { apps: [], onRevoke: () => Promise.resolve() }),
+    );
+    expect(html).toContain("No connected apps");
+    expect(html).toContain("Connect ChatGPT, Claude, or Muse to https://folderlink.muiz.pk/mcp.");
   });
 });
 
@@ -223,6 +237,7 @@ describe("FolderDetails", () => {
     expect(html).toContain("Visible to all connected apps");
     expect(html).toContain("ChatGPT");
     expect(html).toContain("Claude");
+    expect(html).toContain(">Pause<");
     expect(html).toContain("Rename");
     expect(html).toContain("Remove");
     expect(html).toContain("← Folders");
@@ -242,6 +257,7 @@ describe("FolderDetails", () => {
     );
     expect(html).toContain("portfolio");
     expect(html).toContain(">paused<");
+    expect(html).toContain(">Resume<");
     expect(html).toContain("Hidden from every app");
   });
 });
@@ -281,5 +297,16 @@ describe("DiffView", () => {
     expect(html).toContain('<span class="diff-no">86</span><span class="diff-no"></span>');
     expect(html).toContain('<span class="diff-no"></span><span class="diff-no">86</span>');
     expect(html).toContain('<span class="diff-no">83</span><span class="diff-no">83</span>');
+  });
+
+  it("shows the hunk section text, or an ellipsis when there is none", () => {
+    const html = renderToStaticMarkup(createElement(DiffView, { diff }));
+    expect(html).toContain('<div class="diff-hunk">fixture</div>');
+    const plain = renderToStaticMarkup(
+      createElement(DiffView, {
+        diff: "@@ -1,2 +1,2 @@\n context\n-old\n+new\n",
+      }),
+    );
+    expect(plain).toContain('<div class="diff-hunk">···</div>');
   });
 });

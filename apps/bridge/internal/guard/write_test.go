@@ -138,17 +138,7 @@ func TestWriteRefusals(t *testing.T) {
 	}
 }
 
-func TestExecutableAndBinary(t *testing.T) {
-	for _, rel := range []string{"run.ps1", "x.sh", "a.py", "b.js", "c.exe", "d.PS1"} {
-		if !IsExecutablePath(rel) {
-			t.Errorf("IsExecutablePath(%q) = false", rel)
-		}
-	}
-	for _, rel := range []string{"notes.md", "a.txt", "noext", "x.json"} {
-		if IsExecutablePath(rel) {
-			t.Errorf("IsExecutablePath(%q) = true", rel)
-		}
-	}
+func TestBinaryContent(t *testing.T) {
 	if !IsBinaryContent([]byte("a\x00b")) || !IsBinaryContent([]byte{0xff, 0xfe}) {
 		t.Error("binary content was not detected")
 	}

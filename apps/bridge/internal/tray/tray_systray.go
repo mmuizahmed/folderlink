@@ -8,6 +8,9 @@ import (
 	"encoding/base64"
 	"log/slog"
 	"strings"
+	"syscall"
+	"time"
+	"unsafe"
 
 	"github.com/getlantern/systray"
 
@@ -74,7 +77,59 @@ func Run(ctx context.Context, opts Options) {
 		<-ctx.Done()
 		systray.Quit()
 	}()
+	// The logon task can fire before Explorer is up. Wait for the shell
+	// so the tray icon is created once the notification area exists;
+	// otherwise Shell_NotifyIcon fails silently, the icon is never
+	// created, and the bridge runs headless with no tray icon even though
+	// the process is alive. The bridge itself already runs in its own
+	// goroutine, so waiting here only delays the tray, not the connection.
+	if !waitForShell(ctx, 60*time.Second) {
+		slog.Warn("system tray: shell not ready after 60s, starting tray anyway")
+	}
 	systray.Run(func() { onReady(opts) }, func() {})
+}
+
+// waitForShell waits until the Windows shell (Explorer taskbar) exists,
+// returning true when it is up, false on timeout or ctx done. It polls
+// FindWindow for the Shell_TrayWnd class, which Explorer creates when the
+// taskbar — and with it the notification area — is ready.
+func waitForShell(ctx context.Context, timeout time.Duration) bool {
+	if shellWindowExists() {
+		return true
+	}
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return false
+		case <-timer.C:
+			return false
+		case <-ticker.C:
+			if shellWindowExists() {
+				return true
+			}
+		}
+	}
+}
+
+var (
+	modUser32       = syscall.NewLazyDLL("user32.dll")
+	procFindWindowW = modUser32.NewProc("FindWindowW")
+)
+
+// shellWindowExists reports whether the Explorer taskbar window exists.
+// A zero return means no window of that class (shell not up yet) or the
+// lookup failed; either way the caller treats it as "not ready".
+func shellWindowExists() bool {
+	className, err := syscall.UTF16PtrFromString("Shell_TrayWnd")
+	if err != nil {
+		return false
+	}
+	ret, _, _ := procFindWindowW.Call(uintptr(unsafe.Pointer(className)), 0)
+	return ret != 0
 }
 
 // Quit stops the tray loop, so Run returns. It is how an update apply

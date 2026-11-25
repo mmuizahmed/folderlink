@@ -3,9 +3,27 @@ version: 2
 project_name: folderlink
 
 builds:
-  # Console binary for macOS and Linux, and for Windows when the user runs
-  # commands by hand: its output has to be visible.
-  - id: bridge
+  # Console binary for macOS and Linux, split into one build per OS so
+  # each archive below maps to exactly one platform: a single build
+  # covering both would make the darwin and linux archives emit the
+  # same files and collide (GoReleaser refuses duplicate archive names).
+  - id: bridge-darwin
+    dir: apps/bridge
+    main: ./cmd/bridge
+    binary: folderlink
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+  - id: bridge-linux
     dir: apps/bridge
     main: ./cmd/bridge
     binary: folderlink
@@ -17,7 +35,6 @@ builds:
       - -s -w -X main.version={{ .Version }}
     goos:
       - linux
-      - darwin
     goarch:
       - amd64
       - arm64
@@ -60,27 +77,28 @@ builds:
       - arm64
 
 archives:
-  # Console binary archives: exactly one binary per platform.
-  - id: bridge
+  # One archive per platform. Windows holds both binaries (the console
+  # CLI and the background service); macOS and Linux hold the CLI only.
+  # Each archive has a consistent binary count per platform, so
+  # GoReleaser's "different count of binaries" error does not apply.
+  - id: windows
     builds:
-      - bridge
       - bridge-windows
-    formats: [tar.gz]
-    format_overrides:
-      - goos: windows
-        formats: [zip]
-    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
-
-  # Background binary archives (Windows only): exactly one binary per
-  # platform. Kept as a separate archive because GoReleaser refuses an
-  # archive whose binary count differs per platform — putting folderlink-bg
-  # into the console archive would give Windows two binaries while
-  # macOS/Linux have one.
-  - id: bridge-bg
-    builds:
       - bridge-bg
     formats: [zip]
-    name_template: "{{ .ProjectName }}-bg_{{ .Os }}_{{ .Arch }}"
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+  - id: darwin
+    builds:
+      - bridge-darwin
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+  - id: linux
+    builds:
+      - bridge-linux
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
 
 checksum:
   name_template: checksums.txt
@@ -91,10 +109,37 @@ release:
   prerelease: false
   draft: false
   make_latest: true
+  header: |
+    FolderLink lets ChatGPT, Claude, and Muse read files from your own computer — the files never leave it.
+
+    Install on Windows (PowerShell):
+
+    ```
+    irm https://folderlink.muiz.pk/install.ps1 | iex
+    ```
+  footer: |
+    ## Downloads
+
+    - Windows (`folderlink_windows_amd64.zip`, `folderlink_windows_arm64.zip`): the installer and the background service in one zip — it holds both `folderlink.exe` and `folderlink-bg.exe`.
+    - macOS (`folderlink_darwin_amd64.tar.gz`, `folderlink_darwin_arm64.tar.gz`) and Linux (`folderlink_linux_amd64.tar.gz`, `folderlink_linux_arm64.tar.gz`): the `folderlink` command-line tool.
+
+    Verify a download against `checksums.txt` (SHA-256).
 
 # Checksum signing is not configured. Cosign needs a key that this
 # repository does not have, and the free GoReleaser build cannot skip a
 # signs block with an if condition.
 
 changelog:
-  disable: true
+  # Generated from the commits since the last tag. Merge commits are
+  # excluded so a change is not listed twice (once as the merge, once
+  # as the commit). Commit messages here do not use conventional
+  # prefixes, so everything lands in one plain Changes list.
+  sort: asc
+  use: git
+  filters:
+    exclude:
+      - "^Merge pull request"
+      - "^Merge branch"
+  groups:
+    - title: Changes
+      order: 999

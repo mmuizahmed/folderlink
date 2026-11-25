@@ -620,8 +620,8 @@ export function SettingsSection({
           <span>
             <strong>AI approval</strong>
             <span className="minor">
-              The connected app&apos;s own confirmation card is the gate for normal writes.
-              Dashboard approval is only needed for deletes, commands, scripts, and binary files.
+              The connected app asks you in chat first. Every write still needs your approval here
+              in the dashboard.
             </span>
           </span>
         </label>
@@ -645,7 +645,8 @@ export function SettingsSection({
         <div style={{ flex: 1, minWidth: 0 }}>
           <h3>Session</h3>
           <p className="minor">
-            ChatGPT and Claude connect from their own apps. You do not create a token here.
+            You&apos;re signed in as {user.email}. Signing out ends this browser session — your
+            folders and approvals stay.
           </p>
         </div>
         <button type="button" className="btn quiet small" onClick={onLogout}>
@@ -745,7 +746,7 @@ function Checklist({
     { done: hasFolder, title: "Add a folder", body: "The path stays on this computer." },
     {
       done: hasApp,
-      title: "Connect ChatGPT or Claude",
+      title: "Connect ChatGPT, Claude, or Muse",
       body: "Add this address as a custom connector.",
     },
   ];
@@ -870,6 +871,10 @@ function DeviceCard({
   );
 }
 
+// when renders an absolute time in the viewer's own timezone, not the
+// server's. The server stores UTC; the browser converts it. The locale
+// stays en-US so the format (Nov 23, 9:40 PM) never changes — only the
+// timezone follows the person looking at the page.
 function when(value: string | null): string {
   if (!value) return "Not yet";
   const date = new Date(value);
@@ -879,7 +884,6 @@ function when(value: string | null): string {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "UTC",
   });
 }
 
@@ -1150,12 +1154,13 @@ export function FolderDetails({
         <span className="row-actions">
           <button
             type="button"
-            className={on ? "toggle on" : "toggle"}
-            aria-pressed={on}
+            className="btn quiet small"
             aria-label={`${on ? "Pause" : "Allow"} ${folder.label}`}
             title={on ? "Pause this folder (hide it from AI)" : "Allow this folder again"}
             onClick={() => void onToggle(folder)}
-          />
+          >
+            {on ? "Pause" : "Resume"}
+          </button>
           <button
             type="button"
             className="btn quiet small"
@@ -1169,7 +1174,15 @@ export function FolderDetails({
           <button
             type="button"
             className="btn danger small"
-            onClick={() => void onRemove(folder.id)}
+            onClick={() => {
+              if (
+                window.confirm(
+                  `Remove "${folder.label}"? It will stop being shared with every AI app.`,
+                )
+              ) {
+                void onRemove(folder.id);
+              }
+            }}
           >
             Remove
           </button>
@@ -1204,7 +1217,13 @@ function accessSummary(folder: FolderView, apps: AppView[]): string {
   return `Visible to: ${names.join(", ")}`;
 }
 
-function AppList({ apps, onRevoke }: { apps: AppView[]; onRevoke: (id: string) => Promise<void> }) {
+export function AppList({
+  apps,
+  onRevoke,
+}: {
+  apps: AppView[];
+  onRevoke: (id: string) => Promise<void>;
+}) {
   return (
     <section>
       <div className="section-head">
@@ -1214,7 +1233,7 @@ function AppList({ apps, onRevoke }: { apps: AppView[]; onRevoke: (id: string) =
         {apps.length === 0 ? (
           <Empty
             title="No connected apps"
-            body="Connect ChatGPT or Claude to https://folderlink.muiz.pk/mcp. An app shows up here after you allow it."
+            body="Connect ChatGPT, Claude, or Muse to https://folderlink.muiz.pk/mcp. An app shows up here after you allow it."
           />
         ) : (
           apps.map((app) => (

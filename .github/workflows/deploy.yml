@@ -57,3 +57,44 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  # After a successful deploy, tag the release automatically: no more
+  # manual tag commands. Pushing the tag triggers the Release workflow,
+  # which builds the binaries and publishes the GitHub release. A tag is
+  # only created when main has commits the last release does not, so
+  # re-running Deploy on an unchanged main creates nothing.
+  tag-release:
+    needs: worker
+    if: github.ref == 'refs/heads/main' && github.repository == 'mmuizahmed/mcp-bridge'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Tag the release
+        run: |
+          set -euo pipefail
+          latest=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+          if [ -z "$latest" ]; then
+            next="v0.0.1"
+          else
+            if [ "$(git rev-list "$latest"..HEAD --count)" -eq 0 ]; then
+              echo "No new commits since $latest — nothing to release."
+              exit 0
+            fi
+            # Strip a pre-release suffix (-beta.1) before bumping the patch number.
+            base="${latest%%-*}"
+            major="$(echo "$base" | cut -d. -f1)"
+            minor="$(echo "$base" | cut -d. -f2)"
+            patch="$(echo "$base" | cut -d. -f3)"
+            next="$major.$minor.$((patch + 1))"
+          fi
+          echo "Tagging $next."
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$next" -m "Release $next"
+          git push origin "$next"

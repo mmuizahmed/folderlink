@@ -81,28 +81,21 @@ func writeFile(ctx context.Context, store *config.Store, deps Deps, folder *conf
 		}
 		return executeWrite(ctx, folder, plan, content)
 	}
-	// The mode is the top authority. In manual mode every write needs a
-	// dashboard approval, whatever the file is: neither a client card
-	// nor a remember-rule bypasses the manual step. In AI mode (the
-	// default) only high-risk writes need one: binary content and
-	// executable paths. A missing mode store fails closed to manual.
-	manual := deps.Mode == nil || deps.Mode.Get() == mode.ModeManual
-	if manual || plan.Binary || guard.IsExecutablePath(req.Path) {
-		pending := deps.Approve.Create(&approve.Pending{
-			Op:          approve.OpWriteFile,
-			FolderID:    folder.ID,
-			FolderLabel: folder.Label,
-			Path:        plan.Rel,
-			ContentHash: plan.ContentHash,
-			PreHash:     plan.PreHash,
-			Diff:        plan.Diff,
-		})
-		return approvalRequired(deps, pending)
-	}
-	// Ordinary text write in AI mode: the client approval card is the
-	// gate, the bridge is the backstop (guard validation above, atomic
-	// write below). It executes on the first call.
-	return executeWrite(ctx, folder, plan, content)
+	// Every write needs a dashboard approval, whatever the file is and
+	// whatever the mode is: no write lands on a client card alone. The
+	// mode still gates commands and shows in the tray, but it no longer
+	// lets a write through. The second call (with approval_id) verifies
+	// the token against the live plan above and only then executes.
+	pending := deps.Approve.Create(&approve.Pending{
+		Op:          approve.OpWriteFile,
+		FolderID:    folder.ID,
+		FolderLabel: folder.Label,
+		Path:        plan.Rel,
+		ContentHash: plan.ContentHash,
+		PreHash:     plan.PreHash,
+		Diff:        plan.Diff,
+	})
+	return approvalRequired(deps, pending)
 }
 
 func executeWrite(ctx context.Context, folder *config.Folder, plan *guard.WritePlan, content []byte) any {

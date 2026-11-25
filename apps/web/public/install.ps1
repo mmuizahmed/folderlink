@@ -3,6 +3,9 @@ $ErrorActionPreference = "Stop"
 
 $Repo = "mmuizahmed/mcp-bridge"
 $Asset = "folderlink_windows_amd64.zip"
+# Old layout (releases before the single-zip change) shipped the background
+# binary in its own zip. New releases put both exes in $Asset; this is only
+# a fallback so the installer keeps working against an old release.
 $BgAsset = "folderlink-bg_windows_amd64.zip"
 $Root = Join-Path $env:LOCALAPPDATA "FolderLink"
 $Tmp = Join-Path $env:TEMP "folderlink-install"
@@ -10,7 +13,9 @@ New-Item -ItemType Directory -Force -Path $Root, $Tmp | Out-Null
 
 $Base = "https://github.com/$Repo/releases/latest/download"
 Invoke-WebRequest -Uri "$Base/checksums.txt" -OutFile (Join-Path $Tmp "checksums.txt")
-foreach ($Name in @($Asset, $BgAsset)) {
+
+function Get-VerifiedAsset {
+  param([string]$Name)
   Invoke-WebRequest -Uri "$Base/$Name" -OutFile (Join-Path $Tmp $Name)
   $line = Get-Content (Join-Path $Tmp "checksums.txt") | Where-Object { $_ -like "*$Name" } | Select-Object -First 1
   if (-not $line) { throw "checksums.txt has no entry for $Name" }
@@ -18,6 +23,8 @@ foreach ($Name in @($Asset, $BgAsset)) {
   $actual = (Get-FileHash (Join-Path $Tmp $Name) -Algorithm SHA256).Hash.ToLower()
   if ($actual -ne $expected) { throw "checksum mismatch for $Name" }
 }
+
+Get-VerifiedAsset $Asset
 
 # Stop the running bridge before overwriting it. Windows locks a running
 # .exe, so on an upgrade Expand-Archive cannot replace folderlink-bg.exe
@@ -31,7 +38,13 @@ foreach ($Name in @("folderlink-bg", "folderlink")) {
 }
 
 Expand-Archive -Path (Join-Path $Tmp $Asset) -DestinationPath $Root -Force
-Expand-Archive -Path (Join-Path $Tmp $BgAsset) -DestinationPath $Root -Force
+# Transition fallback: releases before the single-zip change did not put
+# folderlink-bg.exe in $Asset. If it is missing after extracting, fetch
+# the old background zip and extract that too.
+if (-not (Test-Path (Join-Path $Root "folderlink-bg.exe"))) {
+  Get-VerifiedAsset $BgAsset
+  Expand-Archive -Path (Join-Path $Tmp $BgAsset) -DestinationPath $Root -Force
+}
 $Exe = Join-Path $Root "folderlink.exe"
 if (-not (Test-Path $Exe)) {
   $found = Get-ChildItem -Path $Root -Filter "folderlink.exe" -Recurse | Select-Object -First 1

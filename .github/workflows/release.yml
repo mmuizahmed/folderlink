@@ -21,20 +21,12 @@ jobs:
         with:
           go-version: "1.22"
           cache-dependency-path: apps/bridge/go.sum
-      - id: notes
-        run: |
-          notes=".github/releases/${GITHUB_REF_NAME}.md"
-          if [ -f "$notes" ]; then
-            echo "args=--release-notes ${notes}" >> "$GITHUB_OUTPUT"
-          else
-            echo "args=" >> "$GITHUB_OUTPUT"
-          fi
       - name: Publish the release
         uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
         with:
           distribution: goreleaser
           version: v2.20.3
-          args: release --clean ${{ steps.notes.outputs.args }}
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -55,12 +47,10 @@ jobs:
         run: |
           mkdir -p work
           cd work
-          gh release download "$TAG" --pattern 'folderlink*_windows_*.zip' --dir unsigned
-          mkdir -p amd64 arm64 bg-amd64 bg-arm64
+          gh release download "$TAG" --pattern 'folderlink_windows_*.zip' --dir unsigned
+          mkdir -p amd64 arm64
           unzip -q unsigned/folderlink_windows_amd64.zip -d amd64
           unzip -q unsigned/folderlink_windows_arm64.zip -d arm64
-          unzip -q unsigned/folderlink-bg_windows_amd64.zip -d bg-amd64
-          unzip -q unsigned/folderlink-bg_windows_arm64.zip -d bg-arm64
 
       - name: Upload unsigned folderlink.exe (amd64)
         id: upload-amd64
@@ -111,7 +101,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: unsigned-folderlink-bg-amd64
-          path: work/bg-amd64/folderlink-bg.exe
+          path: work/amd64/folderlink-bg.exe
           retention-days: 1
 
       - name: Sign folderlink-bg.exe (amd64)
@@ -123,17 +113,17 @@ jobs:
           signing-policy-slug: release-signing
           artifact-configuration-slug: windows-exe
           github-artifact-id: ${{ steps.upload-bg-amd64.outputs.artifact-id }}
-          output-artifact-directory: work/bg-amd64/signed
+          output-artifact-directory: work/amd64/signed-bg
 
       - name: Replace with the signed exe (amd64)
-        run: mv work/bg-amd64/signed/folderlink-bg.exe work/bg-amd64/folderlink-bg.exe
+        run: mv work/amd64/signed-bg/folderlink-bg.exe work/amd64/folderlink-bg.exe
 
       - name: Upload unsigned folderlink-bg.exe (arm64)
         id: upload-bg-arm64
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: unsigned-folderlink-bg-arm64
-          path: work/bg-arm64/folderlink-bg.exe
+          path: work/arm64/folderlink-bg.exe
           retention-days: 1
 
       - name: Sign folderlink-bg.exe (arm64)
@@ -145,25 +135,23 @@ jobs:
           signing-policy-slug: release-signing
           artifact-configuration-slug: windows-exe
           github-artifact-id: ${{ steps.upload-bg-arm64.outputs.artifact-id }}
-          output-artifact-directory: work/bg-arm64/signed
+          output-artifact-directory: work/arm64/signed-bg
 
       - name: Replace with the signed exe (arm64)
-        run: mv work/bg-arm64/signed/folderlink-bg.exe work/bg-arm64/folderlink-bg.exe
+        run: mv work/arm64/signed-bg/folderlink-bg.exe work/arm64/folderlink-bg.exe
 
       - name: Re-zip the signed Windows archives
         run: |
           cd work
-          (cd amd64 && zip -q ../folderlink_windows_amd64.zip LICENSE README.md folderlink.exe)
-          (cd arm64 && zip -q ../folderlink_windows_arm64.zip LICENSE README.md folderlink.exe)
-          (cd bg-amd64 && zip -q ../folderlink-bg_windows_amd64.zip LICENSE README.md folderlink-bg.exe)
-          (cd bg-arm64 && zip -q ../folderlink-bg_windows_arm64.zip LICENSE README.md folderlink-bg.exe)
+          (cd amd64 && zip -q ../folderlink_windows_amd64.zip LICENSE README.md folderlink.exe folderlink-bg.exe)
+          (cd arm64 && zip -q ../folderlink_windows_arm64.zip LICENSE README.md folderlink.exe folderlink-bg.exe)
 
       - name: Regenerate checksums and re-upload the signed zips
         run: |
           mkdir -p final
           cd final
           gh release download "$TAG" --dir .
-          cp ../work/folderlink_windows_amd64.zip ../work/folderlink_windows_arm64.zip ../work/folderlink-bg_windows_amd64.zip ../work/folderlink-bg_windows_arm64.zip .
+          cp ../work/folderlink_windows_amd64.zip ../work/folderlink_windows_arm64.zip .
           rm -f checksums.txt
           sha256sum folderlink* > checksums.txt
-          gh release upload "$TAG" folderlink_windows_amd64.zip folderlink_windows_arm64.zip folderlink-bg_windows_amd64.zip folderlink-bg_windows_arm64.zip checksums.txt --clobber
+          gh release upload "$TAG" folderlink_windows_amd64.zip folderlink_windows_arm64.zip checksums.txt --clobber

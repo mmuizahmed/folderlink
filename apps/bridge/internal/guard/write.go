@@ -43,25 +43,6 @@ const MaxDeletePreviewBytes = 2048
 // that appeared after approval, or overwrite one that was deleted.
 const AbsentHash = "absent"
 
-// ExecutableExts are the file extensions a client-card-only write may
-// never touch. A write to one of these always needs dashboard approval:
-// an injected instruction that lands a script is the T1 payload.
-var ExecutableExts = map[string]bool{
-	".sh": true, ".ps1": true, ".bat": true, ".cmd": true,
-	".exe": true, ".com": true, ".msi": true,
-	".py": true, ".js": true, ".ts": true, ".mjs": true, ".cjs": true,
-	".rb": true, ".pl": true, ".php": true, ".vbs": true,
-	".jar": true, ".dll": true, ".so": true, ".dylib": true,
-}
-
-// IsExecutablePath reports whether rel names an executable or script file.
-// The check is by extension only and applies in every folder: there is
-// no "source folder" exception, because a script dropped into a source
-// folder is exactly what a toolchain would run next.
-func IsExecutablePath(rel string) bool {
-	return ExecutableExts[strings.ToLower(ext(filepath.Base(rel)))]
-}
-
 // HashBytes returns the hex SHA-256 of b.
 func HashBytes(b []byte) string {
 	sum := sha256.Sum256(b)

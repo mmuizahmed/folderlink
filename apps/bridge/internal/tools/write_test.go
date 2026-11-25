@@ -58,32 +58,68 @@ func setupFolder(t *testing.T) (*config.Store, string, Deps) {
 	return store, folder.ID, testDeps()
 }
 
-func TestWriteFilePlainTextExecutes(t *testing.T) {
+func TestWriteFilePlainTextNeedsApproval(t *testing.T) {
 	store, folderID, deps := setupFolder(t)
 	ctx := context.Background()
+	// Every write needs a dashboard approval now, even a plain-text one
+	// in AI mode: no write lands on a client card alone.
 	out := callJSON(t, ctx, store, deps, map[string]any{
 		"op": "write_file", "folderId": folderID, "path": "a.md", "content": "hello\n",
 	})
 	if !out.OK {
-		t.Fatalf("write_file failed: %+v", out.Error)
+		t.Fatalf("first call failed: %+v", out.Error)
+	}
+	var approval approvalResult
+	if err := json.Unmarshal(out.Result, &approval); err != nil {
+		t.Fatal(err)
+	}
+	if approval.Status != "approval_required" || approval.RequestID == "" {
+		t.Fatalf("result = %+v, want approval_required", approval)
+	}
+	if out := callJSON(t, ctx, store, deps, map[string]any{
+		"op": "approve_request", "requestId": approval.RequestID,
+	}); !out.OK {
+		t.Fatalf("approve_request failed: %+v", out.Error)
+	}
+	done := callJSON(t, ctx, store, deps, map[string]any{
+		"op": "write_file", "folderId": folderID, "path": "a.md",
+		"content": "hello\n", "approvalId": approval.RequestID,
+	})
+	if !done.OK {
+		t.Fatalf("second call failed: %+v", done.Error)
 	}
 	var res struct {
 		PreHash  string `json:"preHash"`
 		PostHash string `json:"postHash"`
 		Bytes    int    `json:"bytes"`
 	}
-	if err := json.Unmarshal(out.Result, &res); err != nil {
+	if err := json.Unmarshal(done.Result, &res); err != nil {
 		t.Fatal(err)
 	}
 	if res.PreHash != "absent" || res.Bytes != 6 || res.PostHash == "" {
 		t.Fatalf("result = %+v", res)
 	}
-	// A plain-text overwrite executes on the first call too.
-	out = callJSON(t, ctx, store, deps, map[string]any{
-		"op": "write_file", "folderId": folderID, "path": "a.md", "content": "hello again\n",
-	})
-	if !out.OK {
-		t.Fatalf("overwrite failed: %+v", out.Error)
+}
+
+func TestWriteFileTSXNeedsApproval(t *testing.T) {
+	store, folderID, deps := setupFolder(t)
+	ctx := context.Background()
+	// A plain .tsx or .css write in AI mode needs approval too — the
+	// file type no longer decides.
+	for _, path := range []string{"ui.tsx", "styles.css"} {
+		out := callJSON(t, ctx, store, deps, map[string]any{
+			"op": "write_file", "folderId": folderID, "path": path, "content": "x\n",
+		})
+		if !out.OK {
+			t.Fatalf("first call failed: %+v", out.Error)
+		}
+		var approval approvalResult
+		if err := json.Unmarshal(out.Result, &approval); err != nil {
+			t.Fatal(err)
+		}
+		if approval.Status != "approval_required" || approval.RequestID == "" {
+			t.Fatalf("write %s = %+v, want approval_required", path, approval)
+		}
 	}
 }
 
