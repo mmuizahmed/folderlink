@@ -59,10 +59,13 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
   # After a successful deploy, tag the release automatically: no more
-  # manual tag commands. Pushing the tag triggers the Release workflow,
-  # which builds the binaries and publishes the GitHub release. A tag is
-  # only created when main has commits the last release does not, so
-  # re-running Deploy on an unchanged main creates nothing.
+  # manual tag commands. A tag pushed by a workflow with GITHUB_TOKEN
+  # does NOT trigger the Release workflow (GitHub drops runs caused by
+  # GITHUB_TOKEN to prevent loops), so after pushing the tag this job
+  # dispatches the Release workflow explicitly with `gh workflow run`
+  # (workflow_dispatch is the one trigger GITHUB_TOKEN can still fire).
+  # A tag is only created when main has commits the last release does
+  # not, so re-running Deploy on an unchanged main creates nothing.
   tag-release:
     needs: worker
     if: github.ref == 'refs/heads/main' && github.repository == 'mmuizahmed/mcp-bridge'
@@ -76,6 +79,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Tag the release
+        id: tag
         run: |
           set -euo pipefail
           latest=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
@@ -98,3 +102,9 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "$next" -m "Release $next"
           git push origin "$next"
+          echo "tag=$next" >> "$GITHUB_OUTPUT"
+      - name: Dispatch the release workflow
+        if: steps.tag.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run release.yml --ref "${{ steps.tag.outputs.tag }}"

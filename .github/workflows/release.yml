@@ -3,6 +3,12 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  # Dispatchable so the Deploy workflow can trigger a release explicitly.
+  # A tag pushed by a workflow with GITHUB_TOKEN does NOT trigger the
+  # `push: tags` event above (GitHub drops workflow runs caused by
+  # GITHUB_TOKEN to prevent loops), so Deploy dispatches this workflow
+  # with `gh workflow run` instead of relying on the tag push alone.
+  workflow_dispatch:
 
 permissions: {}
 
