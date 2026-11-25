@@ -125,30 +125,24 @@ func parseVersion(s string) parsedVersion {
 	return out
 }
 
-// AssetNames returns the release asset names for a platform: the console
-// binary archive, and the background binary archive on Windows (empty
-// elsewhere, where the console binary is the background binary).
-func AssetNames(goos, goarch string) (console, bg string) {
-	switch goos {
-	case "windows":
-		return "folderlink_windows_" + goarch + ".zip", "folderlink-bg_windows_" + goarch + ".zip"
-	default:
-		return "folderlink_" + goos + "_" + goarch + ".tar.gz", ""
+// AssetName returns the release asset name for a platform: one archive per
+// platform. On Windows the zip holds both folderlink.exe and
+// folderlink-bg.exe; elsewhere the tarball holds the single folderlink
+// binary.
+func AssetName(goos, goarch string) string {
+	if goos == "windows" {
+		return "folderlink_windows_" + goarch + ".zip"
 	}
+	return "folderlink_" + goos + "_" + goarch + ".tar.gz"
 }
 
-// binaryName is the file inside an asset archive.
-func binaryName(goos, asset string) string {
-	if strings.Contains(asset, "folderlink-bg") {
-		if goos == "windows" {
-			return "folderlink-bg.exe"
-		}
-		return "folderlink-bg"
-	}
+// BinaryNames returns the binary file names inside the release asset for a
+// platform: both exes on Windows, the single folderlink binary elsewhere.
+func BinaryNames(goos string) []string {
 	if goos == "windows" {
-		return "folderlink.exe"
+		return []string{"folderlink.exe", "folderlink-bg.exe"}
 	}
-	return "folderlink"
+	return []string{"folderlink"}
 }
 
 // Check asks GitHub for the latest release and returns it when its tag is
@@ -187,45 +181,33 @@ func Check(ctx context.Context, client *http.Client, current string) (*Release, 
 	return rel, nil
 }
 
-// Fetch downloads the release assets for this platform, verifies each
+// Fetch downloads the release asset for this platform, verifies it
 // against checksums.txt from the same release, and extracts the binaries.
 // It returns the binary contents keyed by file name ("folderlink",
 // "folderlink.exe", "folderlink-bg.exe"). Nothing is written to disk.
 func Fetch(ctx context.Context, client *http.Client, rel *Release) (map[string][]byte, error) {
-	console, bg := AssetNames(runtime.GOOS, runtime.GOARCH)
-	names := []string{console}
-	if bg != "" {
-		names = append(names, bg)
+	name := AssetName(runtime.GOOS, runtime.GOARCH)
+	url, ok := rel.Assets[name]
+	if !ok {
+		return nil, fmt.Errorf("release %s has no asset %s", rel.Tag, name)
 	}
 	sums, err := fetchChecksums(ctx, client, rel)
 	if err != nil {
 		return nil, err
 	}
-	out := map[string][]byte{}
-	for _, name := range names {
-		url, ok := rel.Assets[name]
-		if !ok {
-			return nil, fmt.Errorf("release %s has no asset %s", rel.Tag, name)
-		}
-		want, ok := sums[name]
-		if !ok {
-			return nil, fmt.Errorf("checksums.txt has no entry for %s", name)
-		}
-		raw, err := download(ctx, client, url)
-		if err != nil {
-			return nil, err
-		}
-		sum := sha256.Sum256(raw)
-		if hex.EncodeToString(sum[:]) != want {
-			return nil, fmt.Errorf("checksum mismatch for %s", name)
-		}
-		bin, err := extract(name, raw)
-		if err != nil {
-			return nil, err
-		}
-		out[binaryName(runtime.GOOS, name)] = bin
+	want, ok := sums[name]
+	if !ok {
+		return nil, fmt.Errorf("checksums.txt has no entry for %s", name)
 	}
-	return out, nil
+	raw, err := download(ctx, client, url)
+	if err != nil {
+		return nil, err
+	}
+	sum := sha256.Sum256(raw)
+	if hex.EncodeToString(sum[:]) != want {
+		return nil, fmt.Errorf("checksum mismatch for %s", name)
+	}
+	return extract(name, raw, BinaryNames(runtime.GOOS))
 }
 
 func fetchChecksums(ctx context.Context, client *http.Client, rel *Release) (map[string]string, error) {
@@ -272,25 +254,32 @@ func download(ctx context.Context, client *http.Client, url string) ([]byte, err
 	return io.ReadAll(io.LimitReader(res.Body, maxDownloadBytes+1))
 }
 
-// extract returns the binary from a zip or tar.gz archive. Anything that
-// is not the expected binary is ignored, and an archive with no binary is
-// an error.
-func extract(asset string, raw []byte) ([]byte, error) {
-	want := binaryName(runtime.GOOS, asset)
+// extract returns the named binaries from a zip or tar.gz archive.
+// Anything else in the archive is ignored, and an archive missing any
+// named binary is an error.
+func extract(asset string, raw []byte, want []string) (map[string][]byte, error) {
+	wanted := map[string]bool{}
+	for _, name := range want {
+		wanted[name] = true
+	}
+	out := map[string][]byte{}
 	if strings.HasSuffix(asset, ".zip") {
 		zr, err := zip.NewReader(bytes.NewReader(raw), int64(len(raw)))
 		if err != nil {
 			return nil, fmt.Errorf("the %s archive was not valid: %w", asset, err)
 		}
 		for _, f := range zr.File {
-			if filepath.Base(f.Name) != want {
+			name := filepath.Base(f.Name)
+			if !wanted[name] {
 				continue
 			}
-			return readEntry(f)
+			bin, err := readEntry(f)
+			if err != nil {
+				return nil, err
+			}
+			out[name] = bin
 		}
-		return nil, fmt.Errorf("the %s archive has no %s", asset, want)
-	}
-	if strings.HasSuffix(asset, ".tar.gz") {
+	} else if strings.HasSuffix(asset, ".tar.gz") {
 		gr, err := gzip.NewReader(bytes.NewReader(raw))
 		if err != nil {
 			return nil, fmt.Errorf("the %s archive was not valid: %w", asset, err)
@@ -304,14 +293,25 @@ func extract(asset string, raw []byte) ([]byte, error) {
 			if err != nil {
 				return nil, fmt.Errorf("the %s archive was not valid: %w", asset, err)
 			}
-			if filepath.Base(header.Name) != want {
+			name := filepath.Base(header.Name)
+			if !wanted[name] {
 				continue
 			}
-			return io.ReadAll(io.LimitReader(tr, maxBinaryBytes+1))
+			bin, err := io.ReadAll(io.LimitReader(tr, maxBinaryBytes+1))
+			if err != nil {
+				return nil, err
+			}
+			out[name] = bin
 		}
-		return nil, fmt.Errorf("the %s archive has no %s", asset, want)
+	} else {
+		return nil, fmt.Errorf("unsupported asset %s", asset)
 	}
-	return nil, fmt.Errorf("unsupported asset %s", asset)
+	for _, name := range want {
+		if _, ok := out[name]; !ok {
+			return nil, fmt.Errorf("the %s archive has no %s", asset, name)
+		}
+	}
+	return out, nil
 }
 
 func readEntry(f *zip.File) ([]byte, error) {

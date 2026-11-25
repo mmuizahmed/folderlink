@@ -44,18 +44,25 @@ func TestCompare(t *testing.T) {
 	}
 }
 
-func TestAssetNames(t *testing.T) {
-	console, bg := AssetNames("windows", "amd64")
-	if console != "folderlink_windows_amd64.zip" || bg != "folderlink-bg_windows_amd64.zip" {
-		t.Errorf("windows assets = %q, %q", console, bg)
+func TestAssetName(t *testing.T) {
+	if got := AssetName("windows", "amd64"); got != "folderlink_windows_amd64.zip" {
+		t.Errorf("windows asset = %q", got)
 	}
-	console, bg = AssetNames("darwin", "arm64")
-	if console != "folderlink_darwin_arm64.tar.gz" || bg != "" {
-		t.Errorf("darwin assets = %q, %q", console, bg)
+	if got := AssetName("darwin", "arm64"); got != "folderlink_darwin_arm64.tar.gz" {
+		t.Errorf("darwin asset = %q", got)
 	}
-	console, bg = AssetNames("linux", "amd64")
-	if console != "folderlink_linux_amd64.tar.gz" || bg != "" {
-		t.Errorf("linux assets = %q, %q", console, bg)
+	if got := AssetName("linux", "amd64"); got != "folderlink_linux_amd64.tar.gz" {
+		t.Errorf("linux asset = %q", got)
+	}
+}
+
+func TestBinaryNames(t *testing.T) {
+	// Windows needs both exes from the single zip.
+	if got := BinaryNames("windows"); len(got) != 2 || got[0] != "folderlink.exe" || got[1] != "folderlink-bg.exe" {
+		t.Errorf("windows binaries = %q", got)
+	}
+	if got := BinaryNames("linux"); len(got) != 1 || got[0] != "folderlink" {
+		t.Errorf("linux binaries = %q", got)
 	}
 }
 
@@ -106,13 +113,13 @@ func TestFetchVerifiesChecksums(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Fetch test uses the tar.gz asset for this platform")
 	}
-	console, _ := AssetNames(runtime.GOOS, runtime.GOARCH)
+	console := AssetName(runtime.GOOS, runtime.GOARCH)
 	// Build a tar.gz holding a fake binary, and its checksum.
 	var archive bytes.Buffer
 	gz := gzip.NewWriter(&archive)
 	tw := tar.NewWriter(gz)
 	body := []byte("fake-binary-0.3.0")
-	binName := binaryName(runtime.GOOS, console)
+	binName := BinaryNames(runtime.GOOS)[0]
 	if err := tw.WriteHeader(&tar.Header{Name: binName, Mode: 0o755, Size: int64(len(body))}); err != nil {
 		t.Fatal(err)
 	}
@@ -178,28 +185,35 @@ func TestFetchZip(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		t.Skip("Fetch zip test is for the Windows asset")
 	}
+	// One zip holding both exes, with different contents so each is checked.
 	var archive bytes.Buffer
 	zw := zip.NewWriter(&archive)
-	w, err := zw.Create("folderlink.exe")
-	if err != nil {
-		t.Fatal(err)
-	}
-	body := []byte("fake-binary-0.3.0")
-	if _, err := w.Write(body); err != nil {
-		t.Fatal(err)
+	consoleBody := []byte("fake-folderlink-0.3.0")
+	bgBody := []byte("fake-folderlink-bg-0.3.0")
+	for _, entry := range []struct {
+		name string
+		body []byte
+	}{
+		{"folderlink.exe", consoleBody},
+		{"folderlink-bg.exe", bgBody},
+	} {
+		w, err := zw.Create(entry.name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := w.Write(entry.body); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if err := zw.Close(); err != nil {
 		t.Fatal(err)
 	}
 	asset := archive.Bytes()
 	sum := sha256.Sum256(asset)
-	sums := hex.EncodeToString(sum[:]) + "  folderlink_windows_amd64.zip\n" +
-		hex.EncodeToString(sum[:]) + "  folderlink-bg_windows_amd64.zip\n"
+	sums := hex.EncodeToString(sum[:]) + "  folderlink_windows_amd64.zip\n"
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/dl/win":
-			_, _ = w.Write(asset)
-		case "/dl/bg":
 			_, _ = w.Write(asset)
 		case "/dl/sums":
 			_, _ = w.Write([]byte(sums))
@@ -209,15 +223,14 @@ func TestFetchZip(t *testing.T) {
 	}))
 	defer server.Close()
 	rel := &Release{Tag: "v0.3.0", Assets: map[string]string{
-		"folderlink_windows_amd64.zip":    server.URL + "/dl/win",
-		"folderlink-bg_windows_amd64.zip": server.URL + "/dl/bg",
-		"checksums.txt":                   server.URL + "/dl/sums",
+		"folderlink_windows_amd64.zip": server.URL + "/dl/win",
+		"checksums.txt":                server.URL + "/dl/sums",
 	}}
 	got, err := Fetch(context.Background(), server.Client(), rel)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(got["folderlink.exe"], body) || !bytes.Equal(got["folderlink-bg.exe"], body) {
+	if !bytes.Equal(got["folderlink.exe"], consoleBody) || !bytes.Equal(got["folderlink-bg.exe"], bgBody) {
 		t.Errorf("Fetch zip = %v, want both binaries", got)
 	}
 }
@@ -273,10 +286,10 @@ func TestStageRejectsOversize(t *testing.T) {
 }
 
 func TestExtractRejectsUnknownArchive(t *testing.T) {
-	if _, err := extract("folderlink_linux_amd64.tar.gz", []byte("not an archive")); err == nil {
+	if _, err := extract("folderlink_linux_amd64.tar.gz", []byte("not an archive"), BinaryNames("linux")); err == nil {
 		t.Errorf("extract accepted garbage")
 	}
-	if _, err := extract("folderlink_windows_amd64.zip", []byte("not an archive")); err == nil {
+	if _, err := extract("folderlink_windows_amd64.zip", []byte("not an archive"), BinaryNames("windows")); err == nil {
 		t.Errorf("extract accepted garbage")
 	}
 }
