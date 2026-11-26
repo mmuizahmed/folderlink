@@ -177,74 +177,6 @@ a {
   padding: 0;
 }
 
-.hero {
-  position: relative;
-  overflow: hidden;
-}
-.glow {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(600px 280px at 50% -40px, rgba(34, 197, 94, 0.12), transparent 70%);
-}
-.dots {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 600px;
-  pointer-events: none;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
-  background-size: 20px 20px;
-  mask-image: linear-gradient(to bottom, #000, transparent 85%);
-}
-.hero-inner {
-  position: relative;
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 40px 24px 0;
-  text-align: center;
-}
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: rgba(17, 17, 19, 0.8);
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--sub);
-}
-.dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--go);
-  display: inline-block;
-  flex: none;
-}
-h1.display {
-  margin: 24px 0 0;
-  font-size: clamp(40px, 6vw, 60px);
-  line-height: 1.02;
-  letter-spacing: -0.045em;
-  font-weight: 600;
-}
-h1.display span {
-  color: var(--sub);
-}
-.lede {
-  margin: 20px auto 0;
-  max-width: 640px;
-  color: var(--sub);
-  font-size: 17px;
-  line-height: 1.6;
-}
-a.pill {
-  text-decoration: none;
-}
 .cta {
   margin-top: 32px;
   display: flex;
@@ -252,243 +184,1314 @@ a.pill {
   gap: 12px;
   flex-wrap: wrap;
 }
-.hero-note {
-  margin: 16px 0 0;
-  color: var(--faint);
-  font-size: 13px;
-}
-
-.terminal {
-  margin: 32px auto 0;
-  max-width: 820px;
-  border-radius: 12px;
-  background: var(--panel);
-  text-align: left;
-  overflow: hidden;
-}
-.terminal-bar {
-  height: 36px;
-  padding: 0 16px;
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid var(--line);
-}
-.lights {
-  display: flex;
-  gap: 6px;
-}
-.lights i {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--line-2);
-  display: block;
-}
-.terminal-title {
-  margin: 0 auto;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--faint);
-}
-.terminal pre {
-  margin: 0;
-  padding: 16px 20px 20px;
-  font-family: var(--mono);
-  font-size: 13px;
-  line-height: 1.85;
-  color: var(--sub);
-  overflow-x: auto;
-}
-.fg {
-  color: var(--fg);
-}
-.mono {
-  font-family: var(--mono);
-}
-.faint {
-  color: var(--faint);
-}
-.go {
-  color: var(--go);
-}
-.bad {
-  color: var(--bad);
-}
-.warn {
-  color: var(--warn);
-}
-.code-pill {
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: var(--raise);
-  color: var(--fg);
-  letter-spacing: 0.15em;
-}
-.linkish {
-  color: var(--fg);
-  text-decoration: underline;
-  text-decoration-color: var(--line-2);
-  text-underline-offset: 4px;
-}
-
-.steps {
-  position: relative;
-  max-width: 1080px;
-  width: calc(100% - 48px);
-  margin: 40px auto 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  background: var(--line);
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 0 0 1px var(--line);
-}
-.band .steps {
-  width: 100%;
-  margin: 0;
-}
-.features {
-  position: relative;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  background: var(--line);
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 0 0 1px var(--line);
-}
-.steps article,
-.features article {
-  background: var(--bg);
-  padding: 24px;
-}
-.step-icon,
-.feature-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--panel);
-  color: var(--fg);
-  margin-bottom: 12px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 0 0 1px var(--line);
-}
-.steps h3,
-.features h3 {
-  margin: 12px 0 0;
-  font-size: 14px;
-  font-weight: 500;
-}
-.steps p,
-.features p {
-  margin: 4px 0 0;
-  color: var(--sub);
-  font-size: 13px;
-}
-.kicker {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--go);
-}
-.band {
-  max-width: 1080px;
-  width: calc(100% - 48px);
-  margin: 0 auto;
-  padding: 24px 0 8px;
-}
-.band h2 {
-  margin: 0 0 16px;
-  font-size: 22px;
-  letter-spacing: -0.03em;
-}
-.band .sub {
-  margin: -8px 0 16px;
-  color: var(--sub);
-  font-size: 14px;
-}
-.apps-note {
-  margin: 16px 0 0;
-  color: var(--faint);
-  font-size: 13px;
-  text-align: center;
-}
-.product-frame {
-  margin: 20px auto 0;
-  max-width: 960px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  overflow: hidden;
-  background: #09090b;
-  line-height: 0;
-}
-.product-shot {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-.platforms {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  margin: 16px 0;
-}
-.platforms a {
-  color: var(--sub);
-}
-.install-command {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-.install-command pre {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-  padding: 12px 14px;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
-  border-radius: 8px;
-  background: var(--panel);
-  color: var(--sub);
-  font-family: var(--mono);
-  font-size: 13px;
-  text-align: left;
-}
-.install-command .btn {
-  flex: none;
-}
-.cta .install-command {
-  flex: 1 1 100%;
-  max-width: 560px;
-  margin: 0 auto;
-}
-.faq p,
 .docs-article p {
   color: var(--sub);
 }
-.faq {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px 32px;
-}
-.faq h3,
 .docs-article h1,
 .docs-article h2 {
   margin: 0;
+}
+
+/* ---- FolderLink landing (F direction: dark poster, coral red) ---- */
+/* Scoped under .fl so the dashboard's tokens (--go green, etc.) are
+   untouched. One accent (coral red), used once loudly in the hero, then
+   withdrawn. Primary CTA is a white pill, never red. */
+
+.fl {
+  --fl-bg: #07080a;
+  --fl-bg2: #0a0a0a;
+  --fl-s1: #101111;
+  --fl-s2: #141414;
+  --fl-line: rgba(255, 255, 255, 0.06);
+  --fl-line-strong: rgba(255, 255, 255, 0.1);
+  --fl-text: #f4f4f6;
+  --fl-muted: #9a9a9a;
+  --fl-faint: #6e6e6e;
+  --fl-red: #ff5b3e;
+  --fl-red-soft: #ff6363;
+  --fl-red-deep: #c22e14;
+  /* Status green: tiny live/ok signals only (folder dots, "Bridge
+     connected", the approved tag, added lines) — never a second accent. */
+  --fl-green: #3ecf8e;
+  background: var(--fl-bg);
+  color: var(--fl-text);
+}
+.fl a:focus-visible,
+.fl button:focus-visible,
+.fl summary:focus-visible {
+  outline: 2px solid var(--fl-red-soft);
+  outline-offset: 3px;
+}
+
+/* Hero entrance (on load, staged). All use `backwards` fill so the `from`
+   keyframe applies during the delay, and the natural styles (opacity 1,
+   no transform) apply after — under prefers-reduced-motion the global
+   rule disables the animation, so every element renders final. The pill,
+   lede, actions, meta, install line, mock and glow are gated on the
+   typewriter finishing (.fl-typed on the hero): they stay hidden until the
+   headline is typed, then fade/slide in staggered, Antigravity-style. */
+@keyframes fl-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fl-mock-in {
+  from {
+    opacity: 0;
+    transform: perspective(1200px) rotateX(10deg) translateY(56px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(1200px) rotateX(0deg) translateY(0) scale(1);
+  }
+}
+@keyframes fl-glow-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes fl-aurora-drift {
+  from {
+    transform: translate3d(-3%, -1%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(3%, 2%, 0) scale(1.06);
+  }
+}
+@keyframes fl-streak-drift {
+  from {
+    transform: translateX(-54%) rotate(-14deg) translateY(0);
+    opacity: 0.9;
+  }
+  to {
+    transform: translateX(-46%) rotate(-14deg) translateY(26px);
+    opacity: 0.55;
+  }
+}
+/* Ambient particle drift: each dot moves a few px from its placed spot,
+   slowly, back and forth. Offsets come from --dx/--dy on the dot; duration
+   and delay are inline so no two dots move alike. */
+@keyframes fl-dot-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(var(--dx, 10px), var(--dy, -8px), 0);
+  }
+}
+
+/* Scroll reveals (IntersectionObserver adds .is-visible once). Transform +
+   opacity only. Under prefers-reduced-motion the reveal is forced visible
+   (see the reduced-motion block at the end) so content never depends on
+   the observer firing. */
+.fl-reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fl-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.fl-reveal + .fl-reveal {
+  border-top: 1px solid var(--fl-line);
+}
+
+/* ---------- Hero poster ---------- */
+.fl-hero {
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+  padding: 88px 0 0;
+}
+/* The red aurora: one hue only, low opacity, transform-only drift. */
+.fl-aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.fl-aurora-field {
+  position: absolute;
+  left: 50%;
+  top: -320px;
+  width: 1400px;
+  height: 900px;
+  margin-left: -700px;
+  background:
+    radial-gradient(
+      ellipse 55% 42% at 42% 46%,
+      rgba(255, 91, 62, 0.34) 0%,
+      rgba(255, 91, 62, 0.12) 45%,
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 45% 38% at 62% 40%,
+      rgba(255, 99, 99, 0.26) 0%,
+      rgba(255, 99, 99, 0.08) 50%,
+      transparent 72%
+    ),
+    radial-gradient(ellipse 70% 30% at 50% 62%, rgba(194, 46, 20, 0.22) 0%, transparent 70%);
+  filter: blur(28px);
+  animation: fl-aurora-drift 52s ease-in-out infinite alternate;
+  will-change: transform;
+}
+.fl-streak {
+  position: absolute;
+  left: 50%;
+  top: -140px;
+  width: 900px;
+  height: 5px;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 99, 99, 0.55) 30%,
+    rgba(255, 91, 62, 0.75) 55%,
+    transparent
+  );
+  filter: blur(1px);
+  transform: translateX(-50%) rotate(-14deg);
+  animation: fl-streak-drift 58s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+.fl-streak.s2 {
+  top: -40px;
+  width: 700px;
+  height: 3px;
+  transform: translateX(-50%) rotate(-14deg) translateY(60px);
+  opacity: 0.55;
+  animation-duration: 46s;
+}
+.fl-streak.s3 {
+  top: 60px;
+  width: 1100px;
+  height: 2px;
+  transform: translateX(-50%) rotate(-14deg) translateY(120px);
+  opacity: 0.35;
+  animation-duration: 64s;
+}
+/* Ambient particle field: tiny dots across the hero, denser at the edges,
+   sparse in the centre so the headline stays legible. Transform-only drift
+   (20–60s loops); under prefers-reduced-motion the global rule stops it. */
+.fl-dot {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: fl-dot-drift linear infinite alternate;
+  will-change: transform;
+}
+.fl-dot.coral {
+  background: rgba(255, 91, 62, 0.55);
+  box-shadow: 0 0 6px rgba(255, 91, 62, 0.35);
+}
+.fl-dot.white {
+  background: rgba(255, 255, 255, 0.5);
+}
+.fl-dot.soft {
+  background: rgba(255, 99, 99, 0.4);
+}
+.fl-hero-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.fl-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
+  color: var(--fl-text);
+  border: 1px solid var(--fl-line-strong);
+  background: rgba(16, 17, 17, 0.72);
+  border-radius: 999px;
+  padding: 7px 14px;
+  margin-bottom: 22px;
+}
+/* Hero entrance, gated on the typewriter (.fl-typed): hidden until the
+   headline finishes typing, then staggered fade/slide in. The base hidden
+   state reserves layout space (no jump when the pill appears above the H1),
+   and under prefers-reduced-motion .fl-typed is present from the first
+   render, so everything shows at once with the animation disabled. */
+.fl-pill,
+.fl-lede,
+.fl-hero-actions,
+.fl-hero-meta,
+.fl-hero .fl-install-line {
+  opacity: 0;
+  visibility: hidden;
+}
+.fl-typed .fl-pill {
+  opacity: 1;
+  visibility: visible;
+  animation: fl-rise-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.05s backwards;
+}
+.fl-typed .fl-lede {
+  opacity: 1;
+  visibility: visible;
+  animation: fl-rise-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards;
+}
+.fl-typed .fl-hero-actions {
+  opacity: 1;
+  visibility: visible;
+  animation: fl-rise-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.25s backwards;
+}
+.fl-typed .fl-hero-meta {
+  opacity: 1;
+  visibility: visible;
+  animation: fl-rise-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.32s backwards;
+}
+.fl-hero.fl-typed .fl-install-line {
+  opacity: 1;
+  visibility: visible;
+  animation: fl-rise-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.38s backwards;
+}
+.fl-pill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--fl-red);
+  flex: none;
+}
+.fl-h1 {
+  margin: 0 auto 20px;
+  font-size: clamp(40px, 10vw, 64px);
+  line-height: 1.04;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  color: #fff;
+  max-width: 14ch;
+}
+/* Typewriter caret: a thin coral gradient bar following the last typed
+   character; it disappears when typing finishes. */
+.fl-caret {
+  display: inline-block;
+  width: 3px;
+  height: 0.92em;
+  margin-left: 5px;
+  vertical-align: -0.1em;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #ff5b3e, #ff6363);
+}
+.fl-lede {
+  margin: 0 auto 28px;
+  max-width: 560px;
+  font-size: 18px;
+  line-height: 1.65;
+  color: var(--fl-muted);
+}
+.fl-lede strong {
+  color: var(--fl-text);
+  font-weight: 600;
+}
+.fl-hero-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.fl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 15.5px;
+  border-radius: 999px;
+  padding: 13px 26px;
+  min-height: 48px;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.fl-btn-white {
+  background: #fff;
+  color: #0a0a0a;
+}
+.fl-btn-white:hover {
+  background: #e8e8ea;
+}
+.fl-btn-ghost {
+  background: transparent;
+  color: var(--fl-text);
+  border-color: var(--fl-line-strong);
+}
+.fl-btn-ghost:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.fl-hero-meta {
+  margin: 20px 0 0;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  letter-spacing: 0.08em;
+  color: var(--fl-faint);
+  text-transform: uppercase;
+}
+.fl-hero-meta span + span::before {
+  content: "·";
+  margin: 0 10px;
+  color: var(--fl-red);
+}
+
+/* Install line (hero + install band). */
+.fl-install-line {
+  margin: 32px auto 0;
+  max-width: 640px;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--fl-s1);
+  border: 1px solid var(--fl-line-strong);
+  border-radius: 12px;
+  overflow: hidden;
+  text-align: left;
+}
+.fl-install-line code {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 16px;
+  font-family: var(--mono);
+  font-size: 13.5px;
+  color: var(--fl-text);
+  white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fl-install-line code::-webkit-scrollbar {
+  display: none;
+}
+.fl-install-line code .fl-prompt {
+  color: var(--fl-red-soft);
+}
+.fl-copy {
+  flex: none;
+  margin-right: 8px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fl-text);
+  background: var(--fl-s2);
+  border: 1px solid var(--fl-line-strong);
+  border-radius: 8px;
+  padding: 8px 13px;
+  cursor: pointer;
+  min-height: 36px;
+}
+.fl-copy:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.fl-copy.copied {
+  color: var(--fl-red-soft);
+  border-color: rgba(255, 99, 99, 0.5);
+}
+
+/* ---------- Dashboard mock (the hero product visual) ---------- */
+.fl-mock-stage {
+  position: relative;
+  padding: 48px 0 0;
+}
+.fl-mock-glow {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  width: 820px;
+  max-width: 94vw;
+  height: 420px;
+  margin-left: -410px;
+  background: radial-gradient(
+    ellipse 50% 55% at 50% 42%,
+    rgba(255, 91, 62, 0.28) 0%,
+    rgba(255, 91, 62, 0.07) 55%,
+    transparent 75%
+  );
+  filter: blur(24px);
+  pointer-events: none;
+  opacity: 0;
+}
+/* The dashboard comes up like Antigravity's product: it rises slowly from
+   below with a fade and a soft red glow behind it, starting once the
+   headline finishes typing (.fl-typed). 1.6s, cinematic ease. Under
+   prefers-reduced-motion .fl-typed is present from the first render, so
+   the mock shows at once with the animation disabled. */
+.fl-typed .fl-mock-glow {
+  opacity: 1;
+  animation: fl-glow-in 1.6s ease backwards;
+}
+.fl-mock {
+  position: relative;
+  z-index: 1;
+  max-width: 960px;
+  margin: 0 auto;
+  background: var(--fl-s1);
+  border: 1px solid var(--fl-line-strong);
+  border-radius: 16px;
+  overflow: hidden;
+  text-align: left;
+  opacity: 0;
+}
+.fl-typed .fl-mock {
+  opacity: 1;
+  animation: fl-mock-in 1.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+.fl-mock-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--fl-line);
+}
+.fl-mock-bar .fl-t-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #2a2a2a;
+  flex: none;
+}
+.fl-mock-bar .fl-t-dot:first-child {
+  background: var(--fl-red);
+}
+.fl-mock-title {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--fl-muted);
+  margin-left: 8px;
+}
+.fl-mock-status {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--fl-text);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.fl-mock-status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--fl-red);
+  display: inline-block;
+}
+.fl-mock-body {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  min-height: 340px;
+}
+.fl-mock-side {
+  border-right: 1px solid var(--fl-line);
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.fl-side-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14.5px;
+  letter-spacing: -0.01em;
+  color: var(--fl-text);
+  padding: 2px 10px 14px;
+}
+.fl-side-brand svg {
+  flex: none;
+}
+.fl-side-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--fl-muted);
+  font-size: 14px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+.fl-side-link.active {
+  background: var(--fl-s2);
+  color: var(--fl-text);
+}
+.fl-side-badge {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--fl-s2);
+  color: var(--fl-text);
+  border: 1px solid var(--fl-line-strong);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+.fl-side-foot {
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--fl-faint);
+  padding: 8px 10px;
+}
+.fl-side-foot i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--fl-green);
+  flex: none;
+}
+.fl-mock-main {
+  padding: 20px 22px 22px;
+  min-width: 0;
+}
+.fl-overview-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.fl-overview-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.fl-overview-head span {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--fl-faint);
+  white-space: nowrap;
+}
+/* Overview columns: shared folders beside the activity log. */
+.fl-overview-cols {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 20px;
+  margin-top: 18px;
+}
+.fl-col-h {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fl-faint);
+  margin: 0 0 10px;
+}
+.fl-ov-folder {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid var(--fl-line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  background: var(--fl-s2);
+}
+.fl-ov-folder:last-child {
+  margin-bottom: 0;
+}
+.fl-ov-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--fl-green);
+  flex: none;
+  margin-top: 6px;
+}
+.fl-ov-info {
+  min-width: 0;
+  flex: 1;
+}
+.fl-ov-name {
+  display: block;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fl-text);
+}
+.fl-ov-path {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--fl-faint);
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fl-ov-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.fl-ov-log li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--fl-muted);
+  padding: 7px 0;
+  border-top: 1px solid var(--fl-line);
+}
+.fl-ov-log li:first-child {
+  border-top: 0;
+}
+.fl-ov-log time {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fl-faint);
+  flex: none;
+}
+.fl-ov-log b {
+  color: var(--fl-text);
+  font-weight: 600;
+}
+.fl-ov-tag {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fl-faint);
+  flex: none;
+}
+.fl-ov-tag.ok {
+  color: var(--fl-green);
+}
+.fl-f-apps {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--fl-muted);
+  white-space: nowrap;
+}
+.fl-f-apps .app-mark.lg {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  font-size: 8px;
+  margin-bottom: 0;
+}
+.fl-approval {
+  margin-top: 0;
+  border: 1px solid rgba(255, 99, 99, 0.35);
+  background: rgba(255, 91, 62, 0.06);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.fl-a-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.fl-a-tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fl-red-soft);
+}
+.fl-a-badge {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fl-muted);
+  border: 1px solid var(--fl-line-strong);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+.fl-approval p {
+  margin: 8px 0 12px;
+  font-size: 13.5px;
+  color: var(--fl-muted);
+}
+.fl-approval p strong,
+.fl-approval p b {
+  color: var(--fl-text);
+}
+.fl-approval p code {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--fl-text);
+}
+.fl-approval .fl-a-diff {
+  margin: -2px 0 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.fl-a-diff .fl-add {
+  color: var(--fl-green);
+}
+.fl-a-diff .fl-del {
+  color: #e08a8a;
+}
+.fl-a-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.fl-a-actions button {
+  font-weight: 600;
+  font-size: 13.5px;
+  border-radius: 999px;
+  padding: 9px 18px;
+  min-height: 38px;
+  cursor: pointer;
+}
+.fl-approve {
+  background: #fff;
+  color: #0a0a0a;
+  border: 1px solid #fff;
+}
+.fl-deny {
+  background: transparent;
+  color: var(--fl-text);
+  border: 1px solid var(--fl-line-strong);
+}
+.fl-a-result {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  letter-spacing: 0.08em;
+  margin-top: 10px;
+  display: none;
+}
+.fl-approval.resolved-approve .fl-a-result {
+  display: block;
+  color: var(--fl-red-soft);
+}
+.fl-approval.resolved-deny .fl-a-result {
+  display: block;
+  color: var(--fl-muted);
+}
+.fl-approval.resolved-approve .fl-a-actions,
+.fl-approval.resolved-deny .fl-a-actions {
+  display: none;
+}
+.fl-proof {
+  margin: 20px 0 0;
+  padding-bottom: 56px;
+  font-size: 13.5px;
+  color: var(--fl-faint);
+  animation: fl-rise-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.7s backwards;
+}
+.fl-proof a {
+  color: var(--fl-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.fl-proof a:hover {
+  color: var(--fl-text);
+}
+
+/* ---------- Sections ---------- */
+.fl-block {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 72px 24px;
+}
+.fl-section-head {
+  max-width: 640px;
+  margin: 0 auto 40px;
+  text-align: center;
+}
+.fl-section-head.left {
+  margin-left: 0;
+  text-align: left;
+  max-width: 560px;
+}
+.fl-section-head h2 {
+  margin: 14px 0 12px;
+  font-size: 40px;
+  line-height: 1.12;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+.fl-section-head p {
+  margin: 0;
+  color: var(--fl-muted);
+  font-size: 17px;
+}
+.fl-num {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--fl-red-soft);
+  text-transform: uppercase;
+}
+
+/* Install band */
+.fl-install-band {
+  background: var(--fl-s1);
+  border: 1px solid var(--fl-line);
+  border-radius: 16px;
+  padding: 32px;
+}
+.fl-install-band .fl-install-line {
+  margin: 0;
+  max-width: none;
+  animation: none;
+}
+.fl-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.fl-tab {
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 9px 16px;
+  min-height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--fl-line-strong);
+  background: transparent;
+  color: var(--fl-muted);
+  cursor: pointer;
+}
+.fl-tab.selected {
+  background: #fff;
+  color: #0a0a0a;
+  border-color: #fff;
+  font-weight: 600;
+}
+.fl-cmd-note {
+  margin: 16px 0 0;
+  color: var(--fl-muted);
+  font-size: 14.5px;
+}
+.fl-cmd-note code {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--fl-text);
+}
+.fl-manual {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 16px 0 0;
+  font-size: 14.5px;
+}
+.fl-manual span {
+  color: var(--fl-faint);
+}
+.fl-manual a {
+  color: var(--fl-muted);
+}
+.fl-manual a:hover {
+  color: var(--fl-text);
+}
+.fl-install-band .fl-btn {
+  margin-top: 24px;
+}
+
+/* How it works — step sequence */
+.fl-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.fl-steps li {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 24px;
+  padding: 26px 0;
+  border-top: 1px solid var(--fl-line);
+}
+.fl-steps li:last-child {
+  border-bottom: 1px solid var(--fl-line);
+}
+.fl-step-no {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--fl-red-soft);
+  padding-top: 6px;
+}
+.fl-steps h3 {
+  margin: 0 0 6px;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.fl-steps p {
+  margin: 0;
+  color: var(--fl-muted);
+  max-width: 560px;
+}
+.fl-steps p code,
+.fl-steps p a {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--fl-text);
+}
+
+/* Features — mono-labelled list, not a grid */
+.fl-features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--fl-line);
+}
+.fl-features li {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 24px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--fl-line);
+  align-items: baseline;
+}
+.fl-f-label {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fl-red-soft);
+}
+.fl-features h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.fl-features p {
+  margin: 0;
+  color: var(--fl-muted);
+  font-size: 15.5px;
+  max-width: 620px;
+}
+
+/* Apps — real brand logos, prominent */
+.app-mark.xl {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  font-size: 18px;
+}
+.fl-apps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--fl-line);
+}
+.fl-apps li {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--fl-line);
+  flex-wrap: wrap;
+}
+.fl-apps .app-mark {
+  margin-bottom: 0;
+}
+.fl-apps h3 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.fl-apps p {
+  margin: 2px 0 0;
+  color: var(--fl-muted);
+  font-size: 14.5px;
+}
+.fl-app-mcp {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--fl-muted);
+  border: 1px solid var(--fl-line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  word-break: break-all;
+}
+.fl-app-mcp b {
+  color: var(--fl-text);
+  font-weight: 500;
+}
+.fl-apps-note {
+  margin: 16px 0 0;
+  color: var(--fl-faint);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Security */
+.fl-security-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border: 1px solid var(--fl-line);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--fl-s1);
+}
+.fl-security-grid > div {
+  padding: 24px;
+}
+.fl-security-grid > div + div {
+  border-left: 1px solid var(--fl-line);
+}
+.fl-s-mark {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--fl-red-soft);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 12px;
+}
+.fl-security-grid h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+}
+.fl-security-grid p {
+  margin: 0;
+  color: var(--fl-muted);
+  font-size: 15px;
+}
+
+/* FAQ */
+.fl-faq {
+  max-width: 720px;
+  margin: 0 auto;
+  border-top: 1px solid var(--fl-line);
+}
+.fl-faq details {
+  border-bottom: 1px solid var(--fl-line);
+}
+.fl-faq summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 2px;
+  font-size: 17.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.fl-faq summary::-webkit-details-marker {
+  display: none;
+}
+.fl-faq summary::after {
+  content: "+";
+  font-family: var(--mono);
+  font-weight: 400;
+  color: var(--fl-red-soft);
+  font-size: 20px;
+  flex: none;
+  transition: transform 0.2s ease;
+}
+.fl-faq details[open] summary::after {
+  content: "–";
+}
+.fl-faq p {
+  margin: 0 0 18px;
+  color: var(--fl-muted);
+  max-width: 600px;
+}
+
+/* Final CTA */
+.fl-final {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 88px 24px 80px;
+  text-align: center;
+}
+.fl-final h2 {
+  margin: 0 auto 16px;
+  font-size: 48px;
+  line-height: 1.08;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  max-width: 16ch;
+}
+.fl-final p {
+  margin: 0 auto 24px;
+  color: var(--fl-muted);
+  max-width: 480px;
+  font-size: 17px;
+}
+
+/* Landing footer: the shared SiteFooter, restyled for the F direction. */
+.fl .site-footer {
+  border-top: 1px solid var(--fl-line);
+  color: var(--fl-muted);
+}
+.fl .foot-links a:hover {
+  color: var(--fl-text);
+}
+
+@media (max-width: 720px) {
+  .fl-hero {
+    padding-top: 64px;
+  }
+  .fl-lede {
+    font-size: 16.5px;
+  }
+  .fl-block {
+    padding: 56px 24px;
+  }
+  .fl-section-head h2 {
+    font-size: 31px;
+  }
+  .fl-install-band {
+    padding: 24px 20px;
+  }
+  .fl-final {
+    padding: 72px 24px;
+  }
+  .fl-final h2 {
+    font-size: 34px;
+  }
+  .fl-mock-body {
+    grid-template-columns: 1fr;
+  }
+  .fl-mock-side {
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-right: 0;
+    border-bottom: 1px solid var(--fl-line);
+    padding: 12px;
+  }
+  .fl-side-brand,
+  .fl-side-foot {
+    display: none;
+  }
+  .fl-f-apps {
+    display: none;
+  }
+  .fl-mock-main {
+    padding: 16px;
+  }
+  .fl-overview-cols {
+    grid-template-columns: 1fr;
+  }
+  .fl-app-mcp {
+    margin-left: 74px;
+  }
+}
+/* Tablet (768px): the 200px sidebar leaves the main too narrow for the two
+   overview columns, so the activity log clips at the mock's right edge
+   (the hero's overflow hides the page-level overflow, so the test passes
+   while the visual is broken). Collapse the sidebar to a row here — as on
+   phones — so the main gets the full width and the columns fit. */
+@media (max-width: 800px) {
+  .fl-mock-body {
+    grid-template-columns: 1fr;
+  }
+  .fl-mock-side {
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-right: 0;
+    border-bottom: 1px solid var(--fl-line);
+    padding: 12px;
+  }
+  .fl-side-brand,
+  .fl-side-foot {
+    display: none;
+  }
+  .fl-mock-main {
+    padding: 16px;
+  }
+}
+@media (max-width: 640px) {
+  .fl-steps li {
+    grid-template-columns: 44px 1fr;
+    gap: 14px;
+  }
+  .fl-features li {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .fl-security-grid {
+    grid-template-columns: 1fr;
+  }
+  .fl-security-grid > div + div {
+    border-left: 0;
+    border-top: 1px solid var(--fl-line);
+  }
+}
+/* Small phones (~360px): the pill text wraps to two lines instead of
+   clipping, the CTAs stack full-width, and the mock bar tightens so
+   "Connected" never clips. */
+@media (max-width: 480px) {
+  .fl-hero-inner {
+    padding: 0 20px;
+  }
+  .fl-pill {
+    display: inline-block;
+    line-height: 1.6;
+    padding: 8px 14px;
+  }
+  .fl-pill-dot {
+    display: inline-block;
+    vertical-align: -1px;
+    margin-right: 8px;
+  }
+  .fl-hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+    max-width: 320px;
+    margin: 0 auto;
+  }
+  .fl-hero-actions .fl-btn {
+    width: 100%;
+  }
+  .fl-hero-meta {
+    font-size: 11px;
+    letter-spacing: 0.05em;
+  }
+  .fl-mock-bar {
+    padding: 11px 12px;
+    gap: 6px;
+  }
+  .fl-mock-title {
+    font-size: 11.5px;
+  }
+}
+/* Reduced motion: every entrance/reveal renders in its final state.
+   (The global rule already disables animations/transitions; this block
+   also resets the reveal's hidden base state, which no animation covers,
+   and the hero's typewriter-gated hidden state, so the hero can never
+   stay invisible if the typing state fails to flip.) */
+@media (prefers-reduced-motion: reduce) {
+  .fl-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .fl-pill,
+  .fl-lede,
+  .fl-hero-actions,
+  .fl-hero-meta,
+  .fl-hero .fl-install-line,
+  .fl-mock,
+  .fl-mock-glow {
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+  .fl-aurora-field,
+  .fl-streak {
+    animation: none !important;
+  }
 }
 .docs-article h2 {
   margin-top: 8px;
