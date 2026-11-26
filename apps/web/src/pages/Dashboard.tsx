@@ -10,6 +10,7 @@ import {
   IconGrid,
   IconLaptop,
   IconSettings,
+  IconShield,
   Mark,
 } from "../components/Icons.tsx";
 import { Avatar } from "../components/AccountMenu.tsx";
@@ -32,24 +33,30 @@ import {
   toneForIdentity,
 } from "../data/apps.ts";
 
-type Section = "overview" | "devices" | "folders" | "apps" | "activity" | "settings";
+type Section = "overview" | "devices" | "folders" | "approvals" | "apps" | "activity" | "settings";
 
 const NAV: Array<{
   id: Section;
   label: string;
   icon: ReactNode;
-  count?: "devices" | "folders" | "apps";
+  count?: "devices" | "folders" | "apps" | "approvals";
 }> = [
   { id: "overview", label: "Overview", icon: <IconGrid /> },
+  { id: "folders", label: "Folders", icon: <IconFolder />, count: "folders" },
+  {
+    id: "approvals",
+    label: "Approvals",
+    icon: <IconShield />,
+    count: "approvals",
+  },
+  { id: "activity", label: "Activity", icon: <IconActivity /> },
+  { id: "apps", label: "AI apps", icon: <IconApps />, count: "apps" },
   {
     id: "devices",
     label: "Devices",
     icon: <IconLaptop width="15" height="15" />,
     count: "devices",
   },
-  { id: "folders", label: "Folders", icon: <IconFolder />, count: "folders" },
-  { id: "apps", label: "AI apps", icon: <IconApps />, count: "apps" },
-  { id: "activity", label: "Activity", icon: <IconActivity /> },
   { id: "settings", label: "Settings", icon: <IconSettings /> },
 ];
 
@@ -88,10 +95,10 @@ export function Dashboard() {
   usePageTitle("Dashboard · FolderLink");
 
   // A dashboard link from the bridge (or the AI) lands on
-  // #approvals[/id]: open the Activity section, where approvals live.
+  // #approvals[/id]: open the Approvals section.
   useEffect(() => {
     if (window.location.hash.startsWith("#approvals")) {
-      setSection("activity");
+      setSection("approvals");
     }
   }, []);
 
@@ -440,6 +447,12 @@ export function Dashboard() {
 
   const ready = state.status === "ready" ? state.data : null;
   const openFolder = ready?.folders.find((folder) => folder.id === openFolderId) ?? null;
+  const pendingCount = ready
+    ? ready.approvals.filter((item) => item.status === "pending").length
+    : 0;
+  const bridgeOnline = ready
+    ? ready.devices.some((device) => device.online && device.status === "active")
+    : false;
 
   return (
     <div className="shell">
@@ -470,13 +483,19 @@ export function Dashboard() {
             >
               {item.icon}
               {item.label}
-              {item.count && ready ? (
+              {item.count === "approvals" && pendingCount > 0 ? (
+                <span className="count alert">{pendingCount}</span>
+              ) : item.count && item.count !== "approvals" && ready ? (
                 <span className="count">{ready[item.count].length}</span>
               ) : null}
             </a>
           ))}
         </nav>
         <div className="side-foot">
+          <div className={bridgeOnline ? "bridge-status" : "bridge-status off"}>
+            <i aria-hidden="true" />
+            {bridgeOnline ? "Bridge connected" : "Bridge offline"}
+          </div>
           {ready ? (
             <div className="account">
               <Avatar user={ready.user} className="lg" />
@@ -494,6 +513,12 @@ export function Dashboard() {
             Menu
           </button>
           <div className="dash-title">{NAV.find((item) => item.id === section)?.label}</div>
+          {ready && section === "overview" ? (
+            <span className="dash-sub">
+              {ready.folders.length} folder{ready.folders.length === 1 ? "" : "s"} shared ·{" "}
+              {ready.apps.length} app{ready.apps.length === 1 ? "" : "s"} connected
+            </span>
+          ) : null}
         </header>
         <div className="dash-body">
           {state.status === "loading" ? <p className="state">Loading.</p> : null}
@@ -506,12 +531,14 @@ export function Dashboard() {
           {ready && section === "overview" ? (
             <Overview
               data={ready}
+              busy={busy}
+              onDecide={decideApproval}
               onRemove={removeDevice}
               onRename={renameDevice}
               onAdd={addFolder}
               adding={adding}
               onRevoke={revokeApp}
-              onShowApprovals={() => setSection("activity")}
+              onShowApprovals={() => setSection("approvals")}
               onShowFolders={() => setSection("folders")}
               onShowActivity={() => setSection("activity")}
             />
@@ -549,14 +576,10 @@ export function Dashboard() {
             )
           ) : null}
           {ready && section === "apps" ? <AppList apps={ready.apps} onRevoke={revokeApp} /> : null}
-          {ready && section === "activity" ? (
-            <>
-              {ready.approvals.length > 0 ? (
-                <ApprovalsList items={ready.approvals} busy={busy} onDecide={decideApproval} />
-              ) : null}
-              <ActivityList items={ready.activity} />
-            </>
+          {ready && section === "approvals" ? (
+            <ApprovalsList items={ready.approvals} busy={busy} onDecide={decideApproval} />
           ) : null}
+          {ready && section === "activity" ? <ActivityList items={ready.activity} /> : null}
           {ready && section === "settings" ? (
             <SettingsSection
               user={ready.user}
@@ -659,6 +682,8 @@ export function SettingsSection({
 
 function Overview({
   data,
+  busy,
+  onDecide,
   onRemove,
   onRename,
   onAdd,
@@ -669,6 +694,8 @@ function Overview({
   onShowActivity,
 }: {
   data: DashboardData;
+  busy: string | null;
+  onDecide: (id: string, approve: boolean) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
   onRename: (id: string, name: string) => Promise<void>;
   onAdd: () => Promise<void>;
@@ -680,36 +707,47 @@ function Overview({
 }) {
   const device = data.devices[0];
   const pending = data.approvals.filter((item) => item.status === "pending");
+  const firstPending = pending[0];
   return (
     <>
       {pending.length > 0 ? (
-        <div className="banner" role="status">
-          <strong>
-            {pending.length} write approval{pending.length === 1 ? "" : "s"} waiting
-          </strong>
-          <span>An app asked to change a file or run a command.</span>
-          <a
-            href="#approvals"
-            onClick={(event) => {
-              event.preventDefault();
-              onShowApprovals();
-            }}
-          >
-            Review
-          </a>
-        </div>
+        <section className="overview-approvals" aria-label="Approvals waiting">
+          <div className="section-head">
+            <h2>Approvals</h2>
+            <button type="button" className="btn quiet small" onClick={onShowApprovals}>
+              Review{pending.length > 1 ? ` ${pending.length}` : ""}
+            </button>
+          </div>
+          {firstPending ? (
+            <ApprovalCard item={firstPending} busy={busy} onDecide={onDecide} />
+          ) : null}
+          {pending.length > 1 ? (
+            <p className="minor overview-more">
+              {pending.length - 1} more waiting —{" "}
+              <a
+                href="#approvals"
+                onClick={(event) => {
+                  event.preventDefault();
+                  onShowApprovals();
+                }}
+              >
+                review all
+              </a>
+            </p>
+          ) : null}
+        </section>
       ) : null}
       <Checklist data={data} onAdd={onAdd} adding={adding} />
-      {device ? (
-        <DeviceCard device={device} onRemove={onRemove} onRename={onRename} />
-      ) : (
-        <div className="state">
-          <strong>No device yet</strong>
-          Open FolderLink. It connects automatically.
-        </div>
-      )}
       <div className="split">
         <div>
+          {device ? (
+            <DeviceCard device={device} onRemove={onRemove} onRename={onRename} />
+          ) : (
+            <div className="state">
+              <strong>No device yet</strong>
+              Open FolderLink. It connects automatically.
+            </div>
+          )}
           <FolderSummary data={data} onShowFolders={onShowFolders} />
           <AppList apps={data.apps} onRevoke={onRevoke} />
         </div>
@@ -1026,9 +1064,11 @@ function FolderList({
   );
 }
 
-// FolderSummary is the overview's compact folders card. The full list
-// lives in the Folders section — the overview only shows the count, the
-// active share, and the folder names, so it never grows with the list.
+// FolderSummary is the overview's compact folders card: one row per
+// folder — a live dot, the name, its detail — with the app marks it is
+// shared with, and the count footer. The full list lives in the Folders
+// section; this card never grows rows with actions, so it never shows
+// Rename or Remove.
 export function FolderSummary({
   data,
   onShowFolders,
@@ -1049,19 +1089,39 @@ export function FolderSummary({
         {data.folders.length === 0 ? (
           <Empty title="No folders" body="Add a folder from this computer. The path stays on it." />
         ) : (
-          <div className="app-row">
-            <span className="folder-icon" aria-hidden="true">
-              <IconFolder />
-            </span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div>
-                {data.folders.length} folder{data.folders.length === 1 ? "" : "s"} · {active} active
-              </div>
-              <div className="minor path">
-                {data.folders.map((folder) => folder.label).join(" · ")}
-              </div>
+          <>
+            {data.folders.map((folder) => {
+              const on = folder.approval === "approved";
+              const allowed = on
+                ? folder.apps === null
+                  ? data.apps
+                  : data.apps.filter((app) => folder.apps?.includes(app.id))
+                : [];
+              return (
+                <div className="app-row" key={folder.id}>
+                  <span className={on ? "ov-dot" : "ov-dot paused"} aria-hidden="true" />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className={on ? "path" : "path paused"} title={folder.label}>
+                      {folder.label}
+                    </div>
+                    <div className="minor">
+                      {folder.deviceName
+                        ? `${folder.detail} · ${folder.deviceName}`
+                        : folder.detail}
+                    </div>
+                  </div>
+                  <span className="ov-apps">
+                    {allowed.map((app) => (
+                      <AppMark key={app.id} identity={app.identity} small />
+                    ))}
+                  </span>
+                </div>
+              );
+            })}
+            <div className="blocked-note">
+              {data.folders.length} folder{data.folders.length === 1 ? "" : "s"} · {active} active
             </div>
-          </div>
+          </>
         )}
       </div>
     </section>
@@ -1273,27 +1333,38 @@ function ApprovalsList({
     <section>
       <div className="section-head">
         <h2>Approvals</h2>
+        {pending.length > 0 ? <span className="hint">{pending.length} waiting</span> : null}
       </div>
-      <div className="list edge">
-        {pending.map((item) => (
-          <ApprovalCard key={item.id} item={item} busy={busy} onDecide={onDecide} />
-        ))}
-        {decided.map((item) => (
-          <div className="app-row" key={item.id}>
-            <AppMark identity={item.client} small />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div>
-                {approvalTitle(item)}
-                {item.path ? <span className="path"> {item.path}</span> : null}
-              </div>
-              <div className="minor">
-                {item.folderLabel} · {item.status}
-                {item.decidedAt ? ` · ${when(item.decidedAt)}` : ""}
+      {items.length === 0 ? (
+        <div className="list edge">
+          <Empty
+            title="No approvals"
+            body="An app asks here before it writes a file or runs a command. Nothing is waiting right now."
+          />
+        </div>
+      ) : null}
+      {pending.map((item) => (
+        <ApprovalCard key={item.id} item={item} busy={busy} onDecide={onDecide} />
+      ))}
+      {decided.length > 0 ? (
+        <div className="list edge decided-list">
+          {decided.map((item) => (
+            <div className="app-row" key={item.id}>
+              <AppMark identity={item.client} small />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div>
+                  {approvalTitle(item)}
+                  {item.path ? <span className="path"> {item.path}</span> : null}
+                </div>
+                <div className="minor">
+                  {item.folderLabel} · {item.status}
+                  {item.decidedAt ? ` · ${when(item.decidedAt)}` : ""}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -1397,7 +1468,11 @@ function ApprovalCard({
 }) {
   const deciding = busy === item.id;
   return (
-    <div className="approval">
+    <div className="approval edge">
+      <div className="approval-tag-row">
+        <span className="approval-tag">Approval requested</span>
+        <span className="badge waiting">waiting</span>
+      </div>
       <div className="approval-head">
         <AppMark identity={item.client} small />
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -1408,7 +1483,6 @@ function ApprovalCard({
             {` · expires ${when(item.expiresAt)}`}
           </div>
         </div>
-        <span className="badge">waiting</span>
       </div>
       {item.tool === "run_command" ? (
         <div className="minor">Command: {item.argv.join(" ")}</div>
@@ -1476,7 +1550,11 @@ export function ActivityList({
                     {when(item.time)} · {item.detail}
                   </div>
                 </div>
-                {item.denied ? <span className="badge">refused</span> : null}
+                {item.denied ? (
+                  <span className="badge refused">refused</span>
+                ) : (
+                  <span className="tag act">{item.action.split("_")[0]}</span>
+                )}
               </div>
             ))}
             {onShowAll && items.length > shown.length ? (

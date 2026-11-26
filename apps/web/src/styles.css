@@ -2779,3 +2779,351 @@ img.avatar {
     z-index: 10;
   }
 }
+
+/* ---- Real dashboard, landing-matched (F direction) ----
+   Scoped under .shell so the landing (.fl-*) and the other pages are
+   untouched. Same tokens as the landing: near-black canvas, ONE coral-red
+   accent used sparingly (approval attention, selection), green only for
+   tiny live/ok signals, hairline dividers, tight spacing. Visual only:
+   no class the dashboard logic depends on is renamed, only restyled. */
+.shell {
+  --fl-red: #ff5b3e;
+  --fl-red-soft: #ff6363;
+  --bg: #07080a;
+  --sidebar: #0a0a0a;
+  --panel: #101111;
+  --raise: #141414;
+  --surface-2: #141414;
+  --line: rgba(255, 255, 255, 0.06);
+  --line-2: rgba(255, 255, 255, 0.1);
+  --fg: #f4f4f6;
+  --sub: #9a9a9a;
+  --faint: #6e6e6e;
+  --go: #3ecf8e;
+  --warn: #fbbf24;
+  --bad: #e08a8a;
+  background: var(--bg);
+}
+.shell :focus-visible {
+  outline: 2px solid var(--fl-red-soft);
+  outline-offset: 2px;
+}
+.shell .btn {
+  border-radius: 8px;
+  height: 36px;
+}
+.shell .btn.small {
+  height: 32px;
+}
+.shell .btn.quiet,
+.shell .btn.danger {
+  background: var(--panel);
+}
+
+/* Sidebar: the landing mock's sidebar — 208px, brand on top, nav, and
+   "Bridge connected" with a green dot above the account at the bottom. */
+.shell .sidebar {
+  width: 208px;
+  background: var(--sidebar);
+}
+.shell .side-brand {
+  padding: 0 16px;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+.shell .side-brand .mark svg {
+  width: 20px;
+  height: 20px;
+}
+.shell .side-nav {
+  padding: 10px 12px;
+}
+.shell .side-nav a {
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--sub);
+}
+.shell .side-nav a.active {
+  background: var(--raise);
+  color: var(--fg);
+}
+.shell .side-nav a:hover {
+  color: var(--fg);
+}
+.shell .side-nav .count {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--faint);
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+.shell .side-nav .count.alert {
+  color: var(--fl-red-soft);
+  border-color: rgba(255, 99, 99, 0.45);
+  background: rgba(255, 91, 62, 0.08);
+}
+.shell .side-foot {
+  padding: 12px;
+}
+.shell .bridge-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--faint);
+  padding: 8px 10px;
+}
+.shell .bridge-status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--go);
+  flex: none;
+}
+.shell .bridge-status.off i {
+  background: var(--faint);
+}
+.shell .account {
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+  padding: 12px 10px 0;
+}
+.shell .account .who-name {
+  font-size: 12px;
+  color: var(--fg);
+}
+
+/* Top bar: the section title reads like the mock's Overview heading,
+   with the folder/app counts as a mono subtitle on Overview. */
+.shell .dash-top {
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.shell .dash-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  text-transform: none;
+}
+.shell .dash-sub {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--faint);
+  white-space: nowrap;
+  flex: none;
+}
+
+/* Body: tighter like the mock (20px gutters), 960px measure, and the
+   Overview two-column split from the mock — folders beside activity. */
+.shell .dash-body {
+  padding: 24px 28px 64px;
+  max-width: 960px;
+}
+.shell .split {
+  grid-template-columns: 1.15fr 1fr;
+  gap: 20px;
+  margin-top: 0;
+}
+.shell .split > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  align-content: start;
+  min-width: 0;
+}
+.shell .split > div > * {
+  min-width: 0;
+}
+.shell .section-head {
+  margin: 24px 0 10px;
+}
+.shell .section-head:first-child {
+  margin-top: 0;
+}
+.shell .section-head h2 {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.shell .overview-approvals .section-head {
+  margin-top: 0;
+}
+.shell .overview-more {
+  margin: 10px 2px 0;
+}
+.shell .overview-more a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Cards: hairline panels on the near-black canvas. */
+.shell .list,
+.shell .stat-card,
+.shell .profile-card,
+.shell .mode-block,
+.shell .session-card,
+.shell .checklist {
+  border-radius: 12px;
+  background: var(--panel);
+}
+.shell .stat-card {
+  margin-bottom: 0;
+}
+.shell .folder-row,
+.shell .app-row {
+  padding: 12px 16px;
+}
+.shell .folder-icon {
+  background: var(--raise);
+  border-color: var(--line-2);
+}
+.shell .tag {
+  border-color: var(--line-2);
+  color: var(--sub);
+}
+.shell .tag.act {
+  color: var(--faint);
+  border-color: var(--line);
+}
+.shell .badge.waiting {
+  margin-left: 0;
+  background: rgba(255, 99, 99, 0.12);
+  color: var(--fl-red-soft);
+}
+.shell .badge.refused {
+  background: rgba(255, 99, 99, 0.12);
+  color: var(--fl-red-soft);
+}
+.shell .badge.go {
+  background: rgba(62, 207, 142, 0.12);
+  color: var(--go);
+}
+
+/* Overview folder rows: live dot, mono name, app marks — the mock's
+   shared-folders column, with real folders and real scoping. */
+.shell .ov-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--go);
+  flex: none;
+  margin-top: 6px;
+}
+.shell .ov-dot.paused {
+  background: var(--faint);
+}
+.shell .ov-apps {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+}
+.shell .ov-apps .app-mark.small {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+}
+
+/* Approval card: the mock's approval card, with the real request inside.
+   Coral border + tint (the one loud red on the page), white pill Approve,
+   ghost pill Deny. */
+.shell .approval {
+  background: rgba(255, 91, 62, 0.06);
+  border: 1px solid rgba(255, 99, 99, 0.35);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.shell .approval + .approval,
+.shell .approval + .decided-list,
+.shell .decided-list {
+  margin-top: 12px;
+}
+.shell .approval-tag-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.shell .approval-tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fl-red-soft);
+}
+.shell .approval-tag-row .badge {
+  margin-left: auto;
+}
+.shell .approval .btn {
+  border-radius: 999px;
+  padding: 0 18px;
+  min-height: 38px;
+  font-weight: 600;
+}
+.shell .approval .btn.quiet {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--line-2);
+  box-shadow: none;
+}
+.shell .diff-table,
+.shell .diff {
+  background: var(--panel);
+  border-color: var(--line-2);
+}
+.shell .diff-add {
+  background: rgba(62, 207, 142, 0.1);
+}
+.shell .diff-del {
+  background: rgba(255, 99, 99, 0.1);
+}
+
+/* Settings + details: coral is the selection accent; green stays the
+   ok signal (allowed chips, done steps). */
+.shell .mode-option.selected {
+  border-color: var(--fl-red);
+  background: rgba(255, 91, 62, 0.06);
+}
+.shell .mode-option input {
+  accent-color: var(--fl-red);
+}
+.shell .access-chip.on {
+  border-color: var(--go);
+  background: rgba(62, 207, 142, 0.08);
+}
+.shell .checklist li.done .step-no {
+  background: var(--go);
+  color: #04120a;
+}
+.shell .toggle.on {
+  background: var(--go);
+}
+
+@media (max-width: 1100px) {
+  .shell .split {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 800px) {
+  .shell .dash-body {
+    padding: 20px 16px 48px;
+  }
+  .shell .dash-sub {
+    display: none;
+  }
+  .shell .approval .cta {
+    flex-wrap: wrap;
+  }
+}

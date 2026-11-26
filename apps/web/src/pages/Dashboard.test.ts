@@ -195,14 +195,16 @@ describe("ActivityList", () => {
 });
 
 describe("FolderSummary", () => {
-  it("shows the folder count, the active share, and the names without the rows", () => {
-    const data = { folders: [activeFolder, pausedFolder] } as unknown as DashboardData;
+  it("shows one row per folder, the count footer, and the active share", () => {
+    const data = { folders: [activeFolder, pausedFolder], apps } as unknown as DashboardData;
     const html = renderToStaticMarkup(
       createElement(FolderSummary, { data, onShowFolders: () => {} }),
     );
-    expect(html).toContain("2 folders");
-    expect(html).toContain("1 active");
-    expect(html).toContain("raffle · portfolio");
+    expect(html).toContain("2 folders · 1 active");
+    expect(html).toContain("raffle");
+    expect(html).toContain("portfolio");
+    expect(html).toContain("read-only");
+    expect(html).toContain("paused · hidden from AI");
     expect(html).toContain("Manage");
     expect(html).not.toContain("Rename");
     expect(html).not.toContain("Remove");

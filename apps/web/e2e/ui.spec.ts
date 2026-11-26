@@ -118,7 +118,8 @@ test.describe("visual and glitch checks", () => {
     await dashboardFrame(page, 1440);
 
     await page.goto("/dashboard?fixture=offline");
-    await expect(page.getByText("offline")).toBeVisible();
+    // Exact match: the sidebar also says "Bridge offline" now.
+    await expect(page.getByText("offline", { exact: true })).toBeVisible();
     await dashboardFrame(page, 1440);
 
     await page.setViewportSize({ width: 390, height: 800 });
