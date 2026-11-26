@@ -874,7 +874,7 @@ function DeviceCard({
           </div>
           <div className="device-sub path">
             {device.os || "unknown"} · {device.arch || "unknown"}
-            {device.version ? ` · FolderLink ${device.version}` : ""}
+            {device.version ? ` · ${device.version}` : ""}
           </div>
         </div>
         <div className="stat-actions">

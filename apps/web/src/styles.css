@@ -1780,9 +1780,23 @@ a {
   color: var(--go);
 }
 .row-line {
+  display: flex;
+  min-width: 0;
+  /* The action and the path are separate flex items now, so the single
+     space that used to live inside the span is gone (a flex item's
+     leading whitespace is stripped). Restore it as an explicit gap. */
+  gap: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* The path is the truncating flex item: it takes the remaining width and
+   ellipsises itself, instead of the span overflowing as an inline element
+   and relying on the parent to clip it (which left the span's box hanging
+   up to ~170px past the viewport on narrow phones). */
+.row-line .path {
+  flex: 1;
+  min-width: 0;
 }
 .meta {
   padding: 12px 20px;
@@ -2567,6 +2581,19 @@ img.avatar {
   border-radius: 12px;
   background: var(--panel);
 }
+/* Below ~640px the three action buttons leave under 200px for the
+   description, squeezing it into a word-per-line column. Stack the card
+   so the text gets the full width and the buttons wrap below it. */
+@media (max-width: 640px) {
+  .session-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .session-card .row-actions {
+    flex-wrap: wrap;
+  }
+}
 .session-card h3 {
   margin: 0 0 4px;
   font-size: 15px;
@@ -2921,14 +2948,18 @@ img.avatar {
   flex: none;
 }
 
-/* Body: tighter like the mock (20px gutters), 960px measure, and the
-   Overview two-column split from the mock — folders beside activity. */
+/* Body: tighter like the mock (20px gutters), 1280px measure, and the
+   Overview two-column split from the mock — folders beside activity.
+   The cap is 1280px, not fluid: at 1920px the dashboard uses the screen
+   instead of leaving ~780px of empty black on the right, but the content
+   never stretches unbounded. The activity column stays a fixed 380px and
+   the left column takes the extra width. */
 .shell .dash-body {
   padding: 24px 28px 64px;
-  max-width: 960px;
+  max-width: 1280px;
 }
 .shell .split {
-  grid-template-columns: 1.15fr 1fr;
+  grid-template-columns: minmax(0, 1fr) 380px;
   gap: 20px;
   margin-top: 0;
 }
@@ -2944,6 +2975,11 @@ img.avatar {
 }
 .shell .section-head {
   margin: 24px 0 10px;
+  /* Inset the header to the card's inner content edge (16px) so the
+     action button (Manage / Add folder / Pair device) does not sit flush
+     against the column edge, where it reads as colliding with the next
+     column. */
+  padding: 0 16px;
 }
 .shell .section-head:first-child {
   margin-top: 0;
