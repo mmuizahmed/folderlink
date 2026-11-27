@@ -509,16 +509,18 @@ export function Dashboard() {
       </aside>
       <div className="main">
         <header className="dash-top">
-          <button type="button" className="btn quiet small menu" onClick={() => setMenu(true)}>
-            Menu
-          </button>
-          <div className="dash-title">{NAV.find((item) => item.id === section)?.label}</div>
-          {ready && section === "overview" ? (
-            <span className="dash-sub">
-              {ready.folders.length} folder{ready.folders.length === 1 ? "" : "s"} shared ·{" "}
-              {ready.apps.length} app{ready.apps.length === 1 ? "" : "s"} connected
-            </span>
-          ) : null}
+          <div className="dash-top-inner">
+            <button type="button" className="btn quiet small menu" onClick={() => setMenu(true)}>
+              Menu
+            </button>
+            <div className="dash-title">{NAV.find((item) => item.id === section)?.label}</div>
+            {ready && section === "overview" ? (
+              <span className="dash-sub">
+                {ready.folders.length} folder{ready.folders.length === 1 ? "" : "s"} shared ·{" "}
+                {ready.apps.length} app{ready.apps.length === 1 ? "" : "s"} connected
+              </span>
+            ) : null}
+          </div>
         </header>
         <div className="dash-body">
           {state.status === "loading" ? <p className="state">Loading.</p> : null}

@@ -2922,16 +2922,42 @@ img.avatar {
   border-top: 1px solid var(--line);
   padding: 12px 10px 0;
 }
+/* The text column must be allowed to shrink below the email's width:
+   without min-width: 0 a long unbreakable email (muizahmedarain@gmail.com)
+   forces the column to its full min-content width and the address runs
+   8px past the sidebar edge, hard-clipped with no ellipsis. With the
+   column shrinkable, the .path ellipsis on .who-mail truncates it. */
+.shell .account > div {
+  flex: 1;
+  min-width: 0;
+}
 .shell .account .who-name {
   font-size: 12px;
   color: var(--fg);
 }
 
 /* Top bar: the section title reads like the mock's Overview heading,
-   with the folder/app counts as a mono subtitle on Overview. */
+   with the folder/app counts as a mono subtitle on Overview. The bar
+   itself stays full-width (sticky background + border), but the inner
+   row is capped at the same 1280px as the body so the subtitle's right
+   edge lines up with the content below it instead of floating ~400px
+   out in the empty gutter at 1920px. */
 .shell .dash-top {
   background: var(--bg);
   border-bottom: 1px solid var(--line);
+  display: block;
+  padding: 0;
+}
+.shell .dash-top-inner {
+  width: 100%;
+  max-width: 1280px;
+  height: 100%;
+  margin: 0;
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 .shell .dash-title {
   font-size: 16px;
@@ -2966,7 +2992,14 @@ img.avatar {
 .shell .split > div {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 0;
+  /* 24px between the stacked sections (device card → Folders → AI
+     apps). The gap has to live here, not on the section-heads: every
+     section-head is the first child of its section, so the
+     .section-head:first-child rule below zeroes its top margin (which
+     is correct for a head at the top of a page, but would leave stacked
+     sections flush against each other — the Manage button sat 0px below
+     the device card and the AI apps head 0px below the folders list). */
+  gap: 24px;
   align-content: start;
   min-width: 0;
 }
@@ -3155,6 +3188,9 @@ img.avatar {
 @media (max-width: 800px) {
   .shell .dash-body {
     padding: 20px 16px 48px;
+  }
+  .shell .dash-top-inner {
+    padding: 0 16px;
   }
   .shell .dash-sub {
     display: none;
