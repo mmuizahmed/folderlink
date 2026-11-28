@@ -11,6 +11,7 @@
     <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-22c55e"></a>
     <a href="https://github.com/mmuizahmed/folderlink/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/mmuizahmed/folderlink?label=release"></a>
     <a href="https://go.dev/"><img alt="Go 1.22" src="https://img.shields.io/badge/go-1.22-00ADD8"></a>
+    <a href="https://m8ven.ai/mcp/mmuizahmed/folderlink?s=readme"><img alt="M8ven Verified" src="https://m8ven.ai/badge/mcp/mmuizahmed/folderlink?variant=verified"></a>
   </p>
   <p>
     <a href="https://folderlink.muiz.pk">Website</a>
