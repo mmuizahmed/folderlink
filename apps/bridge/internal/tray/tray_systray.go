@@ -162,6 +162,10 @@ func onReady(opts Options) {
 	systray.AddSeparator()
 	restart := systray.AddMenuItem("Restart bridge", "Drop the connection and reconnect")
 	update := systray.AddMenuItem("Check for updates", "Check GitHub for a newer FolderLink")
+	// Windows gives an app no way to pin its own tray icon or force it
+	// always visible, so this opens Taskbar settings where the user turns
+	// FolderLink on themselves. That is the supported answer to "pin it".
+	keepVisible := systray.AddMenuItem("Keep icon visible", "Open taskbar settings to always show the FolderLink icon")
 	notify := systray.AddMenuItem("Notify on successful reads", "Show a toast when an app reads a file")
 	quit := systray.AddMenuItem("Quit FolderLink", "Stop the bridge and remove the tray icon")
 	mu.Lock()
@@ -176,6 +180,7 @@ func onReady(opts Options) {
 	go watchClicks(folders, func() { _ = browser.Open(opts.Web + "/dashboard") })
 	go watchClicks(restart, opts.OnRestart)
 	go watchClicks(update, opts.OnCheckUpdates)
+	go watchClicks(keepVisible, func() { _ = browser.Open("ms-settings:taskbar") })
 	go watchClicks(notify, func() {
 		on := !currentNotifySuccess()
 		if opts.OnToggleNotifySuccess != nil {
@@ -190,6 +195,9 @@ func onReady(opts Options) {
 		}
 		systray.Quit()
 	})
+	if opts.OnReady != nil {
+		opts.OnReady()
+	}
 }
 
 func watchClicks(item *systray.MenuItem, fn func()) {

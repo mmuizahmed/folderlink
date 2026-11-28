@@ -417,7 +417,11 @@ async function main() {
     .join("");
   const sqlite = execFileSync(
     "bash",
-    ["-lc", `find ${state} -path '*d1*' -name '*.sqlite' | head -1`],
+    // The D1 directory also holds miniflare's metadata.sqlite, which has
+    // no app tables; exclude it so the insert below targets the real
+    // database. `head -1` on readdir order used to pick metadata.sqlite
+    // first on some machines and the insert failed with "no such table".
+    ["-lc", `find ${state} -path '*d1*' -name '*.sqlite' ! -name 'metadata.sqlite' | head -1`],
     {
       encoding: "utf8",
     },

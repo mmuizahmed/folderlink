@@ -53,6 +53,12 @@ func TestDoctorNotInstalled(t *testing.T) {
 			return "absent", nil
 		},
 	})
+	if got := findCheck(checks, "Notifications"); got.Status != CheckSkip {
+		t.Errorf("Notifications = %s, want skip", got.Status)
+	}
+	if got := findCheck(checks, "Desktop shortcut"); got.Status != CheckSkip {
+		t.Errorf("Desktop shortcut = %s, want skip", got.Status)
+	}
 	if got := findCheck(checks, "Background copy"); got.Status != CheckFail {
 		t.Errorf("Background copy = %s, want FAIL", got.Status)
 	}

@@ -26,6 +26,8 @@ func TestNilNotifierIsSafe(t *testing.T) {
 	n.WriteRefused("notes", ".env")
 	n.ApprovalNeeded("notes", "run.ps1", "some-id")
 	n.CommandStarted("notes", []string{"git", "status"})
+	n.Started()
+	n.AlreadyRunning()
 	n.SetNotifySuccess(true)
 }
 
@@ -35,9 +37,13 @@ func TestWriteNotifiersDoNotPanic(t *testing.T) {
 	n.WriteRefused("notes", ".env")
 	n.ApprovalNeeded("notes", "run.ps1", "some-id")
 	n.CommandStarted("notes", []string{"git", "status"})
+	n.Started()
+	n.AlreadyRunning()
 	// A second call within the throttle window stays quiet but must not panic.
 	n.WriteDone("notes", "b.md")
 	n.ApprovalNeeded("notes", "x.sh", "other-id")
+	n.Started()
+	n.AlreadyRunning()
 }
 
 func TestDisabledNotifier(t *testing.T) {

@@ -49,6 +49,8 @@ type Notifier struct {
 	lastWrite     time.Time
 	lastApproval  time.Time
 	lastCommand   time.Time
+	lastStarted   time.Time
+	lastAlready   time.Time
 }
 
 // New returns a notifier. Enabled false means no toasts at all (console
@@ -167,6 +169,32 @@ func (n *Notifier) CommandStarted(folder string, argv []string) {
 		cmd = argv[0]
 	}
 	go show("FolderLink — command started", "An app started "+cmd+" in "+folder+".")
+}
+
+// Started tells the user the bridge is running after a shortcut launch,
+// so the double-click gives visible feedback. It never blocks the
+// caller.
+func (n *Notifier) Started() {
+	if n == nil || !n.isEnabled() {
+		return
+	}
+	if !n.allow(&n.lastStarted, refusedThrottle) {
+		return
+	}
+	go show("FolderLink — running", "FolderLink is running. Click the tray icon to open the dashboard.")
+}
+
+// AlreadyRunning tells the user a bridge is already running, so their
+// click did not start a second one. It sends the toast synchronously:
+// the process exits right after, and a goroutine would not get to run.
+func (n *Notifier) AlreadyRunning() {
+	if n == nil || !n.isEnabled() {
+		return
+	}
+	if !n.allow(&n.lastAlready, refusedThrottle) {
+		return
+	}
+	show("FolderLink — already running", "FolderLink is already running. Click the tray icon to open the dashboard.")
 }
 
 // allow rate-limits one toast kind: at most one per interval. It returns

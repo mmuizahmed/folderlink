@@ -51,6 +51,12 @@ func run(args []string) error {
 		fmt.Println(version)
 		return nil
 	}
+	// Whether the process was launched with no command at all. A shortcut
+	// double-click runs the binary with no arguments (and splitCommand
+	// defaults it to "run"); the logon task and a terminal both pass an
+	// explicit "run". The tray uses it to show a startup toast only for
+	// a shortcut launch, not at every login.
+	launchedWithoutArgs := len(args) == 0
 	dir, err := homeDir(*homeFlag)
 	if err != nil {
 		return err
@@ -88,7 +94,20 @@ func run(args []string) error {
 		if len(rest) != 0 {
 			return errors.New("run does not take arguments")
 		}
-		return runBridge(id, store, cfg, *trayFlag || isBackgroundBinary())
+		return runBridge(id, store, cfg, *trayFlag || isBackgroundBinary(), launchedWithoutArgs)
+	case "start":
+		if len(rest) != 0 {
+			return errors.New("start does not take arguments")
+		}
+		if err := service.Start(); err != nil {
+			if service.IsAlreadyRunning(err) {
+				fmt.Println("FolderLink is already running.")
+				return nil
+			}
+			return err
+		}
+		fmt.Println("FolderLink is starting.")
+		return nil
 	case "allow":
 		if len(rest) != 1 {
 			return errors.New("usage: folderlink allow <directory>")
@@ -200,9 +219,9 @@ func run(args []string) error {
 	}
 }
 
-func runBridge(id *identity.Identity, store *config.Store, cfg config.File, trayMode bool) error {
+func runBridge(id *identity.Identity, store *config.Store, cfg config.File, trayMode bool, launchedWithoutArgs bool) error {
 	if trayMode {
-		return runTrayBridge(id, store, cfg)
+		return runTrayBridge(id, store, cfg, launchedWithoutArgs)
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -242,7 +261,7 @@ func clientConfig(id *identity.Identity, store *config.Store, cfg config.File) c
 func splitCommand(args []string) (string, []string) {
 	known := map[string]bool{
 		"run": true, "allow": true, "unallow": true, "folders": true, "status": true, "version": true,
-		"install": true, "uninstall": true, "doctor": true, "update": true,
+		"install": true, "uninstall": true, "doctor": true, "update": true, "start": true,
 	}
 	for i := 0; i < len(args); i++ {
 		arg := args[i]

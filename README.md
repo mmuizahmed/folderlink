@@ -75,6 +75,8 @@ The installer checks `checksums.txt`, puts FolderLink in your user directory, an
 
 Or install by hand from [GitHub Releases](https://github.com/mmuizahmed/folderlink/releases): download the archive for your computer (on Windows, `folderlink_windows_amd64.zip` — or `folderlink_windows_arm64.zip` on Arm — which holds both the app and the background service), unzip into one folder, and run `folderlink install` — not `folderlink` on its own. Running `folderlink` directly opens a terminal window, and the connection dies when you close it. `folderlink install` copies the app to a stable folder, starts it at login, and shows a FolderLink icon in the system tray (Windows) — click it for the connection status, the dashboard, restart, or quit. No terminal window. If something looks wrong, run `folderlink doctor`.
 
+If you quit FolderLink from the tray, start it again from the Desktop shortcut, from the Start Menu, or by running `folderlink start` in a terminal (or Win+R). To keep the tray icon always visible instead of hidden in the overflow, pick "Keep icon visible" in the tray menu, then turn FolderLink on in Taskbar settings.
+
 ```mermaid
 sequenceDiagram
   participant App as FolderLink

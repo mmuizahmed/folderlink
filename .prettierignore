@@ -7,3 +7,4 @@ coverage
 pnpm-lock.yaml
 apps/bridge/vendor
 *.min.js
+docs/TEST-MATRIX.md

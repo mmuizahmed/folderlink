@@ -54,6 +54,7 @@ func Doctor(cfg DoctorConfig) []Check {
 		checkEnabled(installed),
 		checkLogonPower(installed),
 		checkToastShortcut(),
+		checkDesktopShortcut(),
 		checkContextMenu(),
 		checkProcessRunning(),
 		checkServerReachable(cfg.Server),
@@ -206,6 +207,16 @@ func checkToastShortcut() Check {
 		return Check{"Notifications", CheckOK, "Start Menu shortcut is in place, so toasts can show"}
 	}
 	return Check{"Notifications", CheckFail, "notification shortcut is missing — toasts will be silent; run folderlink install again"}
+}
+
+func checkDesktopShortcut() Check {
+	if runtime.GOOS != "windows" {
+		return Check{"Desktop shortcut", CheckSkip, "the Desktop shortcut is Windows-only"}
+	}
+	if DesktopShortcutExists() {
+		return Check{"Desktop shortcut", CheckOK, "Desktop shortcut is in place, so FolderLink can be started from the desktop"}
+	}
+	return Check{"Desktop shortcut", CheckFail, "desktop shortcut is missing — run folderlink install again"}
 }
 
 func checkContextMenu() Check {

@@ -12,6 +12,7 @@ import (
 	"github.com/go-ole/go-ole"
 
 	"github.com/mmuizahmed/folderlink/apps/bridge/internal/notify"
+	"github.com/mmuizahmed/folderlink/apps/bridge/internal/tray"
 )
 
 // toastShortcutPath is the Start Menu shortcut that gives FolderLink its
@@ -66,7 +67,68 @@ func EnsureToastShortcut() error {
 	if err := os.MkdirAll(filepath.Dir(lnk), 0o755); err != nil {
 		return err
 	}
-	return createShortcut(lnk, exe)
+	return createShortcut(lnk, exe, exe)
+}
+
+// desktopShortcutPath is the Desktop shortcut that lets the user start
+// FolderLink again after quitting from the tray. Quitting stops the
+// bridge and removes the tray icon, and the only other relaunch paths
+// are the Start Menu shortcut (which most users never notice) and the
+// logon task (next login only). The Desktop shortcut is the visible one.
+func desktopShortcutPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return desktopShortcutPathFor(home), nil
+}
+
+// DesktopShortcutExists reports whether the Desktop shortcut is in
+// place. It does not verify the target; that is only set by
+// EnsureDesktopShortcut.
+func DesktopShortcutExists() bool {
+	path, err := desktopShortcutPath()
+	if err != nil {
+		return false
+	}
+	_, err = os.Stat(path)
+	return err == nil
+}
+
+// EnsureDesktopShortcut creates the Desktop shortcut for the background
+// binary, so the user can start FolderLink again after quitting from the
+// tray. It carries the same AppUserModelID as the notification shortcut,
+// and its icon is the FolderLink mark (the exe has no embedded icon
+// resource, so the mark is written to the install dir first, the same
+// file the Explorer menu uses). It is idempotent: when the shortcut
+// already exists it is left alone, and a user-deleted shortcut is
+// recreated on the next start, the same as the toast shortcut. A failure
+// is returned but must not fail the install or the start: the shortcut
+// is a convenience, and doctor reports it.
+func EnsureDesktopShortcut() error {
+	dir, err := InstallDir()
+	if err != nil {
+		return err
+	}
+	exe := filepath.Join(dir, "folderlink-bg.exe")
+	if _, err := os.Stat(exe); err != nil {
+		return fmt.Errorf("the background binary is not installed yet")
+	}
+	lnk, err := desktopShortcutPath()
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(lnk); err == nil {
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(lnk), 0o755); err != nil {
+		return err
+	}
+	// The shortcut shares the context menu's icon file (icon.ico in the
+	// install dir); resolveMenuIcon writes it when needed and falls
+	// back to the exe when the mark is unavailable.
+	iconPath := resolveMenuIcon(dir, exe, tray.IconICO())
+	return createShortcut(lnk, exe, iconPath)
 }
 
 var (
@@ -102,8 +164,10 @@ const vtLPWSTR = 31
 // createShortcut writes a .lnk with the AppUserModelID property. It uses
 // raw COM (IShellLink, IPropertyStore, IPersistFile) because a plain
 // WScript.Shell shortcut cannot carry the property, and the property is
-// what makes Windows deliver toasts for this app.
-func createShortcut(lnkPath, target string) error {
+// what makes Windows deliver toasts for this app. iconPath is the file
+// the shortcut shows as its icon (a .ico, or the exe itself when the
+// exe carries an icon resource).
+func createShortcut(lnkPath, target, iconPath string) error {
 	if err := ole.CoInitialize(0); err != nil {
 		return err
 	}
@@ -129,7 +193,11 @@ func createShortcut(lnkPath, target string) error {
 	if hr := vtCall(link, 7, uintptr(unsafe.Pointer(link)), uintptr(unsafe.Pointer(descPtr))); hr != 0 {
 		return fmt.Errorf("IShellLink.SetDescription failed: %#x", hr)
 	}
-	if hr := vtCall(link, 17, uintptr(unsafe.Pointer(link)), uintptr(unsafe.Pointer(targetPtr)), 0); hr != 0 {
+	iconPtr, err := syscall.UTF16PtrFromString(iconPath)
+	if err != nil {
+		return err
+	}
+	if hr := vtCall(link, 17, uintptr(unsafe.Pointer(link)), uintptr(unsafe.Pointer(iconPtr)), 0); hr != 0 {
 		return fmt.Errorf("IShellLink.SetIconLocation failed: %#x", hr)
 	}
 	store, err := queryInterface(link, iidPropertyStore)

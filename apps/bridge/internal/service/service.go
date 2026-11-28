@@ -75,6 +75,13 @@ func installDirFor(goos, localAppData, home string) (string, error) {
 	}
 }
 
+// desktopShortcutPathFor is the Desktop shortcut location for a home
+// directory, exposed so tests can check it without a Windows machine.
+// The Desktop folder is %USERPROFILE%\Desktop on Windows.
+func desktopShortcutPathFor(home string) string {
+	return filepath.Join(home, "Desktop", "FolderLink.lnk")
+}
+
 // installBinaryName is the file the login task runs: the no-console build on
 // Windows, the plain binary everywhere else.
 func installBinaryName() string {
@@ -355,6 +362,13 @@ func installWindows() error {
 	if err := EnsureToastShortcut(); err != nil {
 		slog.Warn("notification shortcut was not created", "err", err.Error())
 	}
+	// The Desktop shortcut lets the user start FolderLink again after
+	// quitting from the tray. Best effort, like the notification
+	// shortcut: a missing shortcut only means no desktop icon, and
+	// doctor reports it.
+	if err := EnsureDesktopShortcut(); err != nil {
+		slog.Warn("desktop shortcut was not created", "err", err.Error())
+	}
 	// The Explorer right-click verb. Best effort as well: a missing verb
 	// only means no context menu, and doctor reports it.
 	if err := RegisterContextMenu(); err != nil {
@@ -363,10 +377,18 @@ func installWindows() error {
 	// Start it now, so the user does not have to log out and back in.
 	// A task that is already running reports an error here; that means the
 	// bridge is up, which is the outcome we want.
-	if err := run("schtasks", "/run", "/tn", "FolderLink"); err != nil && !strings.Contains(err.Error(), "already running") {
+	if err := run("schtasks", "/run", "/tn", "FolderLink"); err != nil && !IsAlreadyRunning(err) {
 		return fmt.Errorf("background task was created but could not be started: %w", err)
 	}
 	return nil
+}
+
+// IsAlreadyRunning reports whether err is the "task is already running"
+// error from schtasks. An already-running bridge is the outcome we want,
+// not a failure: it is what install checks for after creating the task,
+// and what `folderlink start` treats as success.
+func IsAlreadyRunning(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "already running")
 }
 
 func installDarwin() error {

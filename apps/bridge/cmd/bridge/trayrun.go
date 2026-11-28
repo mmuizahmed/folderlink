@@ -48,7 +48,7 @@ func isBackgroundBinaryName(exe string) bool {
 // Quitting from the tray stops the bridge and returns. There is no console
 // window in this mode, so client output is discarded and the tray status
 // line is the only UI.
-func runTrayBridge(id *identity.Identity, store *config.Store, cfg config.File) error {
+func runTrayBridge(id *identity.Identity, store *config.Store, cfg config.File, launchedWithoutArgs bool) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	// Notification identity must be set before any window exists, and the
@@ -59,6 +59,30 @@ func runTrayBridge(id *identity.Identity, store *config.Store, cfg config.File) 
 	if err := service.EnsureToastShortcut(); err != nil {
 		slog.Warn("notification shortcut is missing", "err", err.Error())
 	}
+	// The Desktop shortcut lets the user start FolderLink again after
+	// quitting from the tray. Best effort, like the notification
+	// shortcut: a missing shortcut only means no desktop icon, and
+	// doctor reports it. Existing installs get it on the next start.
+	if err := service.EnsureDesktopShortcut(); err != nil {
+		slog.Warn("desktop shortcut is missing", "err", err.Error())
+	}
+	// Toasts only in tray mode: a console run already prints to the
+	// terminal. Refused reads always toast; successful reads only when
+	// the user opted in (tray checkbox).
+	notifier := notify.New(true, cfg.NotifySuccess)
+	// A second tray would fight the first for the connection and the tray
+	// icon. If one is already running, tell the user and exit instead of
+	// starting a duplicate bridge. A guard failure is best effort: the
+	// bridge still starts.
+	release, alreadyRunning, err := service.TryAcquireSingleInstance()
+	if err != nil {
+		slog.Warn("single-instance check failed", "err", err.Error())
+	}
+	if alreadyRunning {
+		notifier.AlreadyRunning()
+		return nil
+	}
+	defer release()
 	clientCfg := clientConfig(id, store, cfg)
 	clientCfg.Stdout = io.Discard
 	clientCfg.OnState = tray.SetState
@@ -67,10 +91,6 @@ func runTrayBridge(id *identity.Identity, store *config.Store, cfg config.File) 
 	// live. There is no approve-from-tray UI: approving happens in the
 	// dashboard, and the tray notification is the alert.
 	clientCfg.OnMode = tray.SetMode
-	// Toasts only in tray mode: a console run already prints to the
-	// terminal. Refused reads always toast; successful reads only when
-	// the user opted in (tray checkbox).
-	notifier := notify.New(true, cfg.NotifySuccess)
 	clientCfg.Notify = notifier
 	restart := make(chan struct{}, 1)
 	checkNow := make(chan struct{}, 1)
@@ -118,6 +138,15 @@ func runTrayBridge(id *identity.Identity, store *config.Store, cfg config.File) 
 	tray.Run(ctx, tray.Options{
 		Web:  cfg.Web,
 		Mode: mode.New(cfg.WriteApprovalMode).Get(),
+		OnReady: func() {
+			// A shortcut double-click gives no other feedback (the
+			// background binary has no console), so toast once the tray
+			// is up. The logon task and a terminal run pass an explicit
+			// "run", so they do not toast at every login.
+			if launchedWithoutArgs {
+				notifier.Started()
+			}
+		},
 		OnRestart: func() {
 			select {
 			case restart <- struct{}{}:

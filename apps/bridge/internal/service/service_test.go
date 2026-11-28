@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,6 +40,43 @@ func TestInstallDirFor(t *testing.T) {
 			t.Errorf("installDirFor(%q, %q, %q) = %q, want %q", tc.goos, tc.localAppData, tc.home, got, tc.want)
 		}
 	}
+}
+
+func TestDesktopShortcutPathFor(t *testing.T) {
+	got := desktopShortcutPathFor("/home/muiz")
+	want := filepath.Join("/home/muiz", "Desktop", "FolderLink.lnk")
+	if got != want {
+		t.Errorf("desktopShortcutPathFor(%q) = %q, want %q", "/home/muiz", got, want)
+	}
+}
+
+func TestIsAlreadyRunning(t *testing.T) {
+	if IsAlreadyRunning(nil) {
+		t.Errorf("IsAlreadyRunning(nil) = true, want false")
+	}
+	if !IsAlreadyRunning(errAlreadyRunning) {
+		t.Errorf("IsAlreadyRunning(%q) = false, want true", errAlreadyRunning)
+	}
+	if IsAlreadyRunning(errOther) {
+		t.Errorf("IsAlreadyRunning(%q) = true, want false", errOther)
+	}
+}
+
+var (
+	errAlreadyRunning = errors.New("schtasks: ERROR: The task is already running.")
+	errOther          = errors.New("schtasks: ERROR: The system cannot find the file specified.")
+)
+
+func TestTryAcquireSingleInstance(t *testing.T) {
+	release, alreadyRunning, err := TryAcquireSingleInstance()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer release()
+	// On Linux the stub reports no other bridge; on Windows a second
+	// acquire in the same process would report already running, so this
+	// only asserts the call itself works and the release does not panic.
+	_ = alreadyRunning
 }
 
 func TestSameFile(t *testing.T) {

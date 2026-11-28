@@ -35,6 +35,9 @@ type Options struct {
 	// OnToggleNotifySuccess is called when the user toggles the
 	// "Notify on successful reads" checkbox, with the new state.
 	OnToggleNotifySuccess func(bool)
+	// OnReady is called when the tray menu is created and the icon is up.
+	// It is how the bridge shows a startup toast after a shortcut launch.
+	OnReady func()
 	// Mode is the write approval mode shown in the menu at startup.
 	// An unknown value shows as manual: fail closed.
 	Mode mode.Mode
